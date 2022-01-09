@@ -1,0 +1,7 @@
+sources:
+
+  e-obs:
+    driver: intake.catalog.local.YAMLFileCatalog
+    args:
+      path: '{{ CATALOG_DIR }}/external/e-obs.yaml'
+

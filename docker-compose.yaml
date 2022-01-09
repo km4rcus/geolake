@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  api:
+    build: 
+      context: ./
+      dockerfile: ./api/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - broker
+      - db
+    links:
+      - broker
+      - db
+    environment:
+      CATALOG_PATH: /home/vardan/dev/projectsHome/cmcc/hypycube_old/resources/catalogs/catalog.yaml
+    command: ["./wait-for-it.sh", "broker:5672", "--",  "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+  executor:
+    build: 
+      context: ./
+      dockerfile: ./executor/Dockerfile
+    depends_on:
+      - broker
+      - db
+    links:
+      - broker
+      - db
+    ports:
+      - 8787:8787
+    environment:
+      EXECUTOR_TYPES: query
+      CATALOG_PATH: /code/app/resources/catalogs/catalog.yaml
+    command: ["./wait-for-it.sh", "broker:5672", "--", "python", "./app/main.py"]
+  broker:
+    image: rabbitmq:3
+  db:
+    image: postgres:14.1
+    restart: always
+    volumes:
+      - ./db/scripts:/docker-entrypoint-initdb.d
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: dds
+      POSTGRES_USER: dds
+      POSTGRES_PASSWORD: dds
