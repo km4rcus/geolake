@@ -22,10 +22,17 @@ from dask.distributed import Client, LocalCluster
 from datastore.datastore import Datastore
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
+def ds_query(ds_id, prod_id, query, compute, catalog_path):
+    ds = Datastore(catalog_path)
+    kube =  ds.query(ds_id, prod_id, query, compute)
+    kube.persist('.')
+    return kube
+
 class Executor():
 
     def __init__(self, broker, catalog_path, store_path):
         self._datastore = Datastore(catalog_path)
+        self._catalog_path = catalog_path
         self._store = store_path
         broker_conn = pika.BlockingConnection(pika.ConnectionParameters(host=broker))
         self._channel = broker_conn.channel()
@@ -42,8 +49,8 @@ class Executor():
         self._dask_client = Client(dask_cluster)
 
     def query_and_persist(self, ds_id, prod_id, query, compute, format):
-        self._datastore.query(ds_id, prod_id, query, compute)
-#        kube.persist(self._store, format=format)
+        kube = self._datastore.query(ds_id, prod_id, query, compute)
+        kube.persist(self._store, format=format)
 
     def estimate(self, channel, method, properties, body):
         m = body.decode().split('\\')
@@ -92,8 +99,8 @@ class Executor():
         format = m[4]
         
         self._db.update_request(request_id=request_id, worker_id=self._worker_id, status=RequestStatus.RUNNING)
-        future = self._dask_client.submit(self.query_and_persist, dataset_id, product_id, query, False, format)
-
+        # future = self._dask_client.submit(self.query_and_persist, dataset_id, product_id, query, False, format)
+        future = self._dask_client.submit(ds_query, dataset_id, product_id, query, False, self._catalog_path)
         try:
             future.result()
             self._db.update_request(request_id=request_id, worker_id=self._worker_id, status=RequestStatus.DONE)
