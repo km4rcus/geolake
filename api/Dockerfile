@@ -6,6 +6,7 @@ RUN conda install -c anaconda psycopg2
 COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
 COPY ./db/dbmanager /code/db/dbmanager
 COPY ./geoquery/ /code/geoquery
+COPY ./resources /code/app/resources
 COPY ./api/app /code/app
 EXPOSE 80
 # VOLUME /code

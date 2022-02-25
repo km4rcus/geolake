@@ -3,9 +3,9 @@ WORKDIR /code
 RUN conda install -c conda-forge xesmf cartopy psycopg2 -y
 COPY ./executor/requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY geokube_packages/geokube-0.1b1-py3-none-any.whl /code
+COPY geokube_packages/geokube-0.1a0-py3-none-any.whl /code
 COPY geokube_packages/intake_geokube-0.1a0-py3-none-any.whl /code
-RUN pip install /code/geokube-0.1b1-py3-none-any.whl
+RUN pip install /code/geokube-0.1a0-py3-none-any.whl
 RUN pip install /code/intake_geokube-0.1a0-py3-none-any.whl
 COPY ./db/dbmanager /code/app/db/dbmanager
 COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
