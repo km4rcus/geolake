@@ -28,7 +28,7 @@ services:
     ports:
       - 8787:8787
     environment:
-      EXECUTOR_TYPES: query
+      EXECUTOR_TYPES: query,info,estimate
       CATALOG_PATH: /code/app/resources/catalogs/catalog.yaml
     command: ["./wait-for-it.sh", "broker:5672", "--", "python", "./app/main.py"]
   broker:
