@@ -39,7 +39,7 @@ class Datastore():
         :param product: product name
         :param query: subset query
         :param path: path to store
-        :return: subsetted hypycube of selected dataset product
+        :return: subsetted geokube of selected dataset product
         """
         if isinstance(query, str):
             query = json.loads(query)
