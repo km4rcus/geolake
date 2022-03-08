@@ -17,9 +17,9 @@ sources:
     driver: geokube_netcdf
     role: admin
     args:
-      pattern: 'e-obs-ensemble-{ensemble}-var_{var}-resolution_{resolution}-version_{version}.0e.nc'
-      path: '/code/app/resources/netcdfs/e-obs-ensemble-mean-var_*.nc'
-      id_pattern: '{__ddsapi_name}'
+      pattern: 'resources/netcdfs/e-obs-ensemble-{ensemble}-var_{var}-resolution_{resolution}-version_{version}.0e.nc'
+      path: 'resources/netcdfs/e-obs-ensemble-mean-var_*.nc'
+      field_id: '{__ddsapi_name}'
       delay_read_cubes: false
       metadata_caching: true
       metadata_cache_path: 'e-obs.cache'
