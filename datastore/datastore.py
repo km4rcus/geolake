@@ -33,7 +33,7 @@ class Datastore():
         info.update(entry.read_chunked().to_dict())
         return info    
 
-    def query(self, dataset: str, product: str, query: Union[GeoQuery, dict, str], compute: bool=False):
+    def query(self, dataset: str, product: str, query: Union[GeoQuery, dict, str], compute: bool=False) -> DataCube:
         """
         :param dataset: dasaset name
         :param product: product name
@@ -47,17 +47,21 @@ class Datastore():
             query = GeoQuery(**query)
         kube = self.catalog[dataset][product].read_chunked()
         if isinstance(kube, Dataset):
+            # TODO: Check if `filters` are going to be dropped from `GeoQuery`
             kube = kube.filter(query.filters)
         if query.variable:
             kube = kube[query.variable]
         if query.area:
-            kube = kube.geobbox(query.area)
+            kube = kube.geobbox(**query.area)
         if query.locations:
             kube = kube.locations(**query.locations)
         if query.time:
+            # TODO: Check how time is to be represented
             kube = kube.sel(query.time)
         if query.vertical:
-            kube = kube.sel(query.vertical)
+            kube = kube.sel(vertical=query.vertical, method='nearest')
         if compute:
+            # FIXME: TypeError: __init__() got an unexpected keyword argument
+            # 'fastpath'
             kube.compute()
         return kube
