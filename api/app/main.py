@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from typing import Optional
+
+from fastapi import FastAPI, Header
 import pika
 from enum import Enum
 from pydantic import BaseModel
@@ -17,23 +19,24 @@ async def dds_info():
     return {"DDS API 2.0"}
 
 @app.get("/datasets")
-async def datasets():
-    return {"List of Datasets"}
+async def datasets(user_token: Optional[str] = Header(None, convert_underscores=True)):
+    print(user_token)
+    return {"token": user_token, "a":"List of Datasets"}
 
 @app.get("/datasets/{dataset_id}")
-async def dataset(dataset_id: str):
+async def dataset(dataset_id: str, user_token: Optional[str] = Header(None, convert_underscores=True)):
     return {f"Dataset Info {dataset_id}"}
 
 @app.get("/datasets/{dataset_id}/{product_id}")
-async def dataset(dataset_id: str, product_id: str):
+async def dataset(dataset_id: str, product_id: str, user_token: Optional[str] = Header(None, convert_underscores=True)):
     return {f"Product Info {product_id} from dataset {dataset_id}"}
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
-async def estimate(dataset_id: str, product_id: str, query: GeoQuery):
+async def estimate(dataset_id: str, product_id: str, query: GeoQuery, user_token: Optional[str] = Header(None, convert_underscores=True)):
     return {f'estimate size for {dataset_id} {product_id} is 10GB'}
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
-async def query(dataset_id: str, product_id: str, format: str, query: GeoQuery):
+async def query(dataset_id: str, product_id: str, format: str, query: GeoQuery, user_token: Optional[str] = Header(None, convert_underscores=True)):
     global db_conn
     if not db_conn:
         db_conn = DBManager()
@@ -60,13 +63,17 @@ async def query(dataset_id: str, product_id: str, format: str, query: GeoQuery):
     return request_id
 
 @app.get("/requests")
-async def get_requests():
+async def get_requests(user_token: Optional[str] = Header(None, convert_underscores=True)):
     return 
 
 @app.get("/requests/{request_id}/status")
-async def get_request_status(request_id: int):
+async def get_request_status(request_id: int, user_token: Optional[str] = Header(None, convert_underscores=True)):
     return db_conn.get_request_status(request_id)
 
 @app.get("/requests/{request_id}/uri")
-async def get_request_uri(request_id: int):
+async def get_request_uri(request_id: int, user_token: Optional[str] = Header(None, convert_underscores=True)):
     return
+
+@app.delete("/requests/{request_id}/")
+async def get_request_uri(request_id: int, user_token: Optional[str] = Header(None, convert_underscores=True)):
+    return    
