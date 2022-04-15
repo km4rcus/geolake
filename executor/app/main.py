@@ -31,7 +31,10 @@ def ds_query(ds_id, prod_id, query, compute, request_id):
     os.makedirs(res_path, exist_ok=True)
     ds = Datastore()
     kube = ds.query(ds_id, prod_id, query, compute)
+
     kube.persist(res_path)
+    # after closing https://github.com/geokube/geokube/issues/146
+    # kube.persist(res_path, zip_if_many=True)
     return kube
 
 

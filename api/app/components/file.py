@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
+from zipfile import ZipFile
 
 from fastapi import HTTPException
 
@@ -13,11 +14,12 @@ class FileManager:
     _LOG = logging.getLogger("FileManager")
 
     @classmethod
-    def prepare_for_download_and_get_path(cls, request_id: str | int):
-        # TODO: eventually zip
+    def prepare_request_for_download_and_get_path(cls, request_id: str | int):
+        cls._LOG.debug(f"Preparing downloads for request id: {request_id}...")
         db = DBManager()
         request_status = DBManager().get_request_status(request_id=request_id)
         if request_status is not RequestStatus.DONE:
+            cls._LOG.debug(f"Request with id: {request_id} is not finished!")
             raise HTTPException(
                 status_code=404,
                 details=f"Request with id: {request_id} is not finished!",
@@ -25,6 +27,8 @@ class FileManager:
         download_details = db.get_download_details_for_request(
             request_id=request_id
         )
+        # NOTE: geokube persist method should result in single file
+        # zip archive if query results in many netcdf files
         return os.path.join(
             download_details.location_path,
             os.listdir(download_details.location_path)[0],

@@ -47,3 +47,16 @@ class AccessManager:
         return DBManager().has_sufficient_privileges(
             role_name=user_role_name, reference_role_name=product_role_name,
         )
+
+    @classmethod
+    def is_user_eligible_for_request(
+        cls, user_id: str | int, request_id: str | int
+    ) -> bool:
+        request_details = DBManager().get_request_details(
+            request_id=request_id
+        )
+        if (request_details is not None) and (
+            str(request_details.user_id) == str(user_id)
+        ):
+            return True
+        return False

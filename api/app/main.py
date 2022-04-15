@@ -158,8 +158,18 @@ async def download_request_result(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    # TODO: authorize if request is associated to the user!
-    path = FileManager.prepare_for_download_and_get_path(request_id=request_id)
+    user_id, api_key = get_user_id_and_key_from_token(user_token)
+    _ = AccessManager.authorize_and_return_user(user_id, api_key)
+    if not AccessManager.is_user_eligible_for_request(
+        user_id=user_id, request_id=request_id
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail=f"User with id: {user_id} is not authorized for results of the request with id {request_id}",
+        )
+    path = FileManager.prepare_request_for_download_and_get_path(
+        request_id=request_id
+    )
     return FileResponse(path=path, filename=path)
 
 
