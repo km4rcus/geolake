@@ -22,17 +22,16 @@ from dask.distributed import Client, LocalCluster
 from datastore.datastore import Datastore
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
-def ds_query(ds_id, prod_id, query, compute, catalog_path):
-    ds = Datastore(catalog_path)
+def ds_query(ds_id, prod_id, query, compute):
+    ds = Datastore()    
     kube =  ds.query(ds_id, prod_id, query, compute)
     kube.persist('.')
     return kube
 
 class Executor():
 
-    def __init__(self, broker, catalog_path, store_path):
-        self._datastore = Datastore(catalog_path)
-        self._catalog_path = catalog_path
+    def __init__(self, broker, store_path):
+        self._datastore = Datastore()
         self._store = store_path
         broker_conn = pika.BlockingConnection(pika.ConnectionParameters(host=broker))
         self._channel = broker_conn.channel()
@@ -100,7 +99,7 @@ class Executor():
         
         self._db.update_request(request_id=request_id, worker_id=self._worker_id, status=RequestStatus.RUNNING)
         # future = self._dask_client.submit(self.query_and_persist, dataset_id, product_id, query, False, format)
-        future = self._dask_client.submit(ds_query, dataset_id, product_id, query, False, self._catalog_path)
+        future = self._dask_client.submit(ds_query, dataset_id, product_id, query, False)
         try:
             future.result()
             self._db.update_request(request_id=request_id, worker_id=self._worker_id, status=RequestStatus.DONE)
@@ -124,11 +123,9 @@ if __name__ == "__main__":
 
     broker = os.getenv('BROKER', 'broker')
     executor_types = os.getenv('EXECUTOR_TYPES', 'query').split(',')
-    catalog_path = os.getenv('CATALOG_PATH', 'catalog.yaml')
     store_path = os.getenv('STORE_PATH', '.')
 
     executor = Executor(broker=broker, 
-                        catalog_path=catalog_path, 
                         store_path=store_path)
     print('channel subscribe')
     for etype in executor_types:

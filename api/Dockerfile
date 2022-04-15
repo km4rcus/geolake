@@ -1,9 +1,15 @@
 FROM continuumio/miniconda3
 WORKDIR /code
 COPY ./api/requirements.txt /code/requirements.txt
+RUN conda install -c conda-forge xesmf cartopy psycopg2 -y
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+COPY geokube_packages/geokube-0.1a0-py3-none-any.whl /code
+COPY geokube_packages/intake_geokube-0.1a0-py3-none-any.whl /code
+RUN pip install /code/geokube-0.1a0-py3-none-any.whl
+RUN pip install /code/intake_geokube-0.1a0-py3-none-any.whl
 RUN conda install -c anaconda psycopg2
 COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
+COPY ./datastore /code/app/datastore
 COPY ./db/dbmanager /code/db/dbmanager
 COPY ./geoquery/ /code/geoquery
 COPY ./resources /code/app/resources

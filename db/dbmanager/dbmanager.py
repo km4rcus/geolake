@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import yaml
+import logging
 from datetime import datetime
 from enum import auto, Enum as Enum_, unique
 
@@ -15,6 +18,8 @@ from sqlalchemy import (
     String
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+
+from .singleton import Singleton
 
 
 @unique
@@ -97,19 +102,35 @@ class Storage(Base):
     port = Column(Integer)
 
 
-class DBManager:
-    def __init__(
-        self,
-        database: str = 'dds',
-        host: str = 'db',
-        port: int = 5432,
-        user: str = 'dds',
-        password: str = 'dds'
-    ) -> None:
+class DBManager(metaclass=Singleton):
+
+    _LOG = logging.getLogger("DBManager")
+
+    def __init__(self) -> None:
+        for venv_key in ["POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_PORT"]:
+            self._LOG.info(f"Attempt to load data from environment variable: {venv_key}...")
+            if venv_key not in os.environ:
+                self._LOG.error(f"Missing required environment variable: {venv_key}")
+                raise KeyError(f"Missing required environment variable: {venv_key}")
+
+        user = os.environ["POSTGRES_USER"]
+        password = os.environ["POSTGRES_PASSWORD"]
+        host = os.environ["POSTGRES_HOST"]
+        port = os.environ["POSTGRES_PORT"]
+        database = os.environ["POSTGRES_DB"]
+        
         url = f'postgresql://{user}:{password}@{host}:{port}/{database}'
-        self.__engine = engine = create_engine(url, echo=True)
-        self.__session_maker = sessionmaker(bind=engine)
-        Base.metadata.create_all(engine)
+        self.__engine = create_engine(url, echo=True)
+        self.__session_maker = sessionmaker(bind=self.__engine)
+        Base.metadata.create_all(self.__engine)
+
+    def get_user_details(self, user_id: int):
+        with self.__session_maker() as session:
+            return session.query(User).get(user_id)
+
+    def get_role_details(self, role_id: int):
+        with self.__session_maker() as session:
+            return session.query(Role).get(role_id)            
 
     def create_request(
         self,

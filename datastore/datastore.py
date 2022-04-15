@@ -1,15 +1,27 @@
+from __future__ import annotations
+
+import os
 import intake
+import json
+import logging
+
 from geokube.core.datacube import DataCube
 from geokube.core.dataset import Dataset
-from typing import Union
 from geoquery.geoquery import GeoQuery
-import json
 
-class Datastore():
+from .singleton import Singleton
 
-    def __init__(self, cat_path: str) -> None:
-        self.catalog = intake.open_catalog(cat_path)
-    
+
+class Datastore(metaclass=Singleton):
+
+    _LOG = logging.getLogger("DataStore")
+
+    def __init__(self) -> None:
+        if "CATALOG_PATH" not in os.environ:
+            self._LOG.error("Missing required environment variable: 'CATALOG_PATH'")
+            raise KeyError("Missing required environment variable: 'CATALOG_PATH'")
+        self.catalog = intake.open_catalog(os.environ["CATALOG_PATH"])
+
     def dataset_list(self):
         return list(self.catalog)
 
@@ -25,6 +37,9 @@ class Datastore():
         for p in self.products():
             info['products'][p] = self.product_info()
 
+    def product_metadata(self, dataset_id: str, product_id: str):
+        return self.catalog[dataset_id][product_id].metadata
+
     def product_info(self, dataset_id: str, product_id: str):
         info = {}
         entry = self.catalog[dataset_id][product_id]
@@ -33,7 +48,7 @@ class Datastore():
         info.update(entry.read_chunked().to_dict())
         return info    
 
-    def query(self, dataset: str, product: str, query: Union[GeoQuery, dict, str], compute: bool=False) -> DataCube:
+    def query(self, dataset: str, product: str, query: GeoQuery | dict | str, compute: bool=False) -> DataCube:
         """
         :param dataset: dasaset name
         :param product: product name
