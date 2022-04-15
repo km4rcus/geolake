@@ -18,8 +18,12 @@ class Datastore(metaclass=Singleton):
 
     def __init__(self) -> None:
         if "CATALOG_PATH" not in os.environ:
-            self._LOG.error("Missing required environment variable: 'CATALOG_PATH'")
-            raise KeyError("Missing required environment variable: 'CATALOG_PATH'")
+            self._LOG.error(
+                "Missing required environment variable: 'CATALOG_PATH'"
+            )
+            raise KeyError(
+                "Missing required environment variable: 'CATALOG_PATH'"
+            )
         self.catalog = intake.open_catalog(os.environ["CATALOG_PATH"])
 
     def dataset_list(self):
@@ -32,10 +36,10 @@ class Datastore(metaclass=Singleton):
         info = {}
         entry = self.catalog[dataset_id]
         if entry.metadata:
-            info['metadata'] = entry.metadata
-        info['products'] = {}
+            info["metadata"] = entry.metadata
+        info["products"] = {}
         for p in self.products():
-            info['products'][p] = self.product_info()
+            info["products"][p] = self.product_info()
 
     def product_metadata(self, dataset_id: str, product_id: str):
         return self.catalog[dataset_id][product_id].metadata
@@ -44,11 +48,18 @@ class Datastore(metaclass=Singleton):
         info = {}
         entry = self.catalog[dataset_id][product_id]
         if entry.metadata:
-            info['metadata'] = entry.metadata
-        info.update(entry.read_chunked().to_dict())
-        return info    
+            info["metadata"] = entry.metadata
+        # TODO: returns list of dict rather than dict!
+        info.update(entry.read_chunked().to_dict()[0])
+        return info
 
-    def query(self, dataset: str, product: str, query: GeoQuery | dict | str, compute: bool=False) -> DataCube:
+    def query(
+        self,
+        dataset: str,
+        product: str,
+        query: GeoQuery | dict | str,
+        compute: bool = False,
+    ) -> DataCube:
         """
         :param dataset: dasaset name
         :param product: product name
@@ -74,7 +85,7 @@ class Datastore(metaclass=Singleton):
             # TODO: Check how time is to be represented
             kube = kube.sel(query.time)
         if query.vertical:
-            kube = kube.sel(vertical=query.vertical, method='nearest')
+            kube = kube.sel(vertical=query.vertical, method="nearest")
         if compute:
             # FIXME: TypeError: __init__() got an unexpected keyword argument
             # 'fastpath'

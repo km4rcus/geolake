@@ -19,6 +19,8 @@ services:
       POSTGRES_PASSWORD: dds
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432       
+    volumes:
+      - downloads:/downloads:ro 
     command: ["./wait-for-it.sh", "broker:5672", "--",  "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
   executor:
     build: 
@@ -39,7 +41,9 @@ services:
       POSTGRES_USER: dds
       POSTGRES_PASSWORD: dds
       POSTGRES_HOST: db
-      POSTGRES_PORT: 5432      
+      POSTGRES_PORT: 5432 
+    volumes:
+      - downloads:/downloads:rw  
     command: ["./wait-for-it.sh", "broker:5672", "--", "python", "./app/main.py"]
   broker:
     image: rabbitmq:3
@@ -56,3 +60,6 @@ services:
       POSTGRES_PASSWORD: dds
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
+
+volumes:
+  downloads:

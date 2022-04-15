@@ -4,7 +4,8 @@
 
 CREATE TABLE IF NOT EXISTS roles (
    role_id SERIAL PRIMARY KEY,
-   role_name VARCHAR (255) UNIQUE NOT NULL
+   role_name VARCHAR (255) UNIQUE NOT NULL,
+   role_privilege INT UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS users (
