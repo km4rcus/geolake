@@ -44,7 +44,6 @@ class DatasetManager:
             product_metadata = data_store.product_metadata(
                 dataset_id=dataset_id, product_id=product_id
             )
-            raise RuntimeError(product_metadata)
             if AccessManager.is_user_eligible_for_role(
                 user_credentials=user_credentials,
                 product_role_name=product_metadata.get("role"),
