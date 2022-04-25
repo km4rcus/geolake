@@ -22,7 +22,7 @@ class FileManager:
             cls._LOG.debug(f"Request with id: {request_id} is not finished!")
             raise HTTPException(
                 status_code=404,
-                details=f"Request with id: {request_id} is not finished!",
+                detail=f"Request with id: {request_id} is not finished!",
             )
         download_details = db.get_download_details_for_request(
             request_id=request_id

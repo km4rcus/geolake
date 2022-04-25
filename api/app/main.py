@@ -13,7 +13,7 @@ from geoquery.geoquery import GeoQuery
 from .components.access import AccessManager
 from .components.dataset import DatasetManager
 from .components.file import FileManager
-from .util import get_user_id_and_key_from_token
+from .util import UserCredentials
 
 
 app = FastAPI()
@@ -31,17 +31,10 @@ async def dds_info():
 async def datasets(
     user_token: Optional[str] = Header(None, convert_underscores=True)
 ):
-    if user_token is None:
-        return DatasetManager.get_eligible_products_names_for_role()
-    else:
-        user_id, api_key = get_user_id_and_key_from_token(user_token)
-        user_details = AccessManager.authorize_and_return_user(
-            user_id, api_key
-        )
-        user_role = AccessManager.get_role_details(user_details.role_id)
-        return DatasetManager.get_eligible_products_names_for_role(
-            role=user_role
-        )
+    user_cred = UserCredentials(user_token)
+    return DatasetManager.get_eligible_products_for_all_datasets(
+        user_credentials=user_cred
+    )
 
 
 @app.get("/datasets/{dataset_id}")
@@ -49,19 +42,10 @@ async def dataset(
     dataset_id: str,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    if user_token is None:
-        return DatasetManager.get_details_if_dataset_eligible(
-            dataset_id=dataset_id
-        )
-    else:
-        user_id, api_key = get_user_id_and_key_from_token(user_token)
-        user_details = AccessManager.authorize_and_return_user(
-            user_id, api_key
-        )
-        user_role = AccessManager.get_role_details(user_details.role_id)
-        return DatasetManager.get_details_if_dataset_eligible(
-            dataset_id=dataset_id, role_name=user_role.role_name
-        )
+    user_cred = UserCredentials(user_token)
+    return DatasetManager.get_eligible_products_for_dataset(
+        user_credentials=user_cred, dataset_id=dataset_id
+    )
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
@@ -70,21 +54,12 @@ async def dataset(
     product_id: str,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    if user_token is None:
-        return DatasetManager.get_details_if_product_eligible(
-            dataset_id=dataset_id, product_id=product_id
-        )
-    else:
-        user_id, api_key = get_user_id_and_key_from_token(user_token)
-        user_details = AccessManager.authorize_and_return_user(
-            user_id, api_key
-        )
-        user_role = AccessManager.get_role_details(user_details.role_id)
-        return DatasetManager.get_details_if_product_eligible(
-            dataset_id=dataset_id,
-            product_id=product_id,
-            role_name=user_role.role_name,
-        )
+    user_cred = UserCredentials(user_token)
+    return DatasetManager.get_details_if_product_eligible(
+        user_credentials=user_cred,
+        dataset_id=dataset_id,
+        product_id=product_id,
+    )
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
@@ -105,16 +80,24 @@ async def query(
     format: Optional[str] = "netcdf",
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    #
     # TODO: Validation Query Schema
     # TODO: estimate the size and will not execute if it is above the limit
-    #
-    #
+
+    user_cred = UserCredentials(user_token)
+    AccessManager.authenticate_user(user_cred)
+    if user_cred.is_public:
+        raise HTTPException(
+            code="401",
+            detail="Anonymouse user cannot execute queries! Please log in!",
+        )
     request_id = DBManager().create_request(
-        dataset=dataset_id, product=product_id, query=query.json()
+        user_id=user_cred.id,
+        dataset=dataset_id,
+        product=product_id,
+        query=query.json(),
     )
 
-    # we should find a separator; for the moment use "\"
+    # TODO: find a separator; for the moment use "\"
     message = (
         f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}\\{format}"
     )
@@ -135,22 +118,19 @@ async def query(
 async def get_requests(
     user_token: Optional[str] = Header(None, convert_underscores=True)
 ):
+    user_cred = UserCredentials(user_token)
     return
 
 
 @app.get("/requests/{request_id}/status")
-async def get_request_status(
-    request_id: int,
-    user_token: Optional[str] = Header(None, convert_underscores=True),
-):
-    # TODO: currerntly returns string "DONE", "FAILED", etc. Shuold it be code?
+async def get_request_status(request_id: int,):
     status = DBManager().get_request_status(request_id)
     if status is None:
         raise HTTPException(
             status_code=400,
             detail=f"Request with id: {request_id} does not exist!",
         )
-    return status.name
+    return {status.value: status.name}
 
 
 @app.get("/download/{request_id}")
@@ -158,19 +138,20 @@ async def download_request_result(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    user_id, api_key = get_user_id_and_key_from_token(user_token)
-    _ = AccessManager.authorize_and_return_user(user_id, api_key)
-    if not AccessManager.is_user_eligible_for_request(
-        user_id=user_id, request_id=request_id
+    user_cred = UserCredentials(user_token)
+    AccessManager.authenticate_user(user_cred)
+    if AccessManager.is_user_eligible_for_request(
+        user_credentials=user_cred, request_id=request_id
     ):
+        path = FileManager.prepare_request_for_download_and_get_path(
+            request_id=request_id
+        )
+        return FileResponse(path=path, filename=path)
+    else:
         raise HTTPException(
             status_code=401,
             detail=f"User with id: {user_id} is not authorized for results of the request with id {request_id}",
         )
-    path = FileManager.prepare_request_for_download_and_get_path(
-        request_id=request_id
-    )
-    return FileResponse(path=path, filename=path)
 
 
 @app.get("/requests/{request_id}/uri")

@@ -16,8 +16,9 @@ from sqlalchemy import (
     JSON,
     Sequence,
     String,
+    Table,
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .singleton import Singleton
 
@@ -44,7 +45,6 @@ class Role(Base):
     __tablename__ = "roles"
     role_id = Column(Integer, Sequence("role_id_seq"), primary_key=True)
     role_name = Column(String(255), nullable=False, unique=True)
-    role_privilege = Column(Integer, nullable=False, unique=True)
 
 
 class User(Base):
@@ -138,9 +138,10 @@ class DBManager(metaclass=Singleton):
         with self.__session_maker() as session:
             return session.query(User).get(user_id)
 
-    def get_role_details(self, role_id: int):
+    def get_user_role_name(self, user_id: int):
         with self.__session_maker() as session:
-            return session.query(Role).get(role_id)
+            user = session.query(User).get(user_id)
+            return session.query(Role).get(user.role_id).role_name
 
     def get_request_details(self, request_id: int):
         with self.__session_maker() as session:
@@ -154,20 +155,6 @@ class DBManager(metaclass=Singleton):
                     f"Request with id: {request_id} doesn't exist"
                 )
             return session.query(Download).get(request_details.download_id)
-
-    def has_sufficient_privileges(
-        self, role_name, reference_role_name
-    ) -> bool:
-        with self.__session_maker() as session:
-            current_role = (
-                session.query(Role).filter(Role.role_name == role_name).one()
-            )
-            other_role = (
-                session.query(Role)
-                .filter(Role.role_name == reference_role_name)
-                .one()
-            )
-            return current_role.role_privilege >= other_role.role_privilege
 
     def create_request(
         self,
