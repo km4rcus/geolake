@@ -87,7 +87,7 @@ async def query(
     AccessManager.authenticate_user(user_cred)
     if user_cred.is_public:
         raise HTTPException(
-            status_code="401",
+            status_code=401,
             detail="Anonymouse user cannot execute queries! Please log in!",
         )
     request_id = DBManager().create_request(
