@@ -19,10 +19,16 @@ class FileManager:
         db = DBManager()
         request_status = DBManager().get_request_status(request_id=request_id)
         if request_status is not RequestStatus.DONE:
-            cls._LOG.debug(f"Request with id: {request_id} is not finished!")
+            cls._LOG.debug(
+                f"Request with id: {request_id} does not exist or is not"
+                " finished yet!"
+            )
             raise HTTPException(
                 status_code=404,
-                detail=f"Request with id: {request_id} is not finished!",
+                detail=(
+                    f"Request with id: {request_id} does not exist or is not"
+                    " finished yet!"
+                ),
             )
         download_details = db.get_download_details_for_request(
             request_id=request_id

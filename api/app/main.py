@@ -3,7 +3,6 @@ __version__ = "2.0"
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
-import pika
 from enum import Enum
 from pydantic import BaseModel
 
@@ -17,9 +16,6 @@ from .util import UserCredentials
 
 
 app = FastAPI()
-# RabbitMQ Broker Connection
-broker_conn = pika.BlockingConnection(pika.ConnectionParameters(host="broker"))
-broker_chann = broker_conn.channel()
 
 
 @app.get("/")
@@ -82,35 +78,14 @@ async def query(
 ):
     # TODO: Validation Query Schema
     # TODO: estimate the size and will not execute if it is above the limit
-
     user_cred = UserCredentials(user_token)
-    AccessManager.authenticate_user(user_cred)
-    if user_cred.is_public:
-        raise HTTPException(
-            status_code=401,
-            detail="Anonymouse user cannot execute queries! Please log in!",
-        )
-    request_id = DBManager().create_request(
-        user_id=user_cred.id,
-        dataset=dataset_id,
-        product=product_id,
-        query=query.json(),
+    return DatasetManager.retrieve_data_and_get_request_id(
+        user_credentials=user_cred,
+        dataset_id=dataset_id,
+        product_id=product_id,
+        query=query,
+        format=format,
     )
-
-    # TODO: find a separator; for the moment use "\"
-    message = (
-        f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}\\{format}"
-    )
-
-    broker_chann.basic_publish(
-        exchange="",
-        routing_key="query_queue",
-        body=message,
-        properties=pika.BasicProperties(
-            delivery_mode=2,  # make message persistent
-        ),
-    )
-    return request_id
 
 
 @app.get("/requests")

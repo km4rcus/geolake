@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import logging
+import pika
 from fastapi import HTTPException
+from geoquery.geoquery import GeoQuery
+from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
 from ..datastore.datastore import Datastore
@@ -85,3 +88,46 @@ class DatasetManager:
                     f" {product_id}"
                 ),
             )
+
+    @classmethod
+    def retrieve_data_and_get_request_id(
+        cls,
+        user_credentials: UserCredentials,
+        dataset_id: str,
+        product_id: str,
+        query: GeoQuery,
+        format: str,
+    ):
+        AccessManager.authenticate_user(user_credentials)
+        if user_credentials.is_public:
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "Anonymouse user cannot execute queries! Please log in!"
+                ),
+            )
+        broker_conn = pika.BlockingConnection(
+            pika.ConnectionParameters(host="broker")
+        )
+        broker_channel = broker_conn.channel()
+
+        request_id = DBManager().create_request(
+            user_id=user_credentials.id,
+            dataset=dataset_id,
+            product=product_id,
+            query=query.json(),
+        )
+
+        # TODO: find a separator; for the moment use "\"
+        message = f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}\\{format}"
+
+        broker_channel.basic_publish(
+            exchange="",
+            routing_key="query_queue",
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # make message persistent
+            ),
+        )
+        broker_conn.close()
+        return request_id
