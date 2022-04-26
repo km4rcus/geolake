@@ -14,7 +14,8 @@ class DatasetManager:
 
     @classmethod
     def get_eligible_products_for_all_datasets(
-        cls, user_credentials: UserCredentials,
+        cls,
+        user_credentials: UserCredentials,
     ) -> dict[str, list[str]]:
         cls._LOG.debug(
             f"Getting eligible products for user_id: {user_credentials.id}..."
@@ -23,8 +24,10 @@ class DatasetManager:
         data_store = Datastore()
         datasets = {}
         for dataset_id in data_store.dataset_list():
-            eligible_products_for_dataset = DatasetManager.get_eligible_products_for_dataset(
-                user_credentials=user_credentials, dataset_id=dataset_id
+            eligible_products_for_dataset = (
+                DatasetManager.get_eligible_products_for_dataset(
+                    user_credentials=user_credentials, dataset_id=dataset_id
+                )
             )
             if len(eligible_products_for_dataset):
                 datasets[dataset_id] = eligible_products_for_dataset
@@ -35,7 +38,8 @@ class DatasetManager:
         cls, user_credentials: UserCredentials, dataset_id: str
     ) -> list[str]:
         cls._LOG.debug(
-            f"Getting eligible products for user_id: {user_credentials.id}, dataset_id: {dataset_id}..."
+            f"Getting eligible products for user_id: {user_credentials.id},"
+            f" dataset_id: {dataset_id}..."
         )
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore()
@@ -59,7 +63,8 @@ class DatasetManager:
         product_id: str,
     ) -> list[str]:
         cls._LOG.debug(
-            f"Getting details for user_id: {user_credentials.id}, dataset_id: {dataset_id}, product_id: {product_id}..."
+            f"Getting details for user_id: {user_credentials.id}, dataset_id:"
+            f" {dataset_id}, product_id: {product_id}..."
         )
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore()
@@ -74,5 +79,9 @@ class DatasetManager:
         else:
             raise HTTPException(
                 status_code=401,
-                detail=f"The user with id: {user_credentials.id} is not authorized to use dataset: {dataset_id} product: {product_id}",
+                detail=(
+                    f"The user with id: {user_credentials.id} is not"
+                    f" authorized to use dataset: {dataset_id} product:"
+                    f" {product_id}"
+                ),
             )

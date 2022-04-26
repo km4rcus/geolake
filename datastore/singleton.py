@@ -2,7 +2,7 @@ from threading import Lock, Thread
 
 
 class Singleton(type):
-    """ Thread-safe implementation of Singleton design pattern metaclass"""
+    """Thread-safe implementation of Singleton design pattern metaclass"""
 
     _instances = {}
     _lock: Lock = Lock()

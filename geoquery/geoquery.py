@@ -20,6 +20,7 @@ class GeoQuery(BaseModel):
     def area_locations_mutually_exclusive_validator(cls, query):
         if query["area"] is not None and query["locations"] is not None:
             raise KeyError(
-                "area and locations couldn't be processed together, please use one of them"
+                "area and locations couldn't be processed together, please use"
+                " one of them"
             )
         return query

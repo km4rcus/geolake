@@ -113,7 +113,8 @@ class DBManager(metaclass=Singleton):
             "POSTGRES_PORT",
         ]:
             self._LOG.info(
-                f"Attempt to load data from environment variable: {venv_key}..."
+                "Attempt to load data from environment variable:"
+                f" {venv_key}..."
             )
             if venv_key not in os.environ:
                 self._LOG.error(

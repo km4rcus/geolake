@@ -32,6 +32,9 @@ def get_user_id_and_key_from_token(user_token: str):
     if user_token is None or ":" not in user_token:
         raise HTTPException(
             status_code=400,
-            detail=f"Token was not provided or it has a wrong format! Correct format is <user_id>:<user_key>.",
+            detail=(
+                f"Token was not provided or it has a wrong format! Correct"
+                f" format is <user_id>:<user_key>."
+            ),
         )
     return user_token.split(":")

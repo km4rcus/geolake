@@ -102,7 +102,6 @@ async def query(
         f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}\\{format}"
     )
 
-    # submit request to broker queue
     broker_chann.basic_publish(
         exchange="",
         routing_key="query_queue",
@@ -119,11 +118,13 @@ async def get_requests(
     user_token: Optional[str] = Header(None, convert_underscores=True)
 ):
     user_cred = UserCredentials(user_token)
+    # TODO:
     return
 
 
 @app.get("/requests/{request_id}/status")
-async def get_request_status(request_id: int,):
+async def get_request_status(request_id: int):
+    # NOTE: no auth required for checking status
     status = DBManager().get_request_status(request_id)
     if status is None:
         raise HTTPException(
@@ -150,7 +151,10 @@ async def download_request_result(
     else:
         raise HTTPException(
             status_code=401,
-            detail=f"User with id: {user_id} is not authorized for results of the request with id {request_id}",
+            detail=(
+                f"User with id: {user_id} is not authorized for results of the"
+                f" request with id {request_id}"
+            ),
         )
 
 
@@ -159,6 +163,7 @@ async def get_request_uri(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
+    # TODO:
     return
 
 
@@ -167,4 +172,5 @@ async def get_request_uri(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
+    # TODO:
     return

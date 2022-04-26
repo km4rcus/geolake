@@ -24,10 +24,12 @@ class AccessManager:
         user = DBManager().get_user_details(user_credentials.id)
         if user.api_key != user_credentials.key:
             cls._LOG.info(
-                f"Authentication failed! The key provided for the user_id {user_credentials.id} was not valid!"
+                "Authentication failed! The key provided for the user_id"
+                f" {user_credentials.id} was not valid!"
             )
             raise HTTPException(
-                status_code=400, detail=f"The provided key is not valid.",
+                status_code=400,
+                detail=f"The provided key is not valid.",
             )
         cls._LOG.debug(
             f"Authentication successful. User_id: {user_credentials.id}!"
@@ -40,7 +42,8 @@ class AccessManager:
         product_role_name: None | str = "public",
     ) -> bool:
         cls._LOG.debug(
-            f"Verifying eligibility of the user_id: {user_credentials.id} against role_name: {product_role_name}"
+            "Verifying eligibility of the user_id:"
+            f" {user_credentials.id} against role_name: {product_role_name}"
         )
         if product_role_name == "public":
             return True
@@ -59,10 +62,11 @@ class AccessManager:
         cls, user_credentials: UserCredentials, request_id: int
     ) -> bool:
         cls._LOG.debug(
-            f"Verifying eligibility of the user_id: {user_credentials.id} against request_id: {request_id}"
+            "Verifying eligibility of the user_id:"
+            f" {user_credentials.id} against request_id: {request_id}"
         )
         return True
-        # NOTE: currently everyone is eligible for every download
+        # NOTE: currently everyone is eligible for each download
         # request_details = DBManager().get_request_details(
         #     request_id=request_id
         # )
