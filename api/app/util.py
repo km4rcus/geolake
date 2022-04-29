@@ -10,7 +10,16 @@ class UserCredentials:
             self.__user_id, self.__user_key = get_user_id_and_key_from_token(
                 user_token
             )
-            self.__user_id = int(self.__user_id)
+            try:
+                self.__user_id = int(self.__user_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Token was not provided or it has a wrong format!"
+                        f" Correct format is <user_id>:<user_key>."
+                    ),
+                )
         else:
             self.__is_public = True
             self.__user_id = self.__user_key = None
@@ -27,9 +36,27 @@ class UserCredentials:
     def key(self) -> str:
         return self.__user_key
 
+    def __eq__(self, other):
+        if not isinstance(other, UserCredentials):
+            return False
+        if self.id == other.id and self.key == other.key:
+            return True
+        return False
+
+    def __ne__(self, other):
+        return self != other
+
 
 def get_user_id_and_key_from_token(user_token: str):
-    if user_token is None or ":" not in user_token:
+    if user_token is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User token cannot be None",
+        )
+    splits = list(
+        filter(lambda x: x is not None and x != "", user_token.split(":"))
+    )
+    if ":" not in user_token or len(splits) != 2:
         raise HTTPException(
             status_code=400,
             detail=(
