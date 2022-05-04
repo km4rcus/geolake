@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.util import UserCredentials
-from app.components.access import AccessManager
 
 
 @pytest.fixture(scope="session")
@@ -20,6 +19,42 @@ def access_manager():
         p.is_user_eligible_for_role = MagicMock(
             side_effect=is_user_elg_for_role
         )
+        p.is_user_eligible_for_request = MagicMock(
+            side_effect=is_user_elg_for_req
+        )
+        yield p
+
+
+@pytest.fixture(scope="function")
+def access_manager_main():
+    with patch("app.main.AccessManager") as p:
+        p.authenticate_user = MagicMock(return_value=True)
+        p.is_user_eligible_for_role = MagicMock(
+            side_effect=is_user_elg_for_role
+        )
+        p.is_user_eligible_for_request = MagicMock(
+            side_effect=is_user_elg_for_req
+        )
+        yield p
+
+
+@pytest.fixture(scope="function")
+def file_manager():
+    with patch("app.main.FileManager") as p:
+        p.prepare_request_for_download_and_get_path = MagicMock(
+            return_value="../file.zip"
+        )
+        yield p
+
+
+@pytest.fixture(scope="function")
+def file_response():
+    with patch("app.main.FileResponse") as p:
+        inst = MagicMock()
+        inst.prepare_request_for_download_and_get_path = MagicMock(
+            return_value="../file.zip"
+        )
+        p.return_value = inst
         yield p
 
 
@@ -31,6 +66,7 @@ def data_store():
         inst.dataset_list = MagicMock(return_value=["e-obs", "era5"])
         inst.product_list = MagicMock(side_effect=_get_prods_for_ds)
         inst.product_metadata = MagicMock(side_effect=_get_prods_meta)
+        inst.product_info = MagicMock(side_effect=_get_prods_info)
         yield inst
 
 
@@ -38,7 +74,7 @@ def data_store():
 def user_credentials():
     with patch("app.components.dataset.UserCredentials") as p:
         p.return_value = UserCredentials("1:1234")
-        yield p
+        yield p()
 
 
 def _get_prods_for_ds(dataset_id):
@@ -48,7 +84,13 @@ def _get_prods_for_ds(dataset_id):
         return ["reanalysis"]
 
 
+def _get_prods_info(dataset_id, product_id):
+    role = _get_prods_meta(dataset_id, product_id)
+    return {"metadata": role}
+
+
 def _get_prods_meta(dataset_id, product_id):
+    # NOTE: simple logic for test purposes
     role = "public"
     if dataset_id == "e-obs":
         if product_id == "ensemble":
@@ -59,14 +101,20 @@ def _get_prods_meta(dataset_id, product_id):
 
 
 def is_user_elg_for_role(user_credentials, product_role_name):
+    # NOTE: simple logic for test purposes
+    user_role_name = "internal" if user_credentials.id == 1 else "public"
     if product_role_name == "public":
         return True
     if user_credentials.is_public:
         return False
-    user_role_name = "internal"
     if user_role_name == "admin":
         return True
     elif user_role_name == product_role_name:
         return True
     else:
         return False
+
+
+def is_user_elg_for_req(user_credentials, request_id):
+    # NOTE: simple logic for test purposes
+    return user_credentials.id == request_id

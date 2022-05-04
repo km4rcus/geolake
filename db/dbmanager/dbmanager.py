@@ -18,7 +18,7 @@ from sqlalchemy import (
     String,
     Table,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 from .singleton import Singleton
 
@@ -54,6 +54,7 @@ class User(Base):
     api_key = Column(String(255), nullable=False, unique=True)
     contact_name = Column(String(255))
     role_id = Column(Integer, ForeignKey("roles.role_id"))
+    requests = relationship("Request")
 
 
 class Worker(Base):
@@ -201,6 +202,7 @@ class DBManager(metaclass=Singleton):
                     location_path=location_path,
                     storage_id=0,
                     created_on=datetime.utcnow(),
+                    download_uri=f"/download/{request_id}",
                 )
                 session.add(download)
                 session.commit()
@@ -220,6 +222,15 @@ class DBManager(metaclass=Singleton):
                 return RequestStatus(request.status)
             else:
                 return None
+
+    def get_requests_for_user_id(self, user_id) -> list[Request]:
+        with self.__session_maker() as session:
+            return session.query(User).get(user_id).requests
+
+    def get_download_details_for_request_id(self, request_id) -> str:
+        with self.__session_maker() as session:
+            download_id = session.query(Request).get(request_id).download_id
+            return session.query(Download).get(download_id)
 
     def create_worker(
         self,

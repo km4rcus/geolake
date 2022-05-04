@@ -46,6 +46,12 @@ class UserCredentials:
     def __ne__(self, other):
         return self != other
 
+    def __repr__(self):
+        return (
+            f"<UserCredentials(id={self.id}, key=***,"
+            f" is_public={self.is_public}>"
+        )
+
 
 def get_user_id_and_key_from_token(user_token: str):
     if user_token is None:

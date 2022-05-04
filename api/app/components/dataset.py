@@ -131,3 +131,32 @@ class DatasetManager:
         )
         broker_conn.close()
         return request_id
+
+    @classmethod
+    def estimate(
+        cls,
+        dataset_id: str,
+        product_id: str,
+        query: GeoQuery,
+    ):
+        query_bytes_estimation = (
+            Datastore()
+            .query(dataset_id, product_id, query, compute=False)
+            .get_nbytes()
+        )
+        return _make_bytes_readable_dict(bytes=query_bytes_estimation)
+
+
+def _make_bytes_readable_dict(bytes: int) -> dict:
+    units = "bytes"
+    val = bytes
+    if val > 1024:
+        units = "kB"
+        val /= 1024
+    if val > 1024:
+        units = "MB"
+        val /= 1024
+    if val > 1024:
+        units = "GB"
+        val /= 1024
+    return {"value": val, "units": units}
