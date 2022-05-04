@@ -61,7 +61,7 @@ class Datastore(metaclass=Singleton):
         compute: bool = False,
     ) -> DataCube:
         """
-        :param dataset: dasaset name
+        :param dataset: dataset name
         :param product: product name
         :param query: subset query
         :param path: path to store
@@ -82,8 +82,7 @@ class Datastore(metaclass=Singleton):
         if query.locations:
             kube = kube.locations(**query.locations)
         if query.time:
-            # TODO: Check how time is to be represented
-            kube = kube.sel(query.time)
+            kube = kube.sel(**{"time": query.time})
         if query.vertical:
             kube = kube.sel(vertical=query.vertical, method="nearest")
         if compute:
