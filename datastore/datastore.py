@@ -1,15 +1,31 @@
+from __future__ import annotations
+
+import os
 import intake
+import json
+import logging
+
 from geokube.core.datacube import DataCube
 from geokube.core.dataset import Dataset
-from typing import Union
 from geoquery.geoquery import GeoQuery
-import json
 
-class Datastore():
+from .singleton import Singleton
 
-    def __init__(self, cat_path: str) -> None:
-        self.catalog = intake.open_catalog(cat_path)
-    
+
+class Datastore(metaclass=Singleton):
+
+    _LOG = logging.getLogger("DataStore")
+
+    def __init__(self) -> None:
+        if "CATALOG_PATH" not in os.environ:
+            self._LOG.error(
+                "Missing required environment variable: 'CATALOG_PATH'"
+            )
+            raise KeyError(
+                "Missing required environment variable: 'CATALOG_PATH'"
+            )
+        self.catalog = intake.open_catalog(os.environ["CATALOG_PATH"])
+
     def dataset_list(self):
         return list(self.catalog)
 
@@ -20,22 +36,32 @@ class Datastore():
         info = {}
         entry = self.catalog[dataset_id]
         if entry.metadata:
-            info['metadata'] = entry.metadata
-        info['products'] = {}
+            info["metadata"] = entry.metadata
+        info["products"] = {}
         for p in self.products():
-            info['products'][p] = self.product_info()
+            info["products"][p] = self.product_info()
+
+    def product_metadata(self, dataset_id: str, product_id: str):
+        return self.catalog[dataset_id][product_id].metadata
 
     def product_info(self, dataset_id: str, product_id: str):
         info = {}
         entry = self.catalog[dataset_id][product_id]
         if entry.metadata:
-            info['metadata'] = entry.metadata
-        info.update(entry.read_chunked().to_dict())
-        return info    
+            info["metadata"] = entry.metadata
+        # TODO: returns list of dict rather than dict!
+        info.update(entry.read_chunked().to_dict()[0])
+        return info
 
-    def query(self, dataset: str, product: str, query: Union[GeoQuery, dict, str], compute: bool=False):
+    def query(
+        self,
+        dataset: str,
+        product: str,
+        query: GeoQuery | dict | str,
+        compute: bool = False,
+    ) -> DataCube:
         """
-        :param dataset: dasaset name
+        :param dataset: dataset name
         :param product: product name
         :param query: subset query
         :param path: path to store
@@ -47,17 +73,20 @@ class Datastore():
             query = GeoQuery(**query)
         kube = self.catalog[dataset][product].read_chunked()
         if isinstance(kube, Dataset):
+            # TODO: Check if `filters` are going to be dropped from `GeoQuery`
             kube = kube.filter(query.filters)
         if query.variable:
             kube = kube[query.variable]
         if query.area:
-            kube = kube.geobbox(query.area)
+            kube = kube.geobbox(**query.area)
         if query.locations:
             kube = kube.locations(**query.locations)
         if query.time:
-            kube = kube.sel(query.time)
+            kube = kube.sel(**{"time": query.time})
         if query.vertical:
-            kube = kube.sel(query.vertical)
+            kube = kube.sel(vertical=query.vertical, method="nearest")
         if compute:
+            # FIXME: TypeError: __init__() got an unexpected keyword argument
+            # 'fastpath'
             kube.compute()
         return kube

@@ -4,3 +4,4 @@ uvicorn
 pika
 intake
 sqlalchemy
+pytest
