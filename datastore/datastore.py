@@ -16,7 +16,7 @@ class Datastore(metaclass=Singleton):
 
     _LOG = logging.getLogger("DataStore")
 
-    def __init__(self) -> None:
+    def __init__(self, cache_path: str = './') -> None:
         if "CATALOG_PATH" not in os.environ:
             self._LOG.error(
                 "Missing required environment variable: 'CATALOG_PATH'"
@@ -24,7 +24,8 @@ class Datastore(metaclass=Singleton):
             raise KeyError(
                 "Missing required environment variable: 'CATALOG_PATH'"
             )
-        self.catalog = intake.open_catalog(os.environ["CATALOG_PATH"])
+        cat = intake.open_catalog(os.environ["CATALOG_PATH"])
+        self.catalog = cat(CACHE_DIR=cache_path)
 
     def dataset_list(self):
         return list(self.catalog)

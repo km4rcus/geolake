@@ -42,8 +42,8 @@ class Executor:
 
     _LOG = logging.getLogger("Executor")
 
-    def __init__(self, broker, store_path):
-        self._datastore = Datastore()
+    def __init__(self, broker, store_path, cache_path):
+        self._datastore = Datastore(cache_path=cache_path)
         self._store = store_path
         broker_conn = pika.BlockingConnection(
             pika.ConnectionParameters(host=broker)
@@ -173,8 +173,9 @@ if __name__ == "__main__":
     broker = os.getenv("BROKER", "broker")
     executor_types = os.getenv("EXECUTOR_TYPES", "query").split(",")
     store_path = os.getenv("STORE_PATH", ".")
+    cache_path = os.getenv("CACHE_PATH", ".")
 
-    executor = Executor(broker=broker, store_path=store_path)
+    executor = Executor(broker=broker, store_path=store_path, cache_path=cache_path)
     print("channel subscribe")
     for etype in executor_types:
         if etype == "query":

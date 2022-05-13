@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: geodds
+  labels:
+    geodds.service: broker
+  name: broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      geodds.service: broker
+  template:
+    metadata:
+      labels:
+        geodds.service: broker
+    spec:
+      containers:
+        - image: rabbitmq:3
+          name: broker
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "500m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+      restartPolicy: Always
