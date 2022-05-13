@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: geodds
+  labels:
+    geodds.service: api
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      geodds.service: api
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        geodds.service: api
+    spec:
+      containers:
+        - args:
+            - ./wait-for-it.sh
+            - broker:5672
+            - --
+            - uvicorn
+            - app.main:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "80"
+          env:
+            - name: CATALOG_PATH
+              value: /catalog/catalog.yaml
+            - name: POSTGRES_DB
+              value: dds
+            - name: POSTGRES_HOST
+              value: db
+            - name: POSTGRES_PASSWORD
+              value: dds
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: dds
+          name: api
+          image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a2
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          volumeMounts:
+            - mountPath: /catalog
+              name: catalog
+              readOnly: true
+            - mountPath: /work/services/dds/cache
+              name: cache
+              readOnly: true 
+            - mountPath: /data
+              name: data
+              readOnly: true
+            - mountPath: /downloads
+              name: downloads
+              readOnly: true
+      imagePullSecrets:
+          - name: scalereg
+      restartPolicy: Always
+      volumes:
+        - name: catalog
+          hostPath:
+            path: /work/services/dds/dds-catalog/Catalog
+        - name: downloads
+          hostPath:
+            path: /work/services/dds/downloads
+        - name: cache
+          hostPath:
+            path: /work/services/dds/cache
+        - name: data
+          hostPath:
+            path: /data

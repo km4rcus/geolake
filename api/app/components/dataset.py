@@ -24,7 +24,7 @@ class DatasetManager:
             f"Getting eligible products for user_id: {user_credentials.id}..."
         )
         AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore()
+        data_store = Datastore(cache_path='/cache')
         datasets = {}
         for dataset_id in data_store.dataset_list():
             eligible_products_for_dataset = (
@@ -45,7 +45,7 @@ class DatasetManager:
             f" dataset_id: {dataset_id}..."
         )
         AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore()
+        data_store = Datastore(cache_path='/cache')
         eligible_products_for_dataset = []
         for product_id in data_store.product_list(dataset_id=dataset_id):
             product_metadata = data_store.product_metadata(
@@ -70,7 +70,7 @@ class DatasetManager:
             f" {dataset_id}, product_id: {product_id}..."
         )
         AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore()
+        data_store = Datastore(cache_path='/cache')
         product_details = data_store.product_info(
             dataset_id=dataset_id, product_id=product_id
         )
@@ -140,7 +140,7 @@ class DatasetManager:
         query: GeoQuery,
     ):
         query_bytes_estimation = (
-            Datastore()
+            Datastore(cache_path='/cache')
             .query(dataset_id, product_id, query, compute=False)
             .get_nbytes()
         )
