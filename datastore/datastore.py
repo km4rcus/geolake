@@ -25,8 +25,9 @@ class Datastore(metaclass=Singleton):
                 "Missing required environment variable: 'CATALOG_PATH'"
             )
         cat = intake.open_catalog(os.environ["CATALOG_PATH"])
-        self.catalog = cat(CACHE_DIR=cache_path)
-
+#        self.catalog = cat(CACHE_DIR=cache_path)
+        self.catalog = cat
+        
     def dataset_list(self):
         return list(self.catalog)
 

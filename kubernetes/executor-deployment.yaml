@@ -41,7 +41,7 @@ spec:
               value: "5432"
             - name: POSTGRES_USER
               value: dds
-          image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a1
+          image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a2
           name: executor
           ports:
             - containerPort: 8787
@@ -56,7 +56,7 @@ spec:
             - mountPath: /catalog
               name: catalog
               readOnly: true
-            - mountPath: /cache
+            - mountPath: /work/services/dds/cache
               name: cache
               readOnly: true  
             - mountPath: /data
