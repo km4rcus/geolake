@@ -175,7 +175,9 @@ if __name__ == "__main__":
     store_path = os.getenv("STORE_PATH", ".")
     cache_path = os.getenv("CACHE_PATH", ".")
 
-    executor = Executor(broker=broker, store_path=store_path, cache_path=cache_path)
+    executor = Executor(
+        broker=broker, store_path=store_path, cache_path=cache_path
+    )
     print("channel subscribe")
     for etype in executor_types:
         if etype == "query":

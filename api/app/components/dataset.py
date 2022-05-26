@@ -24,7 +24,7 @@ class DatasetManager:
             f"Getting eligible products for user_id: {user_credentials.id}..."
         )
         AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore(cache_path='/cache')
+        data_store = Datastore(cache_path="/cache")
         datasets = {}
         for dataset_id in data_store.dataset_list():
             eligible_products_for_dataset = (
@@ -45,7 +45,7 @@ class DatasetManager:
             f" dataset_id: {dataset_id}..."
         )
         AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore(cache_path='/cache')
+        data_store = Datastore(cache_path="/cache")
         eligible_products_for_dataset = []
         for product_id in data_store.product_list(dataset_id=dataset_id):
             product_metadata = data_store.product_metadata(
@@ -70,7 +70,7 @@ class DatasetManager:
             f" {dataset_id}, product_id: {product_id}..."
         )
         AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore(cache_path='/cache')
+        data_store = Datastore(cache_path="/cache")
         product_details = data_store.product_info(
             dataset_id=dataset_id, product_id=product_id
         )
@@ -139,11 +139,24 @@ class DatasetManager:
         product_id: str,
         query: GeoQuery,
     ):
-        query_bytes_estimation = (
-            Datastore(cache_path='/cache')
-            .query(dataset_id, product_id, query, compute=False)
-            .get_nbytes()
-        )
+        try:
+            query_bytes_estimation = (
+                Datastore(cache_path="/cache")
+                .query(dataset_id, product_id, query, compute=False)
+                .get_nbytes()
+            )
+        except KeyError as e:
+            cls._LOG.error(
+                f"Dataset `{dataset_id}` or product `{product_id}` does not"
+                f" exist!. Error: {e}"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Dataset `{dataset_id}` or product `{product_id}` does"
+                    " not exist!"
+                ),
+            )
         return _make_bytes_readable_dict(bytes=query_bytes_estimation)
 
 

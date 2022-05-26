@@ -215,7 +215,7 @@ class DBManager(metaclass=Singleton):
             session.commit()
             return request.request_id
 
-    def get_request_status(self, request_id) -> Optional[RequestStatus]:
+    def get_request_status(self, request_id) -> None | RequestStatus:
         with self.__session_maker() as session:
             request = session.query(Request).get(request_id)
             if request is not None:

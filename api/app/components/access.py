@@ -22,6 +22,16 @@ class AccessManager:
             cls._LOG.debug(f"Authentication successful. User is anonymouse!")
             return True
         user = DBManager().get_user_details(user_credentials.id)
+        if user is None:
+            cls._LOG.info(
+                f"The user with id `{user_credentials.id}` does not exist!"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"The user with id `{user_credentials.id}` does not exist!"
+                ),
+            )
         if user.api_key != user_credentials.key:
             cls._LOG.info(
                 "Authentication failed! The key provided for the user_id"
