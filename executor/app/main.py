@@ -52,6 +52,9 @@ class Executor:
         self._db = DBManager()
 
     def create_dask_cluster(self, dask_cluster_opts):
+        self._LOG.info(
+            f"Creating Dask Cluster with options: {dask_cluster_opts}..."
+        )
         self._worker_id = self._db.create_worker(
             status="enabled",
             dask_scheduler_port=dask_cluster_opts["scheduler_port"],
@@ -62,6 +65,7 @@ class Executor:
             scheduler_port=dask_cluster_opts["scheduler_port"],
             dashboard_address=dask_cluster_opts["dashboard_address"],
         )
+        self._LOG.info("Creating Dask Client...")
         self._dask_client = Client(dask_cluster)
 
     def query_and_persist(self, ds_id, prod_id, query, compute, format):
@@ -69,6 +73,7 @@ class Executor:
         kube.persist(self._store, format=format)
 
     def estimate(self, channel, method, properties, body):
+        self._LOG.debug(f"Executing `estimate` for request: `{body}`")
         m = body.decode().split("\\")
         dataset_id = m[0]
         product_id = m[1]
@@ -80,7 +85,7 @@ class Executor:
             properties=pika.BasicProperties(
                 correlation_id=properties.correlation_id
             ),
-            body=str(kube.get_nbytes()),
+            body=str(kube.nbytes),
         )
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -116,6 +121,7 @@ class Executor:
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def query(self, channel, method, properties, body):
+        self._LOG.debug(f"Executing query: `{body}`...")
         m = body.decode().split("\\")
         request_id = m[0]
         dataset_id = m[1]
@@ -129,6 +135,7 @@ class Executor:
             status=RequestStatus.RUNNING,
         )
         # future = self._dask_client.submit(self.query_and_persist, dataset_id, product_id, query, False, format)
+        self._LOG.debug(f"Submitting job for request id: `{request_id}`...")
         future = self._dask_client.submit(
             ds_query,
             ds_id=dataset_id,
@@ -138,7 +145,14 @@ class Executor:
             request_id=request_id,
         )
         try:
+            self._LOG.debug(
+                f"Attempt to get result for for request id: `{request_id}`..."
+            )
             future.result()
+            self._LOG.debug(
+                "Updating status and download URI for request id:"
+                f" `{request_id}`..."
+            )
             self._db.update_request(
                 request_id=request_id,
                 worker_id=self._worker_id,

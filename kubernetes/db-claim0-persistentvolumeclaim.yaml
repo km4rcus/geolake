@@ -3,8 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   namespace: geodds
   labels:
-    geodds.service: db-claim0
-  name: db-claim0
+    geodds.service: db-claim1
+  name: db-claim1
 spec:
   accessModes:
     - ReadWriteOnce

@@ -14,7 +14,7 @@ from .singleton import Singleton
 
 class Datastore(metaclass=Singleton):
 
-    _LOG = logging.getLogger("DataStore")
+    _LOG = logging.getLogger("Datastore")
 
     def __init__(self, cache_path: str = "./") -> None:
         if "CATALOG_PATH" not in os.environ:
@@ -27,6 +27,16 @@ class Datastore(metaclass=Singleton):
         cat = intake.open_catalog(os.environ["CATALOG_PATH"])
         #        self.catalog = cat(CACHE_DIR=cache_path)
         self.catalog = cat
+
+    @staticmethod
+    def _maybe_convert_dict_slice_to_slice(dict_vals):
+        if "start" in dict_vals or "stop" in dict_vals:
+            return slice(
+                dict_vals.get("start"),
+                dict_vals.get("stop"),
+                dict_vals.get("step"),
+            )
+        return dict_vals
 
     def dataset_list(self):
         return list(self.catalog)
@@ -84,7 +94,13 @@ class Datastore(metaclass=Singleton):
         if query.locations:
             kube = kube.locations(**query.locations)
         if query.time:
-            kube = kube.sel(**{"time": query.time})
+            kube = kube.sel(
+                **{
+                    "time": Datastore._maybe_convert_dict_slice_to_slice(
+                        query.time
+                    )
+                }
+            )
         if query.vertical:
             kube = kube.sel(vertical=query.vertical, method="nearest")
         if compute:
