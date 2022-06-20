@@ -60,7 +60,7 @@ spec:
               readOnly: true
             - mountPath: /work/services/dds/cache
               name: cache
-              readOnly: false  
+              readOnly: true  
             - mountPath: /data
               name: data
               readOnly: true            
