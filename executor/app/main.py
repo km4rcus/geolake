@@ -20,6 +20,8 @@ import pika
 import logging
 from dask.distributed import Client, LocalCluster
 
+from geokube.core.datacube import DataCube
+
 from datastore.datastore import Datastore
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
@@ -31,11 +33,10 @@ def ds_query(ds_id, prod_id, query, compute, request_id):
     os.makedirs(res_path, exist_ok=True)
     ds = Datastore()
     kube = ds.query(ds_id, prod_id, query, compute)
-
-    kube.persist(res_path)
-    # after closing https://github.com/geokube/geokube/issues/146
-    # kube.persist(res_path, zip_if_many=True)
-    return kube
+    if isinstance(kube, DataCube):
+        return kube.persist(res_path)
+    else:
+        return kube.persist(res_path, zip_if_many=True)
 
 
 class Executor:
@@ -67,10 +68,6 @@ class Executor:
         )
         self._LOG.info("Creating Dask Client...")
         self._dask_client = Client(dask_cluster)
-
-    def query_and_persist(self, ds_id, prod_id, query, compute, format):
-        kube = self._datastore.query(ds_id, prod_id, query, compute)
-        kube.persist(self._store, format=format)
 
     def estimate(self, channel, method, properties, body):
         self._LOG.debug(f"Executing `estimate` for request: `{body}`")
@@ -134,7 +131,6 @@ class Executor:
             worker_id=self._worker_id,
             status=RequestStatus.RUNNING,
         )
-        # future = self._dask_client.submit(self.query_and_persist, dataset_id, product_id, query, False, format)
         self._LOG.debug(f"Submitting job for request id: `{request_id}`...")
         future = self._dask_client.submit(
             ds_query,
@@ -148,7 +144,7 @@ class Executor:
             self._LOG.debug(
                 f"Attempt to get result for for request id: `{request_id}`..."
             )
-            future.result()
+            location_path = future.result()
             self._LOG.debug(
                 "Updating status and download URI for request id:"
                 f" `{request_id}`..."
@@ -157,7 +153,8 @@ class Executor:
                 request_id=request_id,
                 worker_id=self._worker_id,
                 status=RequestStatus.DONE,
-                location_path=os.path.join(_BASE_DOWNLOAD_PATH, request_id),
+                location_path=location_path,
+                bytes_size=os.path.getsize(location_path),
             )
         except Exception as e:
             self._LOG.error(f"Failed due to error: {e}")

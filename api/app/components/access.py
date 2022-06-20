@@ -14,6 +14,14 @@ class AccessManager:
     _LOG = logging.getLogger("AccessManager")
 
     @classmethod
+    def assert_is_admin(cls, user_credentials: UserCredentials) -> bool:
+        if DBManager().get_user_role_name(user_credentials.id) != "admin":
+            raise HTTPException(
+                status_code=401,
+                detail=f"User `{user_credentials.id}` is not an admin!",
+            )
+
+    @classmethod
     def authenticate_user(cls, user_credentials: UserCredentials) -> bool:
         cls._LOG.debug(
             f"Authenticating the user with the user_id: {user_credentials.id}"

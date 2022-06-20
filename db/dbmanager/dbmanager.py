@@ -194,6 +194,7 @@ class DBManager(metaclass=Singleton):
         worker_id: int,
         status: RequestStatus,
         location_path: str = None,
+        bytes_size: int = None,
     ) -> int:
         with self.__session_maker() as session:
             download_id = None
@@ -203,6 +204,7 @@ class DBManager(metaclass=Singleton):
                     storage_id=0,
                     created_on=datetime.utcnow(),
                     download_uri=f"/download/{request_id}",
+                    bytes_size=bytes_size,
                 )
                 session.add(download)
                 session.commit()

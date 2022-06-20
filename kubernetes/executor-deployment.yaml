@@ -43,7 +43,7 @@ spec:
               value: dds
             - name: DASK_DASHBOARD_PORT
               value: "8787"
-          image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a11
+          image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a28
           name: executor
           ports:
             - containerPort: 8787
@@ -60,7 +60,7 @@ spec:
               readOnly: true
             - mountPath: /work/services/dds/cache
               name: cache
-              readOnly: true  
+              readOnly: false  
             - mountPath: /data
               name: data
               readOnly: true            

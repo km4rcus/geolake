@@ -33,9 +33,9 @@ class FileManager:
         download_details = db.get_download_details_for_request(
             request_id=request_id
         )
-        # NOTE: geokube persist method should result in single file
-        # zip archive if query results in many netcdf files
-        return os.path.join(
-            download_details.location_path,
-            os.listdir(download_details.location_path)[0],
-        )
+        if not os.path.exists(download_details.location_path):
+            cls._LOG.error(
+                f"File {download_details.location_path} does not exists!"
+            )
+            raise HTTPException(status_code=404, detail="File was not found!")
+        return download_details.location_path
