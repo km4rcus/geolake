@@ -42,9 +42,9 @@ spec:
               cpu: "500m"
           volumeMounts:
             - mountPath: /docker-entrypoint-initdb.d
-              name: db-claim0
+              name: db-claim1
       restartPolicy: Always
       volumes:
-        - name: db-claim0
+        - name: db-claim1
           persistentVolumeClaim:
-            claimName: db-claim0
+            claimName: db-claim1

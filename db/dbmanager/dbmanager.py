@@ -194,6 +194,7 @@ class DBManager(metaclass=Singleton):
         worker_id: int,
         status: RequestStatus,
         location_path: str = None,
+        bytes_size: int = None,
     ) -> int:
         with self.__session_maker() as session:
             download_id = None
@@ -203,6 +204,7 @@ class DBManager(metaclass=Singleton):
                     storage_id=0,
                     created_on=datetime.utcnow(),
                     download_uri=f"/download/{request_id}",
+                    bytes_size=bytes_size,
                 )
                 session.add(download)
                 session.commit()
@@ -215,13 +217,13 @@ class DBManager(metaclass=Singleton):
             session.commit()
             return request.request_id
 
-    def get_request_status(self, request_id) -> Optional[RequestStatus]:
+    def get_request_status(self, request_id) -> None | RequestStatus:
         with self.__session_maker() as session:
-            request = session.query(Request).get(request_id)
-            if request is not None:
+            if request := session.query(Request).get(request_id):
                 return RequestStatus(request.status)
-            else:
-                return None
+            raise IndexError(
+                f"Request with id: `{request_id}` does not exist!"
+            )
 
     def get_requests_for_user_id(self, user_id) -> list[Request]:
         with self.__session_maker() as session:
@@ -229,7 +231,12 @@ class DBManager(metaclass=Singleton):
 
     def get_download_details_for_request_id(self, request_id) -> str:
         with self.__session_maker() as session:
-            download_id = session.query(Request).get(request_id).download_id
+            request_details = session.query(Request).get(request_id)
+            if request_details is None:
+                raise IndexError(
+                    f"Request with id: `{request_id}` does not exist!"
+                )
+            download_id = request_details.download_id
             return session.query(Download).get(download_id)
 
     def create_worker(

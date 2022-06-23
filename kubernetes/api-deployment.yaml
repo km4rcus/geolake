@@ -42,7 +42,7 @@ spec:
             - name: POSTGRES_USER
               value: dds
           name: api
-          image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a2
+          image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a18
           ports:
             - containerPort: 80
           resources:
@@ -58,7 +58,7 @@ spec:
               readOnly: true
             - mountPath: /work/services/dds/cache
               name: cache
-              readOnly: true 
+              readOnly: false 
             - mountPath: /data
               name: data
               readOnly: true

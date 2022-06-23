@@ -18,6 +18,7 @@ class RequestManager:
         cls, user_credentials: UserCredentials
     ) -> list[DBManager.Request]:
         if user_credentials.is_public:
+            cls._LOG.debug("Attempt to get requests for anonymous user!")
             raise HTTPException(
                 status_code=401, detail="Anonymous user doesn't have requests!"
             )
@@ -29,8 +30,10 @@ class RequestManager:
     def get_request_status_for_request_id(
         cls, request_id: int
     ) -> DBManager.Request:
-        status = DBManager().get_request_status(request_id)
-        if status is None:
+        try:
+            status = DBManager().get_request_status(request_id)
+        except IndexError as e:
+            cls._LOG.error(f"Request with id: `{request_id}` was not found!")
             raise HTTPException(
                 status_code=400,
                 detail=f"Request with id: {request_id} does not exist!",
@@ -39,7 +42,27 @@ class RequestManager:
 
     @classmethod
     def get_request_uri_for_request_id(cls, request_id) -> str:
-        download_details = DBManager().get_download_details_for_request_id(
-            request_id
-        )
+        try:
+            download_details = DBManager().get_download_details_for_request_id(
+                request_id
+            )
+        except IndexError as e:
+            cls._LOG.error(f"Request with id: `{request_id}` was not found!")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Request with id: `{request_id}` does not exist",
+            )
+        if download_details is None:
+            request_status = DBManager().get_request_status(request_id)
+            cls._LOG.info(
+                f"Download URI not found for request id: `{request_id}`."
+                f" Request status is `{request_status}`"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Request with id: `{request_id}` does not have download"
+                    f" URI. It has status: `{request_status}`!"
+                ),
+            )
         return download_details.download_uri

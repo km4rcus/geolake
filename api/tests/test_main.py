@@ -17,7 +17,7 @@ def test_get_only_eligible_datasets(
     client, access_manager, data_store, user_credentials
 ):
     response = client.get("/datasets", headers={"User-Token": "1:1234"}).json()
-    data_store.dataset_list.assert_called_once()
+    data_store.dataset_list.assert_called()
     access_manager.is_user_eligible_for_role.assert_any_call(
         user_credentials=ANY, product_role_name="public"
     )
@@ -25,7 +25,7 @@ def test_get_only_eligible_datasets(
         user_credentials=ANY, product_role_name="internal"
     )
     access_manager.authenticate_user.assert_called()
-    data_store.dataset_list.assert_called_once()
+    data_store.dataset_list.assert_called()
     data_store.product_list.assert_any_call(dataset_id="e-obs")
     data_store.product_list.assert_any_call(dataset_id="era5")
     assert "e-obs" in response
@@ -203,3 +203,35 @@ def test_fail_to_get_requests_details_for_anonymous_user(
     response = client.get("requests")
     assert response.status_code == 401
     assert response.json()["detail"] == "Anonymous user doesn't have requests!"
+
+
+def test_fail_to_get_details_of_not_existing_product(
+    client,
+    access_manager,
+    data_store,
+    file_manager,
+    file_response,
+    user_credentials,
+):
+    response = client.get(
+        "/datasets/e-obs/not-existing", headers={"User-Token": "1:1234"}
+    )
+    access_manager.authenticate_user.assert_called_once()
+    access_manager.is_user_eligible_for_role.assert_not_called()
+    assert response.status_code == 400
+
+
+def test_fail_to_get_details_of_not_existing_dataset(
+    client,
+    access_manager,
+    data_store,
+    file_manager,
+    file_response,
+    user_credentials,
+):
+    response = client.get(
+        "/datasets/not-existing", headers={"User-Token": "1:1234"}
+    )
+    access_manager.authenticate_user.assert_called_once()
+    access_manager.is_user_eligible_for_role.assert_not_called()
+    assert response.status_code == 400

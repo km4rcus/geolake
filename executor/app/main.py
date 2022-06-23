@@ -20,6 +20,8 @@ import pika
 import logging
 from dask.distributed import Client, LocalCluster
 
+from geokube.core.datacube import DataCube
+
 from datastore.datastore import Datastore
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
@@ -31,11 +33,10 @@ def ds_query(ds_id, prod_id, query, compute, request_id):
     os.makedirs(res_path, exist_ok=True)
     ds = Datastore()
     kube = ds.query(ds_id, prod_id, query, compute)
-
-    kube.persist(res_path)
-    # after closing https://github.com/geokube/geokube/issues/146
-    # kube.persist(res_path, zip_if_many=True)
-    return kube
+    if isinstance(kube, DataCube):
+        return kube.persist(res_path)
+    else:
+        return kube.persist(res_path, zip_if_many=True)
 
 
 class Executor:
@@ -52,6 +53,9 @@ class Executor:
         self._db = DBManager()
 
     def create_dask_cluster(self, dask_cluster_opts):
+        self._LOG.info(
+            f"Creating Dask Cluster with options: {dask_cluster_opts}..."
+        )
         self._worker_id = self._db.create_worker(
             status="enabled",
             dask_scheduler_port=dask_cluster_opts["scheduler_port"],
@@ -62,13 +66,11 @@ class Executor:
             scheduler_port=dask_cluster_opts["scheduler_port"],
             dashboard_address=dask_cluster_opts["dashboard_address"],
         )
+        self._LOG.info("Creating Dask Client...")
         self._dask_client = Client(dask_cluster)
 
-    def query_and_persist(self, ds_id, prod_id, query, compute, format):
-        kube = self._datastore.query(ds_id, prod_id, query, compute)
-        kube.persist(self._store, format=format)
-
     def estimate(self, channel, method, properties, body):
+        self._LOG.debug(f"Executing `estimate` for request: `{body}`")
         m = body.decode().split("\\")
         dataset_id = m[0]
         product_id = m[1]
@@ -80,7 +82,7 @@ class Executor:
             properties=pika.BasicProperties(
                 correlation_id=properties.correlation_id
             ),
-            body=str(kube.get_nbytes()),
+            body=str(kube.nbytes),
         )
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -116,6 +118,7 @@ class Executor:
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def query(self, channel, method, properties, body):
+        self._LOG.debug(f"Executing query: `{body}`...")
         m = body.decode().split("\\")
         request_id = m[0]
         dataset_id = m[1]
@@ -128,7 +131,7 @@ class Executor:
             worker_id=self._worker_id,
             status=RequestStatus.RUNNING,
         )
-        # future = self._dask_client.submit(self.query_and_persist, dataset_id, product_id, query, False, format)
+        self._LOG.debug(f"Submitting job for request id: `{request_id}`...")
         future = self._dask_client.submit(
             ds_query,
             ds_id=dataset_id,
@@ -138,12 +141,20 @@ class Executor:
             request_id=request_id,
         )
         try:
-            future.result()
+            self._LOG.debug(
+                f"Attempt to get result for for request id: `{request_id}`..."
+            )
+            location_path = future.result()
+            self._LOG.debug(
+                "Updating status and download URI for request id:"
+                f" `{request_id}`..."
+            )
             self._db.update_request(
                 request_id=request_id,
                 worker_id=self._worker_id,
                 status=RequestStatus.DONE,
-                location_path=os.path.join(_BASE_DOWNLOAD_PATH, request_id),
+                location_path=location_path,
+                bytes_size=os.path.getsize(location_path),
             )
         except Exception as e:
             self._LOG.error(f"Failed due to error: {e}")
@@ -175,7 +186,9 @@ if __name__ == "__main__":
     store_path = os.getenv("STORE_PATH", ".")
     cache_path = os.getenv("CACHE_PATH", ".")
 
-    executor = Executor(broker=broker, store_path=store_path, cache_path=cache_path)
+    executor = Executor(
+        broker=broker, store_path=store_path, cache_path=cache_path
+    )
     print("channel subscribe")
     for etype in executor_types:
         if etype == "query":
