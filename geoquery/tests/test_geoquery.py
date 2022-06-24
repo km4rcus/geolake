@@ -52,3 +52,14 @@ def test_convert_extra_to_filters():
     assert query.locations == {"latitude": 10, "longitude": 25}
     assert isinstance(query.filters, dict)
     assert query.filters == {"resolution": "0.1", "version": "5"}
+
+
+def test_emtpy_filters():
+    query_dict = {
+        "variable": ["wind_speed"],
+        "locations": {"latitude": 10, "longitude": 25},
+        "time": {"start": "2012-01-01", "stop": "2012-01-15"},
+    }
+    query = GeoQuery(**query_dict)
+    assert isinstance(query.filters, dict)
+    assert len(query.filters) == 0

@@ -10,6 +10,7 @@ class GeoQuery(BaseModel):
     area: Optional[Dict[str, float]]
     locations: Optional[Dict[str, Union[float, List[float]]]]
     vertical: Optional[Union[float, List[float]]]
+    filters: Optional[Dict]
 
     # TODO: Check if we are going to allow the vertical coordinates inside both
     # `area`/`locations` nad `vertical`
