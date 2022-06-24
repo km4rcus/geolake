@@ -44,9 +44,11 @@ def test_attrs_parsing():
 def test_convert_extra_to_filters():
     query_dict = {
         "resolution": "0.1",
+        "version": "5",
         "locations": {"latitude": 10, "longitude": 25},
     }
     query = GeoQuery(**query_dict)
     assert len(query.__dict__) == 6
     assert query.locations == {"latitude": 10, "longitude": 25}
-    assert query.filters == {"resolution": "0.1"}
+    assert isinstance(query.filters, dict)
+    assert query.filters == {"resolution": "0.1", "version": "5"}
