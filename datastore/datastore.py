@@ -85,8 +85,7 @@ class Datastore(metaclass=Singleton):
             query = GeoQuery(**query)
         kube = self.catalog[dataset][product].read_chunked()
         if isinstance(kube, Dataset):
-            # TODO: Check if `filters` are going to be dropped from `GeoQuery`
-            kube = kube.filter(query.filters)
+            kube = kube.filter(**query.filters)
         if query.variable:
             kube = kube[query.variable]
         if query.area:
