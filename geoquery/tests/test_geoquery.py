@@ -26,7 +26,7 @@ def test_raise_when_location_and_area():
         "locations": {"latitude": 10, "longitude": 25},
     }
     with pytest.raises(
-        KeyError, match=r"rea and locations couldn't be processed together*"
+        KeyError, match=r"area and locations couldn't be processed together*"
     ):
         _ = GeoQuery(**query_dict)
 

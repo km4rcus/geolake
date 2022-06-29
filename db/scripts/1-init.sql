@@ -36,10 +36,11 @@ CREATE TABLE IF NOT EXISTS requests (
     dataset VARCHAR(255),
     product VARCHAR(255), 
     query json,
-    estimate_bytes_size INT,
+    estimate_size_kb INT,
     download_id INT UNIQUE,
     created_on TIMESTAMP NOT NULL,
     last_update TIMESTAMP,
+    fail_reason VARCHAR(1000),
     CONSTRAINT fk_user
         FOREIGN KEY(user_id) 
 	        REFERENCES users(user_id),
@@ -53,7 +54,7 @@ CREATE TABLE IF NOT EXISTS downloads (
     download_uri VARCHAR(255),
     storage_id INT,
     location_path VARCHAR(255),
-    bytes_size INT,
+    size_kb INT,
     created_on TIMESTAMP NOT NULL
 );
 

@@ -17,6 +17,7 @@ from sqlalchemy import (
     Sequence,
     String,
     Table,
+    BigInteger,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
@@ -77,10 +78,11 @@ class Request(Base):
     dataset = Column(String(255))
     product = Column(String(255))
     query = Column(JSON())
-    estimate_bytes_size = Column(Integer)
+    estimate_size_kb = Column(Integer)
     download_id = Column(Integer, unique=True)
     created_on = Column(DateTime, nullable=False)
     last_update = Column(DateTime)
+    fail_reason = Column(String(1000))
 
 
 class Download(Base):
@@ -89,7 +91,7 @@ class Download(Base):
     download_uri = Column(String(255))
     storage_id = Column(Integer)
     location_path = Column(String(255))
-    bytes_size = Column(Integer)
+    size_kb = Column(Integer)
     created_on = Column(DateTime, nullable=False)
 
 
@@ -166,7 +168,7 @@ class DBManager(metaclass=Singleton):
         query: str | None = None,
         worker_id: int | None = None,
         priority: str | None = None,
-        estimate_bytes_size: int | None = None,
+        estimate_size_kb: int | None = None,
         download_id: int | None = None,
         status: RequestStatus = RequestStatus.PENDING,
     ) -> int:
@@ -180,7 +182,7 @@ class DBManager(metaclass=Singleton):
                 dataset=dataset,
                 product=product,
                 query=query,
-                estimate_bytes_size=estimate_bytes_size,
+                estimate_size_kb=estimate_size_kb,
                 download_id=download_id,
                 created_on=datetime.utcnow(),
             )
@@ -194,7 +196,8 @@ class DBManager(metaclass=Singleton):
         worker_id: int,
         status: RequestStatus,
         location_path: str = None,
-        bytes_size: int = None,
+        size_kb: int = None,
+        fail_reason: str = None,
     ) -> int:
         with self.__session_maker() as session:
             download_id = None
@@ -204,7 +207,7 @@ class DBManager(metaclass=Singleton):
                     storage_id=0,
                     created_on=datetime.utcnow(),
                     download_uri=f"/download/{request_id}",
-                    bytes_size=bytes_size,
+                    size_kb=size_kb,
                 )
                 session.add(download)
                 session.commit()
@@ -214,6 +217,7 @@ class DBManager(metaclass=Singleton):
             request.worker_id = worker_id
             request.last_update = datetime.utcnow()
             request.download_id = download_id
+            request.fail_reason = fail_reason
             session.commit()
             return request.request_id
 

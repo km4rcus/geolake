@@ -154,7 +154,7 @@ class Executor:
                 worker_id=self._worker_id,
                 status=RequestStatus.DONE,
                 location_path=location_path,
-                bytes_size=os.path.getsize(location_path),
+                size_kb=os.path.getsize(location_path) / 1024,
             )
         except Exception as e:
             self._LOG.error(f"Failed due to error: {e}")
@@ -162,6 +162,7 @@ class Executor:
                 request_id=request_id,
                 worker_id=self._worker_id,
                 status=RequestStatus.FAILED,
+                fail_reason=f"{type(e)}: {str(e)}",
             )
 
         channel.basic_ack(delivery_tag=method.delivery_tag)
