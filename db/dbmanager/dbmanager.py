@@ -78,7 +78,7 @@ class Request(Base):
     dataset = Column(String(255))
     product = Column(String(255))
     query = Column(JSON())
-    estimate_size_kb = Column(Integer)
+    estimate_size_bytes = Column(Integer)
     download_id = Column(Integer, unique=True)
     created_on = Column(DateTime, nullable=False)
     last_update = Column(DateTime)
@@ -91,7 +91,7 @@ class Download(Base):
     download_uri = Column(String(255))
     storage_id = Column(Integer)
     location_path = Column(String(255))
-    size_kb = Column(Integer)
+    size_bytes = Column(Integer)
     created_on = Column(DateTime, nullable=False)
 
 
@@ -168,7 +168,7 @@ class DBManager(metaclass=Singleton):
         query: str | None = None,
         worker_id: int | None = None,
         priority: str | None = None,
-        estimate_size_kb: int | None = None,
+        estimate_size_bytes: int | None = None,
         download_id: int | None = None,
         status: RequestStatus = RequestStatus.PENDING,
     ) -> int:
@@ -182,7 +182,7 @@ class DBManager(metaclass=Singleton):
                 dataset=dataset,
                 product=product,
                 query=query,
-                estimate_size_kb=estimate_size_kb,
+                estimate_size_bytes=estimate_size_bytes,
                 download_id=download_id,
                 created_on=datetime.utcnow(),
             )
@@ -196,7 +196,7 @@ class DBManager(metaclass=Singleton):
         worker_id: int,
         status: RequestStatus,
         location_path: str = None,
-        size_kb: int = None,
+        size_bytes: int = None,
         fail_reason: str = None,
     ) -> int:
         with self.__session_maker() as session:
@@ -207,7 +207,7 @@ class DBManager(metaclass=Singleton):
                     storage_id=0,
                     created_on=datetime.utcnow(),
                     download_uri=f"/download/{request_id}",
-                    size_kb=size_kb,
+                    size_bytes=size_bytes,
                 )
                 session.add(download)
                 session.commit()
@@ -221,10 +221,12 @@ class DBManager(metaclass=Singleton):
             session.commit()
             return request.request_id
 
-    def get_request_status(self, request_id) -> None | RequestStatus:
+    def get_request_status_and_reason(
+        self, request_id
+    ) -> None | RequestStatus:
         with self.__session_maker() as session:
             if request := session.query(Request).get(request_id):
-                return RequestStatus(request.status)
+                return RequestStatus(request.status), request.fail_reason
             raise IndexError(
                 f"Request with id: `{request_id}` does not exist!"
             )

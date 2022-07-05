@@ -6,10 +6,11 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
+from .logger_mixin import LoggerMixin
 from ..util import UserCredentials
 
 
-class RequestManager:
+class RequestManager(LoggerMixin):
 
     _LOG = logging.getLogger("RequestManager")
 
@@ -31,14 +32,16 @@ class RequestManager:
         cls, request_id: int
     ) -> DBManager.Request:
         try:
-            status = DBManager().get_request_status(request_id)
+            status, reason = DBManager().get_request_status_and_reason(
+                request_id
+            )
         except IndexError as e:
             cls._LOG.error(f"Request with id: `{request_id}` was not found!")
             raise HTTPException(
                 status_code=400,
                 detail=f"Request with id: {request_id} does not exist!",
             )
-        return status
+        return status, reason
 
     @classmethod
     def get_request_uri_for_request_id(cls, request_id) -> str:
@@ -53,7 +56,10 @@ class RequestManager:
                 detail=f"Request with id: `{request_id}` does not exist",
             )
         if download_details is None:
-            request_status = DBManager().get_request_status(request_id)
+            (
+                request_status,
+                fail_reason,
+            ) = DBManager().get_request_status_and_reason(request_id)
             cls._LOG.info(
                 f"Download URI not found for request id: `{request_id}`."
                 f" Request status is `{request_status}`"

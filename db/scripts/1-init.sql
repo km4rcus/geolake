@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS requests (
     dataset VARCHAR(255),
     product VARCHAR(255), 
     query json,
-    estimate_size_kb INT,
+    estimate_size_bytes BIGINT,
     download_id INT UNIQUE,
     created_on TIMESTAMP NOT NULL,
     last_update TIMESTAMP,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS downloads (
     download_uri VARCHAR(255),
     storage_id INT,
     location_path VARCHAR(255),
-    size_kb INT,
+    size_bytes BIGINT,
     created_on TIMESTAMP NOT NULL
 );
 
