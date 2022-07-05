@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from enum import Enum
 from pydantic import BaseModel
 
-from db.dbmanager.dbmanager import DBManager
+from db.dbmanager.dbmanager import DBManager, RequestStatus
 from geoquery.geoquery import GeoQuery
 
 from .components.access import AccessManager
@@ -254,7 +254,7 @@ async def get_request_status(request_id: int):
     Returns
     -------
     status : dict
-        Dictionary representing enum value and member name of the status, e.g. {3: "DONE"}
+        Dictionary representing status and fail reason (if applicable)
 
     Raises
     ------
@@ -262,10 +262,13 @@ async def get_request_status(request_id: int):
         400 if user was not authenticated properly or request with request_id does not exist
     """
     # NOTE: no auth required for checking status
-    status = RequestManager.get_request_status_for_request_id(
+    status, reason = RequestManager.get_request_status_for_request_id(
         request_id=request_id
     )
-    return {status.value: status.name}
+    if status is RequestStatus.FAILED:
+        return {"status": status.name, "fail_reason": reason}
+    else:
+        return {"status": status.name}
 
 
 @app.get("/download/{request_id}")
@@ -273,7 +276,7 @@ async def download_request_result(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    """Download result of the resuest.
+    """Download result of the request.
 
     Parameters
     ----------
@@ -317,7 +320,7 @@ async def get_request_uri(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    """Get download URI for the requst
+    """Get download URI for the request
 
     Parameters
     ----------

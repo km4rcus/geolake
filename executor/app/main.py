@@ -25,7 +25,7 @@ from geokube.core.datacube import DataCube
 from datastore.datastore import Datastore
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
-_BASE_DOWNLOAD_PATH = os.path.join("..", "downloads")
+_BASE_DOWNLOAD_PATH = "/downloads"
 
 
 def ds_query(ds_id, prod_id, query, compute, request_id):
@@ -69,54 +69,6 @@ class Executor:
         self._LOG.info("Creating Dask Client...")
         self._dask_client = Client(dask_cluster)
 
-    def estimate(self, channel, method, properties, body):
-        self._LOG.debug(f"Executing `estimate` for request: `{body}`")
-        m = body.decode().split("\\")
-        dataset_id = m[0]
-        product_id = m[1]
-        query = m[2]
-        kube = self._datastore.query(dataset_id, product_id, query)
-        channel.basic_publish(
-            exchange="",
-            routing_key=properties.reply_to,
-            properties=pika.BasicProperties(
-                correlation_id=properties.correlation_id
-            ),
-            body=str(kube.nbytes),
-        )
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-
-    def info(self, channel, method, properties, body):
-        m = body.decode().split("\\")
-        oper = m[0]  # could be list or info
-        if oper == "list":
-            if len(m) == 1:  # list datasets
-                response = json.loads(self._datastore.dataset_list())
-            if len(m) == 2:  # list dataset products
-                dataset_id = m[1]
-                response = json.loads(self._datastore.product_list(dataset_id))
-
-        if oper == "info":
-            if len(m) == 2:  # dataset info
-                dataset_id = m[1]
-                response = json.loads(self._datastore.dataset_info(dataset_id))
-            if len(m) == 3:  # product info
-                dataset_id = m[1]
-                product_id = m[2]
-                response = json.loads(
-                    self._datastore.product_info(dataset_id, product_id)
-                )
-
-        channel.basic_publish(
-            exchange="",
-            routing_key=properties.reply_to,
-            properties=pika.BasicProperties(
-                correlation_id=properties.correlation_id
-            ),
-            body=response,
-        )
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-
     def query(self, channel, method, properties, body):
         self._LOG.debug(f"Executing query: `{body}`...")
         m = body.decode().split("\\")
@@ -126,6 +78,7 @@ class Executor:
         query = m[3]
         format = m[4]
 
+        # TODO: estimation size should be updated, too
         self._db.update_request(
             request_id=request_id,
             worker_id=self._worker_id,
@@ -154,7 +107,7 @@ class Executor:
                 worker_id=self._worker_id,
                 status=RequestStatus.DONE,
                 location_path=location_path,
-                size_kb=os.path.getsize(location_path) / 1024,
+                size_bytes=os.path.getsize(location_path),
             )
         except Exception as e:
             self._LOG.error(f"Failed due to error: {e}")

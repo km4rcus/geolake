@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import logging
 import pika
 from fastapi import HTTPException
@@ -8,11 +9,12 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
+from .logger_mixin import LoggerMixin
 from ..datastore.datastore import Datastore
 from ..util import UserCredentials
 
 
-class DatasetManager:
+class DatasetManager(LoggerMixin):
 
     _LOG = logging.getLogger("DatasetManager")
 
