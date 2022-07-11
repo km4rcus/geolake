@@ -6,10 +6,12 @@ from zipfile import ZipFile
 
 from fastapi import HTTPException
 
+from .logger_mixin import LoggerMixin
+
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
 
-class FileManager:
+class FileManager(LoggerMixin):
 
     _LOG = logging.getLogger("FileManager")
 
@@ -17,7 +19,10 @@ class FileManager:
     def prepare_request_for_download_and_get_path(cls, request_id: str | int):
         cls._LOG.debug(f"Preparing downloads for request id: {request_id}...")
         db = DBManager()
-        request_status = DBManager().get_request_status(request_id=request_id)
+        (
+            request_status,
+            fail_reason,
+        ) = DBManager().get_request_status_and_reason(request_id=request_id)
         if request_status is not RequestStatus.DONE:
             cls._LOG.debug(
                 f"Request with id: {request_id} does not exist or it is not"
