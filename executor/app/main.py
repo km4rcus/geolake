@@ -107,20 +107,22 @@ class Executor:
             )
             status = RequestStatus.FAILED
             fail_reason = f"{type(e)}: {str(e)}"
-        if location_path:
-            self._LOG.debug(
-                "Updating status and download URI for request id:"
-                f" `{request_id}`..."
-            )
-            status = RequestStatus.DONE
         else:
-            self._LOG.warning(
-                f"Location path is `None`. Resulting Dataset was empty!"
-            )
-            status = RequestStatus.FAILED
-            fail_reason = (
-                "The query resulted in an empty Dataset. Check your request!"
-            )
+            if location_path:
+                self._LOG.debug(
+                    "Updating status and download URI for request id:"
+                    f" `{request_id}`..."
+                )
+                status = RequestStatus.DONE
+            else:
+                self._LOG.warning(
+                    f"Location path is `None`. Resulting Dataset was empty!"
+                )
+                status = RequestStatus.FAILED
+                fail_reason = (
+                    "The query resulted in an empty Dataset. Check your"
+                    " request!"
+                )
 
         self._db.update_request(
             request_id=request_id,
