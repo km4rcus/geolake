@@ -18,6 +18,7 @@ import os
 import json
 import pika
 import logging
+import traceback
 from dask.distributed import Client, LocalCluster
 
 from geokube.core.datacube import DataCube
@@ -93,30 +94,42 @@ class Executor:
             compute=False,
             request_id=request_id,
         )
+        status = fail_reason = location_path = None
         try:
             self._LOG.debug(
                 f"Attempt to get result for for request id: `{request_id}`..."
             )
             location_path = future.result()
+        except Exception as e:
+            self._LOG.error(
+                f"Failed due to error: {e}. Traceback:"
+                f" {traceback.format_exc()}"
+            )
+            status = RequestStatus.FAILED
+            fail_reason = f"{type(e)}: {str(e)}"
+        if location_path:
             self._LOG.debug(
                 "Updating status and download URI for request id:"
                 f" `{request_id}`..."
             )
-            self._db.update_request(
-                request_id=request_id,
-                worker_id=self._worker_id,
-                status=RequestStatus.DONE,
-                location_path=location_path,
-                size_bytes=os.path.getsize(location_path),
+            status = RequestStatus.DONE
+        else:
+            self._LOG.warning(
+                f"Location path is `None`. Resulting Dataset was empty!"
             )
-        except Exception as e:
-            self._LOG.error(f"Failed due to error: {e}")
-            self._db.update_request(
-                request_id=request_id,
-                worker_id=self._worker_id,
-                status=RequestStatus.FAILED,
-                fail_reason=f"{type(e)}: {str(e)}",
+            status = RequestStatus.FAILED
+            fail_reason = (
+                "The query resulted in an empty Dataset. Check your request!"
             )
+
+        self._db.update_request(
+            request_id=request_id,
+            worker_id=self._worker_id,
+            status=status,
+            location_path=location_path,
+            size_bytes=self.get_size(location_path),
+            fail_reason=fail_reason,
+        )
 
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -131,6 +144,11 @@ class Executor:
     def listen(self):
         while True:
             self._channel.start_consuming()
+
+    def get_size(self, location_path):
+        if location_path and os.path.exists(location_path):
+            return os.path.getsize(location_path)
+        return None
 
 
 if __name__ == "__main__":
