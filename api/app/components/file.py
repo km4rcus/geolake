@@ -6,12 +6,10 @@ from zipfile import ZipFile
 
 from fastapi import HTTPException
 
-from .logger_mixin import LoggerMixin
-
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
 
-class FileManager(LoggerMixin):
+class FileManager:
 
     _LOG = logging.getLogger("FileManager")
 

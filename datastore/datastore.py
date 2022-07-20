@@ -4,6 +4,7 @@ import os
 import intake
 import json
 import logging
+import traceback
 
 from geokube.core.datacube import DataCube
 from geokube.core.dataset import Dataset
@@ -27,6 +28,44 @@ class Datastore(metaclass=Singleton):
         cat = intake.open_catalog(os.environ["CATALOG_PATH"])
         #        self.catalog = cat(CACHE_DIR=cache_path)
         self.catalog = cat
+        # NOTE: for executor we cannot preload cache as it exceeds memory!
+        self.cache = None
+
+    def get_cached_product(self, dataset_id, product_id):
+        if self.cache is None:
+            self.cache = {}
+            self._load_cache()
+        if (
+            dataset_id not in self.cache
+            or product_id not in self.cache[dataset_id]
+        ):
+            self._LOG.warning(
+                f"Dataset `{dataset_id}` or product `{product_id}` not found"
+                " in cache! Reading product!"
+            )
+            self.cache[dataset_id][product_id] = self.catalog[dataset_id][
+                product_id
+            ].read_chunked()
+        return self.cache[dataset_id][product_id]
+
+    def _load_cache(self):
+        for i, dataset_id in enumerate(self.dataset_list()):
+            self._LOG.info(
+                "Loading cache for"
+                f" {dataset_id} ({i+1}/{len(self.dataset_list())})"
+            )
+            self.cache[dataset_id] = {}
+            for product_id in self.product_list(dataset_id):
+                try:
+                    self.cache[dataset_id][product_id] = self.catalog[
+                        dataset_id
+                    ][product_id].read_chunked()
+                except ValueError as err:
+                    self._LOG.error(
+                        f"Failed to load cache for `{dataset_id}.{product_id}`"
+                        f" due to error: {err}. Traceback:"
+                        f" {traceback.format_exc()}"
+                    )
 
     @staticmethod
     def _maybe_convert_dict_slice_to_slice(dict_vals):
@@ -44,25 +83,35 @@ class Datastore(metaclass=Singleton):
     def product_list(self, dataset_id: str):
         return list(self.catalog[dataset_id])
 
-    def dataset_info(self, dataset_id: str):
+    def dataset_info(self, dataset_id: str, use_cache: bool = True):
         info = {}
         entry = self.catalog[dataset_id]
         if entry.metadata:
             info["metadata"] = entry.metadata
         info["products"] = {}
-        for p in self.products():
-            info["products"][p] = self.product_info()
+        for p in self.catalog[dataset_id]:
+            info["products"][p] = self.product_info(
+                dataset_id, product_id, use_cache
+            )
 
     def product_metadata(self, dataset_id: str, product_id: str):
         return self.catalog[dataset_id][product_id].metadata
 
-    def product_info(self, dataset_id: str, product_id: str):
+    def product_info(
+        self, dataset_id: str, product_id: str, use_cache: bool = False
+    ):
         info = {}
         entry = self.catalog[dataset_id][product_id]
         if entry.metadata:
             info["metadata"] = entry.metadata
-        # TODO: returns list of dict rather than dict!
-        info.update(entry.read_chunked().to_dict()[0])
+        if use_cache:
+            info["data"] = self.get_cached_product(
+                dataset_id, product_id
+            ).to_dict()
+        else:
+            info["data"] = (
+                self.catalog[dataset_id][product_id].read_chunked().to_dict()
+            )
         return info
 
     def query(
@@ -83,6 +132,7 @@ class Datastore(metaclass=Singleton):
             query = json.loads(query)
         if isinstance(query, dict):
             query = GeoQuery(**query)
+        # NOTE: we always use catalog directly and single product cache
         kube = self.catalog[dataset][product].read_chunked()
         if isinstance(kube, Dataset):
             kube = kube.filter(**query.filters)

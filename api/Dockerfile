@@ -7,7 +7,7 @@ COPY geokube_packages/geokube-0.2a0-py3-none-any.whl /code
 COPY geokube_packages/intake_geokube-0.1a0-py3-none-any.whl /code
 RUN pip install /code/geokube-0.2a0-py3-none-any.whl
 RUN pip install /code/intake_geokube-0.1a0-py3-none-any.whl
-RUN conda install -c anaconda psycopg2
+# RUN conda install -c anaconda psycopg2
 COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
 COPY ./datastore /code/app/datastore
 COPY ./db/dbmanager /code/db/dbmanager
