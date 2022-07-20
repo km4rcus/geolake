@@ -43,14 +43,14 @@ spec:
           value: '5432'
         - name: POSTGRES_USER
           value: dds
-        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a89
+        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a92
         name: api
         ports:
         - containerPort: 80
         resources:
           limits:
             cpu: 500m
-            memory: 4Gi 
+            memory: 4Gi
           requests:
             cpu: 250m
             memory: 4Gi

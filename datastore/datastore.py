@@ -35,6 +35,17 @@ class Datastore(metaclass=Singleton):
         if self.cache is None:
             self.cache = {}
             self._load_cache()
+        if (
+            dataset_id not in self.cache
+            or product_id not in self.cache[dataset_id]
+        ):
+            self._LOG.warning(
+                f"Dataset `{dataset_id}` or product `{product_id}` not found"
+                " in cache! Reading product!"
+            )
+            self.cache[dataset_id][product_id] = self.catalog[dataset_id][
+                product_id
+            ].read_chunked()
         return self.cache[dataset_id][product_id]
 
     def _load_cache(self):
@@ -122,8 +133,7 @@ class Datastore(metaclass=Singleton):
         if isinstance(query, dict):
             query = GeoQuery(**query)
         # NOTE: we always use catalog directly and single product cache
-        kube = self.get_cached_product(dataset, product).read_chunked()
-        # kube = self.catalog[dataset][product].read_chunked()
+        kube = self.catalog[dataset][product].read_chunked()
         if isinstance(kube, Dataset):
             kube = kube.filter(**query.filters)
         if query.variable:
