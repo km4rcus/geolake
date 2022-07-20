@@ -6,11 +6,10 @@ import logging
 from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager
 
-from .logger_mixin import LoggerMixin
 from ..util import UserCredentials
 
 
-class AccessManager(LoggerMixin):
+class AccessManager:
 
     _LOG = logging.getLogger("AccessManager")
 

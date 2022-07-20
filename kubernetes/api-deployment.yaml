@@ -30,7 +30,7 @@ spec:
         - '80'
         env:
         - name: LOGGING_LEVEL
-          value: DEBUG
+          value: INFO
         - name: CATALOG_PATH
           value: /catalog/catalog.yaml
         - name: POSTGRES_DB
@@ -43,7 +43,7 @@ spec:
           value: '5432'
         - name: POSTGRES_USER
           value: dds
-        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a59
+        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a89
         name: api
         ports:
         - containerPort: 80

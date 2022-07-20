@@ -84,7 +84,7 @@ def _get_prods_for_ds(dataset_id):
         return ["reanalysis"]
 
 
-def _get_prods_info(dataset_id, product_id):
+def _get_prods_info(dataset_id, product_id, use_cache):
     role = _get_prods_meta(dataset_id, product_id)
     return {"metadata": role}
 

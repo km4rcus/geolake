@@ -6,11 +6,10 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
-from .logger_mixin import LoggerMixin
 from ..util import UserCredentials
 
 
-class RequestManager(LoggerMixin):
+class RequestManager:
 
     _LOG = logging.getLogger("RequestManager")
 

@@ -9,17 +9,16 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
-from .logger_mixin import LoggerMixin
 from ..datastore.datastore import Datastore
 from ..util import UserCredentials
 
 
-class DatasetManager(LoggerMixin):
+class DatasetManager:
 
     _LOG = logging.getLogger("DatasetManager")
 
     @classmethod
-    def assert_product_exist(cls, dataset_id, product_id: None | str = None):
+    def assert_product_exists(cls, dataset_id, product_id: None | str = None):
         ds = Datastore(cache_path="/cache")
         if dataset_id not in ds.dataset_list():
             cls._LOG.info(
@@ -79,7 +78,7 @@ class DatasetManager(LoggerMixin):
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore(cache_path="/cache")
         eligible_products_for_dataset = []
-        cls.assert_product_exist(dataset_id=dataset_id)
+        cls.assert_product_exists(dataset_id=dataset_id)
         for product_id in data_store.product_list(dataset_id=dataset_id):
             product_metadata = data_store.product_metadata(
                 dataset_id=dataset_id, product_id=product_id
@@ -104,9 +103,9 @@ class DatasetManager(LoggerMixin):
         )
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore(cache_path="/cache")
-        cls.assert_product_exist(dataset_id=dataset_id, product_id=product_id)
+        cls.assert_product_exists(dataset_id=dataset_id, product_id=product_id)
         product_details = data_store.product_info(
-            dataset_id=dataset_id, product_id=product_id
+            dataset_id=dataset_id, product_id=product_id, use_cache=True
         )
         if AccessManager.is_user_eligible_for_role(
             user_credentials=user_credentials,
