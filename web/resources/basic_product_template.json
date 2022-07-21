@@ -1,0 +1,75 @@
+{
+    "version": "{{ version }}",
+    "status": "{{ status }}",
+    "label": "{{ dataset_label }}"
+    {%- if "dataset" in item -%}
+        ,"dataset": {
+            "id": "{{ dataset_id }}",
+            "default": "{{ default }}",        
+            "description": "{{ description }}",
+            "label": "{{ label }}",
+            "how_to_cite": "{{ how_to_cite }}",
+            "image": "{{ image_url }}",
+            "doi": "{{ doi }}",
+            "publication_date": "{{ publication_date }}",
+            "contact": {
+                "name": "{{ contact_name }}",
+                "email": "{{contact_email }}",
+                "webpage": "{{ contact_webpage }}",
+            },
+            "license": {
+                "name": "{{ license_name }}",
+                "url": "{{ license_url }}"
+            },
+            "keywords": "{{ keywords }}",
+            "related_data":
+            [
+                {%- for data in related_data -%}
+                    {
+                        "name": "{{ data.name }}",
+                        "url": "{{ data.url }}"
+                    }
+                {%- endfor -%}
+            ],
+            "products":
+            [
+                {%- for prod in products -%}
+                    {
+                        "id": "{{ prod.id }}",
+                        "label": "{{ prod.label }}"
+                    }
+                {%- endfor -%}
+            ]
+        }
+    {%- endif -%}
+    {%- if "widgets" in item -%}
+    ,"widgets":
+    [
+        {%- for widget in widgets -%}
+            {
+                "name": "{{ widget.name }}",
+                "label": "{{ widget.label }}",
+                "required": "{{ widget.required }}",
+                "parameter": "{{ widget.parameter }}",
+                "type": "{{ widget.type }}",
+                "help": "{{ widget.help }}",
+                "info": "{{ widget.info }}",
+                "details": {
+                    "values": 
+                    [
+                        {%- for val in values -%}
+                            {
+                                "values": "{{ val.value }}",
+                                "label": "{{ val.label }}"
+                            }
+                        {%- endfor -%}    
+                    ]
+                }
+            }
+        {%- endfor -%}        
+    ]
+    {%- endif -%}
+    {%- if "widgets_order" in item -%}
+    ,"widgets_order": "{{ widgets_order }}"
+    {%- endif -%}
+}

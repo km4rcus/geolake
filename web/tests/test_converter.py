@@ -4,10 +4,12 @@ from jinja2 import exceptions as ex
 
 from app.converter import Converter
 
-from .fixtures import *
-
 
 class TestConverter:
+    @pytest.fixture(autouse=True)
+    def clear_converter(self):
+        Converter.TEMPLATE = None
+
     def test_proper_template_loading(self):
         assert Converter.TEMPLATE is None
         Converter.load_template("basic_product_template.json")
