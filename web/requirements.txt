@@ -1,0 +1,7 @@
+fastapi
+pydantic
+uvicorn
+pika
+intake
+pytest
+jinja2
