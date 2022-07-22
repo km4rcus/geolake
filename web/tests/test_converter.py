@@ -9,10 +9,11 @@ class TestConverter:
     @pytest.fixture(autouse=True)
     def clear_converter(self):
         Converter.TEMPLATE = None
+        Converter.ENVIRONMENT = None
 
     def test_proper_template_loading(self):
         assert Converter.TEMPLATE is None
-        Converter.load_template("basic_product_template.json")
+        Converter.load_template("basic_product_template.json.jinja2")
         assert Converter.TEMPLATE is not None
 
     def test_error_on_missing_template(self):
