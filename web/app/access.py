@@ -44,6 +44,14 @@ class AccessManager:
         return UserCredentials(user_id=user_id, user_token=user_token)
 
     @classmethod
+    def get_eligible_products_names(cls, user_cred: UserCredentials) -> dict:
+        cls._LOG.debug("Getting all eligible products...")
+        user_role_name = DBManager().get_user_role_name(user_credentials.id)
+        # TODO:
+        pass
+
+
+    @classmethod
     def get_eligible_details(cls, user_cred: UserCredentials) -> dict:
         cls._LOG.debug(
             f"Getting details for eligible products of `{dataset_id}`..."
