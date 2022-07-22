@@ -93,6 +93,7 @@ class Datastore(metaclass=Singleton):
             info["products"][product_id] = self.product_info(
                 dataset_id, product_id, use_cache
             )
+        return info
 
     def product_metadata(self, dataset_id: str, product_id: str):
         return self.catalog[dataset_id][product_id].metadata

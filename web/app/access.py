@@ -12,8 +12,21 @@ class AccessManager:
     _LOG = logging.getLogger("AccessManager")
 
     @classmethod
-    def is_user_eligible_for_product(cls, jwt, product):
-        return True
+    def is_user_eligible_for_product(cls, user_role_name, product_role_name):
+        cls._LOG.debug(
+            "Verifying eligibility of the user_id:"
+            f" {user_credentials.id} against role_name: {product_role_name}"
+        )
+        if product_role_name == "public":
+            return True
+        if user_credentials.is_public:
+            return False
+        if user_role_name == "admin":
+            return True
+        elif user_role_name == product_role_name:
+            return True
+        else:
+            return False
 
     @classmethod
     def retrieve_credentials_from_jwt(cls, header) -> UserCredentials:
@@ -35,8 +48,23 @@ class AccessManager:
         cls._LOG.debug(
             f"Getting details for eligible products of `{dataset_id}`..."
         )
+        user_role_name = DBManager().get_user_role_name(user_credentials.id)
         details = Datastore().dataset_info(
             dataset_id=dataset_id, use_cache=True
         )
-        # TODO: get details eligible for the particular user!
-        return {}
+        eligible_products = {}
+        if (products := details.get("products")) and isinstance(
+            products, dict
+        ):
+            for prod_name, prod in products.items():
+                assert (
+                    "metadata" in prod
+                ), f"Metadata are not defined for the product `{prod_name}`"
+                metadata = prod["metadata"]
+                if cls.is_user_eligible_for_product(
+                    user_role_name=user_role_name,
+                    product_role_name=metadata.get("role", "public"),
+                ):
+                    eligible_products[prod_name] = prod
+        details["products"] = eligible_products
+        return details

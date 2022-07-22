@@ -30,6 +30,7 @@
                     "name": "{{ data.name }}",
                     "url": "{{ data.url }}"
                 }
+            {{ ", " if not loop.last else "" }}
             {%- endfor -%}
         ],
         "products":
@@ -39,6 +40,7 @@
                     "id": "{{ prod.id }}",
                     "label": "{{ prod.label }}"
                 }
+            {{ ", " if not loop.last else "" }}
             {%- endfor -%}
         ]
     {%- endif -%}
@@ -62,15 +64,18 @@
                                     "values": "{{ val.value }}",
                                     "label": "{{ val.label }}"
                                 }
+                            {{ ", " if not loop.last else "" }}
                             {%- endfor -%}    
                         ]
                     }
                 }
+            {{ ", " if not loop.last else "" }}
             {%- endfor -%}        
         ],
     "widgets_order": [
         {%- for order in widgets_order -%}
-        "{{ order}} ",
+        "{{ order}} "
+        {{ ", " if not loop.last else "" }}
         {%- endfor -%}
     ]
 }

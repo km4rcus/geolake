@@ -34,9 +34,26 @@ async def dds_info():
     return f"DDS Webportal API {__version__}"
 
 
-@app.get("/datasets/{dataset_id}")
+@app.get("/datasets")
+async def get_datasets(
+    dataset_id: str,
+    authorization: Optional[str] = Header(None, convert_underscores=True),
+):
+    """Get list of eligible datasets for Webportal
+
+    Returns
+    -------
+    datasets : str
+        Eligible datasets with listed products
+
+    """
+    pass
+
+
+@app.get("/datasets/{dataset_id}/{product_id}")
 async def get_details(
     dataset_id: str,
+    product_id: str,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for Webportal

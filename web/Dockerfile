@@ -9,6 +9,11 @@ RUN pip install /code/geokube-0.2a0-py3-none-any.whl
 RUN pip install /code/intake_geokube-0.1a0-py3-none-any.whl
 COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
 COPY ./datastore /code/app/datastore
+COPY ./db/dbmanager /code/db/dbmanager
+COPY ./geoquery/ /code/geoquery
+COPY ./resources /code/app/resources
+COPY ./web/app /code/app
+COPY ./web/tests /code/tests
 RUN pytest /code/tests
 EXPOSE 80
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]

@@ -1,0 +1,19 @@
+{
+    "version": "{{ version|required('version') }}",
+    "status": "{{ status|required('status') }}",
+    "data": 
+    [
+        {%- for dset in data -%}
+        {
+            "id": "{{ dset.id|required('dataset[id]') }}",
+            "default": "{{ dset.default }}",        
+            "description": {{ dset.description|escape_chars }},
+            "label": "{{ dset.label }}",
+            "how_to_cite": "{{ dset.how_to_cite }}",
+            "image": "{{ dset.image }}",
+            "doi": "{{ dset.doi }}"
+        }
+        {{ ", " if not loop.last else "" }}
+        {%- endfor -%}        
+    ]
+}
