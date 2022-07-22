@@ -89,8 +89,8 @@ class Datastore(metaclass=Singleton):
         if entry.metadata:
             info["metadata"] = entry.metadata
         info["products"] = {}
-        for p in self.catalog[dataset_id]:
-            info["products"][p] = self.product_info(
+        for product_id in self.catalog[dataset_id]:
+            info["products"][product_id] = self.product_info(
                 dataset_id, product_id, use_cache
             )
 
