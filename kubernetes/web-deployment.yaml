@@ -2,35 +2,37 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    geodds.service: executor
-  name: executor
+    geodds.service: web
+  name: web
   namespace: geodds
 spec:
   replicas: 1
   selector:
     matchLabels:
-      geodds.service: executor
+      geodds.service: web
   strategy:
-    type: Recreate
+    type: RollingUpdate
   template:
     metadata:
       labels:
-        geodds.service: executor
+        geodds.service: web
     spec:
       containers:
       - args:
         - ./wait-for-it.sh
         - broker:5672
         - --
-        - python
-        - ./app/main.py
+        - uvicorn
+        - app.main:app
+        - --host
+        - 0.0.0.0
+        - --port
+        - '80'
         env:
+        - name: LOGGING_LEVEL
+          value: INFO
         - name: CATALOG_PATH
           value: /catalog/catalog.yaml
-        - name: CACHE_PATH
-          value: /cache
-        - name: EXECUTOR_TYPES
-          value: query
         - name: POSTGRES_DB
           value: dds
         - name: POSTGRES_HOST
@@ -41,31 +43,27 @@ spec:
           value: '5432'
         - name: POSTGRES_USER
           value: dds
-        - name: DASK_DASHBOARD_PORT
-          value: '8787'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a92
-        name: executor
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a26
+        name: web
         ports:
-        - containerPort: 8787
+        - containerPort: 80
         resources:
           limits:
-            cpu: '4'
+            cpu: 500m
             memory: 4Gi
           requests:
-            cpu: '4'
+            cpu: 250m
             memory: 4Gi
         volumeMounts:
         - mountPath: /catalog
           name: catalog
-          readOnly: false
+          readOnly: true
         - mountPath: /work/services/dds/cache
           name: cache
           readOnly: false
         - mountPath: /data
           name: data
           readOnly: true
-        - mountPath: /downloads
-          name: downloads
       imagePullSecrets:
       - name: scalereg
       restartPolicy: Always
@@ -73,9 +71,6 @@ spec:
       - hostPath:
           path: /work/services/dds/dds-catalog/Catalog
         name: catalog
-      - hostPath:
-          path: /work/services/dds/downloads
-        name: downloads
       - hostPath:
           path: /work/services/dds/cache
         name: cache

@@ -11,11 +11,11 @@ import app.jinja_filter as jf
 class TestTemplate:
     @pytest.fixture
     def list_datasets_template_name(self):
-        yield "basic_list_datasets.json.jinja"
+        yield "basic_list_datasets.json.jinja2"
 
     @pytest.fixture
     def product_template_name(self):
-        yield "basic_product.json.jinja"
+        yield "basic_product.json.jinja2"
 
     @pytest.fixture
     def filters_dict(self):

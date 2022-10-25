@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import yaml
 import logging
+import uuid
 from datetime import datetime
 from enum import auto, Enum as Enum_, unique
 
@@ -19,6 +20,7 @@ from sqlalchemy import (
     Table,
     BigInteger,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 from .singleton import Singleton
@@ -50,9 +52,11 @@ class Role(Base):
 
 class User(Base):
     __tablename__ = "users"
-    user_id = Column(Integer, primary_key=True)
-    keycloak_id = Column(Integer, nullable=False, unique=True)
-    api_key = Column(String(255), nullable=False, unique=True)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # keycloak_id = Column(UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4)
+    api_key = Column(
+        UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4
+    )
     contact_name = Column(String(255))
     role_id = Column(Integer, ForeignKey("roles.role_id"))
     requests = relationship("Request")
@@ -73,7 +77,9 @@ class Request(Base):
     request_id = Column(Integer, primary_key=True)
     status = Column(Enum(RequestStatus), nullable=False)
     priority = Column(Integer)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False
+    )
     worker_id = Column(Integer, ForeignKey("workers.worker_id"))
     dataset = Column(String(255))
     product = Column(String(255))
@@ -137,6 +143,15 @@ class DBManager(metaclass=Singleton):
         self.__engine = create_engine(url, echo=True)
         self.__session_maker = sessionmaker(bind=self.__engine)
         Base.metadata.create_all(self.__engine)
+
+    def _create_database(self):
+        try:
+            Base.metadata.create_all(self.__engine)
+        except Exception as e:
+            self._LOG.error(
+                f"Could not create a database due to an error: {e}"
+            )
+            raise e
 
     def get_user_details(self, user_id: int):
         with self.__session_maker() as session:

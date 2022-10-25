@@ -65,9 +65,9 @@ async def datasets(
     HTTPException
         400 if user was not authenticated properly
     """
-    user_cred = UserCredentials(user_token)
+    user_credentials = UserCredentials(user_token)
     return DatasetManager.get_eligible_products_for_all_datasets(
-        user_credentials=user_cred
+        user_credentials=user_credentials
     )
 
 
@@ -95,9 +95,9 @@ async def dataset(
     HTTPException
         400 if user was not authenticated properly
     """
-    user_cred = UserCredentials(user_token)
+    user_credentials = UserCredentials(user_token)
     return DatasetManager.get_eligible_products_for_dataset(
-        user_credentials=user_cred, dataset_id=dataset_id
+        user_credentials=user_credentials, dataset_id=dataset_id
     )
 
 
@@ -129,9 +129,9 @@ async def dataset(
         400 if user was not authenticated properly
         401 if user is not authorized for the product
     """
-    user_cred = UserCredentials(user_token)
+    user_credentials = UserCredentials(user_token)
     return DatasetManager.get_details_if_product_eligible(
-        user_credentials=user_cred,
+        user_credentials=user_credentials,
         dataset_id=dataset_id,
         product_id=product_id,
     )
@@ -203,9 +203,9 @@ async def query(
     """
     # TODO: Validation Query Schema
     # TODO: estimate the size and will not execute if it is above the limit
-    user_cred = UserCredentials(user_token)
+    user_credentials = UserCredentials(user_token)
     return DatasetManager.retrieve_data_and_get_request_id(
-        user_credentials=user_cred,
+        user_credentials=user_credentials,
         dataset_id=dataset_id,
         product_id=product_id,
         query=query,
@@ -235,10 +235,10 @@ async def get_requests(
         400 if user was not authenticated properly
         401 if user is anonymous
     """
-    user_cred = UserCredentials(user_token)
-    AccessManager.authenticate_user(user_cred)
+    user_credentials = UserCredentials(user_token)
+    AccessManager.authenticate_user(user_credentials)
     return RequestManager.get_requests_details_for_user(
-        user_credentials=user_cred
+        user_credentials=user_credentials
     )
 
 
@@ -296,10 +296,10 @@ async def download_request_result(
         400 if user was not authenticated properly
         401 if user is not authorized for the requested resource
     """
-    user_cred = UserCredentials(user_token)
-    AccessManager.authenticate_user(user_cred)
+    user_credentials = UserCredentials(user_token)
+    AccessManager.authenticate_user(user_credentials)
     if AccessManager.is_user_eligible_for_request(
-        user_credentials=user_cred, request_id=request_id
+        user_credentials=user_credentials, request_id=request_id
     ):
         path = FileManager.prepare_request_for_download_and_get_path(
             request_id=request_id
@@ -309,8 +309,8 @@ async def download_request_result(
         raise HTTPException(
             status_code=401,
             detail=(
-                f"User with id: {user_cred.id} is not authorized for results"
-                f" of the request with id {request_id}"
+                f"User with id: {user_credentials.id} is not authorized for"
+                f" results of the request with id {request_id}"
             ),
         )
 
@@ -339,8 +339,8 @@ async def get_request_uri(
     HTTPException
         400 if user was not authenticated properly
     """
-    user_cred = UserCredentials(user_token)
-    AccessManager.authenticate_user(user_cred)
+    user_credentials = UserCredentials(user_token)
+    AccessManager.authenticate_user(user_credentials)
     return RequestManager.get_request_uri_for_request_id(request_id=request_id)
 
 

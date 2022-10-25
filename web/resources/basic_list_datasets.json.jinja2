@@ -1,6 +1,6 @@
 {
-    "version": "{{ version|required('version') }}",
-    "status": "{{ status|required('status') }}",
+    "version": "v1",
+    "status": "OK",
     "data": 
     [
         {%- for dset in data -%}
@@ -38,7 +38,7 @@
                 {%- for prod in dset.products -%}
                     {
                         "id": "{{ prod.id }}",
-                        "label": "{{ prod.label }}"
+                        "description": "{{ prod.description }}"
                     }
                 {{ ", " if not loop.last else "" }}
                 {%- endfor -%}

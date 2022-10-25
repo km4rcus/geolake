@@ -1,20 +1,22 @@
 import os
 import logging
 
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader
+from jinja2.environment import Template
 from jinja2 import exceptions as ex
 
-import jinja_filter as jf
+from . import jinja_filter as jf
 
 
 class Converter:
 
     _LOG = logging.getLogger("Converter")
     RESURCE_DIR = os.path.join(".", "resources")
-    DEFAULT_LIST_DETAILS_TEMPLATE_FILE = "basic_product.json.jinja2"
+    DEFAULT_LIST_DETAILS_TEMPLATE_FILE = "basic_list_datasets.json.jinja2"
     DEFAULT_PRODUCT_TEMPLATE_FILE = "basic_product.json.jinja2"
     ENVIRONMENT = None
-    PRODUCT_TEMPLATE = None
+    PRODUCT_TEMPLATE: Template = None
+    LIST_DATASET_TEMPLATE: Template = None
 
     @classmethod
     def load_templates(
@@ -22,48 +24,47 @@ class Converter:
         list_dataset_template_file: str = None,
         product_template_file: str = None,
     ):
-        cls._LOG("Loading Jinja2 template...")
-        if not template_file:
-            prod_template_file = cls.DEFAULT_PRODUCT_PRODUCT_TEMPLATE_FILE
+        cls._LOG.info("Loading Jinja2 template...")
+        if not product_template_file:
+            product_template_file = cls.DEFAULT_PRODUCT_TEMPLATE_FILE
         if not list_dataset_template_file:
-            list_template_file = cls.DEFAULT_LIST_DETAILS_TEMPLATE_FILE
+            list_dataset_template_file = cls.DEFAULT_LIST_DETAILS_TEMPLATE_FILE
         loader = FileSystemLoader(searchpath=cls.RESURCE_DIR)
         cls.ENVIRONMENT = Environment(loader=loader)
+        cls.load_filters()
         try:
             cls.PRODUCT_TEMPLATE = cls.ENVIRONMENT.get_template(
-                prod_template_file
+                product_template_file
             )
-            cls.PRODUCT_TEMPLATE = cls.ENVIRONMENT.get_template(
-                list_template_file
+            cls.LIST_DATASET_TEMPLATE = cls.ENVIRONMENT.get_template(
+                list_dataset_template_file
             )
         except ex.TemplateNotFound as e:
             cls._LOG.error(
                 "One of templates"
-                f" `{os.path.join(cls.RESURCE_DIR, prod_template_file)}` or"
-                f" `{os.path.join(cls.RESURCE_DIR, list_template_file)}` was"
-                " not found"
+                f" `{os.path.join(cls.RESURCE_DIR, product_template_file)}` or"
+                f" `{os.path.join(cls.RESURCE_DIR, list_dataset_template_file)}`"
+                " was not found"
             )
             raise e
-        cls.load_filters()
 
     @classmethod
     def load_filters(cls):
-        cls._LOG("Loading custom filters for Jinja2 environment...")
+        cls._LOG.info("Loading custom filters for Jinja2 environment...")
         cls.ENVIRONMENT.filters["required"] = jf.required
         cls.ENVIRONMENT.filters["escape_chars"] = jf.escape_chars
 
     @classmethod
-    def render_list_datasets(cls):
-        cls._LOG.debug("Rendering list of datasets for...")
-        pass
-        # TODO:
+    def render_list_datasets(cls, details: list) -> str:
+        cls._LOG.debug("Rendering list of datasets...")
+        return cls.DEFAULT_LIST_DETAILS_TEMPLATE_FILE.render(details)
 
     @classmethod
     def render_details(cls, details: dict) -> str:
-        cls._LOG.debug(f"Rendering details for `{dataset_id}`...")
+        cls._LOG.debug("Rendering details for...")
         # TODO:
-        args = cls.construct_dict(details)
-        return cls.TEMPLATE.render(args)
+        # args = cls.construct_dict(details)
+        return cls.PRODUCT_TEMPLATE.render(details)
 
 
 class Widget:

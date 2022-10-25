@@ -1,39 +1,22 @@
-from __future__ import annotations
+from typing import Optional
+from pydantic import BaseModel, Field, UUID4
 
-from fastapi import HTTPException
 
-
-class UserCredentials:
-    def __init__(self, user_id: None | str, user_token: None | str):
-        if user_id and user_token:
-            self.__is_public = False
-            self.__user_id = user_id
-            self.__user_key = user_token
-            try:
-                self.__user_id = int(self.__user_id)
-            except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"Token was not provided or it has a wrong format!"
-                        f" Correct format is <user_id>:<user_key>."
-                    ),
-                )
-        else:
-            self.__is_public = True
-            self.__user_id = self.__user_key = None
+class UserCredentials(BaseModel):
+    user_id: Optional[UUID4] = None
+    user_token: Optional[str] = None
 
     @property
     def is_public(self) -> bool:
-        return self.__is_public
+        return self.user_id is None
 
     @property
-    def id(self) -> int:
-        return self.__user_id
+    def id(self) -> str:
+        return self.user_id
 
     @property
     def key(self) -> str:
-        return self.__user_key
+        return self.user_token
 
     def __eq__(self, other):
         if not isinstance(other, UserCredentials):

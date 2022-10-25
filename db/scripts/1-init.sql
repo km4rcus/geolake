@@ -2,14 +2,16 @@
 -- CREATE DATABASE dds;
 -- GRANT ALL PRIVILEGES ON DATABASE dds TO dds;
 
+-- extension for using UUID column type
+CREATE EXTENSION "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS roles (
    role_id SERIAL PRIMARY KEY,
    role_name VARCHAR (255) UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    user_id SERIAL PRIMARY KEY,
-    keycloak_id INT UNIQUE NOT NULL,
+    user_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     api_key VARCHAR(255) UNIQUE NOT NULL,
     contact_name VARCHAR(255),
     role_id INT,
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS requests (
     request_id SERIAL PRIMARY KEY, 
     status VARCHAR(255) NOT NULL, 
     priority INT,
-    user_id INT NOT NULL,
+    user_id uuid NOT NULL,
     worker_id INT,
     dataset VARCHAR(255),
     product VARCHAR(255), 
