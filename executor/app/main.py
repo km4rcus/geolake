@@ -55,7 +55,7 @@ class Executor:
 
     def create_dask_cluster(self, dask_cluster_opts):
         self._LOG.info(
-            f"Creating Dask Cluster with options: {dask_cluster_opts}..."
+            "creating Dask Cluster with options: `%s`", dask_cluster_opts
         )
         self._worker_id = self._db.create_worker(
             status="enabled",
@@ -67,11 +67,11 @@ class Executor:
             scheduler_port=dask_cluster_opts["scheduler_port"],
             dashboard_address=dask_cluster_opts["dashboard_address"],
         )
-        self._LOG.info("Creating Dask Client...")
+        self._LOG.info("creating Dask Client...")
         self._dask_client = Client(dask_cluster)
 
     def query(self, channel, method, properties, body):
-        self._LOG.debug(f"Executing query: `{body}`...")
+        self._LOG.debug("executing query: `%s`", body)
         m = body.decode().split("\\")
         request_id = m[0]
         dataset_id = m[1]
@@ -85,7 +85,7 @@ class Executor:
             worker_id=self._worker_id,
             status=RequestStatus.RUNNING,
         )
-        self._LOG.debug(f"Submitting job for request id: `{request_id}`...")
+        self._LOG.debug("submitting job for request id: `%s`", request_id)
         future = self._dask_client.submit(
             ds_query,
             ds_id=dataset_id,
@@ -97,30 +97,29 @@ class Executor:
         status = fail_reason = location_path = None
         try:
             self._LOG.debug(
-                f"Attempt to get result for for request id: `{request_id}`..."
+                "attempt to get result for for request id: `%s`", request_id
             )
             location_path = future.result()
         except Exception as e:
             self._LOG.error(
-                f"Failed due to error: {e}. Traceback:"
-                f" {traceback.format_exc()}"
+                "failed to get result", exc_info=True, stack_info=True
             )
             status = RequestStatus.FAILED
             fail_reason = f"{type(e)}: {str(e)}"
         else:
             if location_path:
                 self._LOG.debug(
-                    "Updating status and download URI for request id:"
-                    f" `{request_id}`..."
+                    "updating status and download URI for request id: `%s`",
+                    request_id,
                 )
                 status = RequestStatus.DONE
             else:
                 self._LOG.warning(
-                    f"Location path is `None`. Resulting Dataset was empty!"
+                    "location path is `None` - resulting dataset was empty!"
                 )
                 status = RequestStatus.FAILED
                 fail_reason = (
-                    "The query resulted in an empty Dataset. Check your"
+                    "the query resulted in an empty Dataset. Check your"
                     " request!"
                 )
 
@@ -136,7 +135,7 @@ class Executor:
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def subscribe(self, etype):
-        self._LOG.debug(f"Subscribe channel: {etype}_queue")
+        self._LOG.debug("subscribe channel: %s_queue", etype)
         self._channel.queue_declare(queue=f"{etype}_queue", durable=True)
         self._channel.basic_qos(prefetch_count=1)
         self._channel.basic_consume(

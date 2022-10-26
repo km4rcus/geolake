@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Union, Mapping, Any
 from pydantic import BaseModel, root_validator
 
 
-class GeoQuery(BaseModel):
+class GeoQuery(BaseModel, extra="allow"):
     variable: Optional[Union[str, List[str]]]
     # TODO: Check how `time` is to be represented
     time: Optional[Union[Dict[str, str], Dict[str, List[str]]]]
@@ -14,9 +14,6 @@ class GeoQuery(BaseModel):
 
     # TODO: Check if we are going to allow the vertical coordinates inside both
     # `area`/`locations` nad `vertical`
-
-    class Config:
-        extra = "allow"
 
     @root_validator
     def area_locations_mutually_exclusive_validator(cls, query):

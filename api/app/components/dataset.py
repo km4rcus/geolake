@@ -19,11 +19,11 @@ class DatasetManager:
 
     @classmethod
     def assert_product_exists(cls, dataset_id, product_id: None | str = None):
-        ds = Datastore(cache_path="/cache")
-        if dataset_id not in ds.dataset_list():
+        dset = Datastore(cache_path="/cache")
+        if dataset_id not in dset.dataset_list():
             cls._LOG.info(
-                f"Requests dataset: `{dataset_id}` was not found in the"
-                " catalog!"
+                "requested dataset: `%s` was not found in the catalog!",
+                dataset_id,
             )
             raise HTTPException(
                 status_code=400,
@@ -33,10 +33,12 @@ class DatasetManager:
                 ),
             )
         if product_id is not None:
-            if product_id not in ds.product_list(dataset_id):
+            if product_id not in dset.product_list(dataset_id):
                 cls._LOG.info(
-                    f"Requests product: `{product_id}` for dataset:"
-                    f" `{dataset_id}` was not found in the catalog!"
+                    "requested product: `%s` for dataset: `%s` was not found"
+                    " in the catalog!",
+                    product_id,
+                    dataset_id,
                 )
                 raise HTTPException(
                     status_code=400,
@@ -52,7 +54,7 @@ class DatasetManager:
         user_credentials: UserCredentials,
     ) -> dict[str, list[str]]:
         cls._LOG.debug(
-            f"Getting eligible products for user_id: {user_credentials.id}..."
+            "getting eligible products for user_id: `%s`", user_credentials.id
         )
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore(cache_path="/cache")
@@ -63,7 +65,7 @@ class DatasetManager:
                     user_credentials=user_credentials, dataset_id=dataset_id
                 )
             )
-            if len(eligible_products_for_dataset):
+            if len(eligible_products_for_dataset) > 0:
                 datasets[dataset_id] = eligible_products_for_dataset
         return datasets
 
@@ -72,8 +74,9 @@ class DatasetManager:
         cls, user_credentials: UserCredentials, dataset_id: str
     ) -> list[str]:
         cls._LOG.debug(
-            f"Getting eligible products for user_id: {user_credentials.id},"
-            f" dataset_id: {dataset_id}..."
+            "getting eligible products for user_id: `%s`, dataset_id: `%s`",
+            user_credentials.id,
+            dataset_id,
         )
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore(cache_path="/cache")
@@ -98,8 +101,11 @@ class DatasetManager:
         product_id: str,
     ) -> list[str]:
         cls._LOG.debug(
-            f"Getting details for user_id: {user_credentials.id}, dataset_id:"
-            f" {dataset_id}, product_id: {product_id}..."
+            "getting details for user_id: `%s`, dataset_id: `%s`, product_id:"
+            " `%s`",
+            user_credentials.id,
+            dataset_id,
+            product_id,
         )
         AccessManager.authenticate_user(user_credentials)
         data_store = Datastore(cache_path="/cache")
@@ -133,7 +139,7 @@ class DatasetManager:
     ):
         AccessManager.authenticate_user(user_credentials)
         if user_credentials.is_public:
-            cls._LOG.info(f"Attempt to execute query by an anonymous user!")
+            cls._LOG.info("attempt to execute query by an anonymous user!")
             raise HTTPException(
                 status_code=401,
                 detail=(
@@ -179,10 +185,12 @@ class DatasetManager:
                 .query(dataset_id, product_id, query, compute=False)
                 .nbytes
             )
-        except KeyError as e:
+        except KeyError as exception:
             cls._LOG.error(
-                f"Dataset `{dataset_id}` or product `{product_id}` does not"
-                f" exist!. Error: {e}"
+                "dataset `%s` or product `%s` does not exist!",
+                dataset_id,
+                product_id,
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=400,
@@ -190,13 +198,13 @@ class DatasetManager:
                     f"Dataset `{dataset_id}` or product `{product_id}` does"
                     " not exist!"
                 ),
-            )
-        return _make_bytes_readable_dict(bytes=query_bytes_estimation)
+            ) from exception
+        return _make_bytes_readable_dict(size_bytes=query_bytes_estimation)
 
 
-def _make_bytes_readable_dict(bytes: int) -> dict:
+def _make_bytes_readable_dict(size_bytes: int) -> dict:
     units = "bytes"
-    val = bytes
+    val = size_bytes
     if val > 1024:
         units = "kB"
         val /= 1024

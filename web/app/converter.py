@@ -39,14 +39,13 @@ class Converter:
             cls.LIST_DATASET_TEMPLATE = cls.ENVIRONMENT.get_template(
                 list_dataset_template_file
             )
-        except ex.TemplateNotFound as e:
+        except ex.TemplateNotFound as exception:
             cls._LOG.error(
-                "One of templates"
-                f" `{os.path.join(cls.RESURCE_DIR, product_template_file)}` or"
-                f" `{os.path.join(cls.RESURCE_DIR, list_dataset_template_file)}`"
-                " was not found"
+                "one of templates `%s` or `%s` was not found",
+                os.path.join(cls.RESURCE_DIR, product_template_file),
+                os.path.join(cls.RESURCE_DIR, list_dataset_template_file),
             )
-            raise e
+            raise exception
 
     @classmethod
     def load_filters(cls):
@@ -57,7 +56,7 @@ class Converter:
     @classmethod
     def render_list_datasets(cls, details: list) -> str:
         cls._LOG.debug("Rendering list of datasets...")
-        return cls.DEFAULT_LIST_DETAILS_TEMPLATE_FILE.render(details)
+        return cls.LIST_DATASET_TEMPLATE.render(details)
 
     @classmethod
     def render_details(cls, details: dict) -> str:

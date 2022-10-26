@@ -1,12 +1,12 @@
-from jinja2.runtime import Undefined
 import json
+from jinja2.runtime import Undefined
 
 
-def required(input, key):
-    if isinstance(input, Undefined):
+def required(load, key):
+    if isinstance(load, Undefined):
         raise KeyError(f"Key `{key}` is required!")
-    return input
+    return load
 
 
-def escape_chars(input):
-    return json.dumps(input)
+def escape_chars(load):
+    return json.dumps(load)

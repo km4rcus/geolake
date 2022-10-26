@@ -4,12 +4,13 @@ from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
-from enum import Enum
 from pydantic import BaseModel
+
+from geoquery.geoquery import GeoQuery
 
 from .access import AccessManager
 from .converter import Converter
-from .util import UserCredentials
+from .dataset import DatasetManager
 
 
 app = FastAPI(
@@ -44,7 +45,7 @@ async def dds_info():
 async def get_datasets(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
-    """Get list of eligible datasets for Webportal
+    """Get list of eligible datasets for the home page of the Webportal
 
     Returns
     -------
@@ -52,41 +53,13 @@ async def get_datasets(
         Datasets with eligible products listed
 
     """
-    # user_credentials = AccessManager.retrieve_credentials_from_jwt(authorization)
     user_credentials = AccessManager.retrieve_credentials_from_jwt(
         authorization
     )
-    datasets = AccessManager.get_datasets_and_eligible_products_names(
+    datasets = DatasetManager.get_datasets_and_eligible_products_names(
         user_credentials=user_credentials
     )
     return Converter.render_list_datasets(datasets)
-
-
-@app.get("/datasets/{dataset_id}")
-async def get_details_for_dataset(
-    dataset_id: str,
-    authorization: Optional[str] = Header(None, convert_underscores=True),
-):
-    """Get details for Webportal
-
-    Parameters
-    ----------
-    dataset_id : str
-        Name of the dataset
-
-    Returns
-    -------
-    details : str
-        Details for the dataset indicated by `dataset_id` parameter
-
-    """
-    user_credentials = AccessManager.retrieve_credentials_from_jwt(
-        authorization
-    )
-    details = AccessManager.get_details_for_eligible_products_for_dataset(
-        dataset_id=dataset_id, user_credentials=user_credentials
-    )
-    return Converter.render_details(details)
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
@@ -113,9 +86,55 @@ async def get_details_for_product(
     user_credentials = AccessManager.retrieve_credentials_from_jwt(
         authorization
     )
-    details = AccessManager.get_details_for_product_if_eligible(
+    details = DatasetManager.get_details_for_product_if_eligible(
         dataset_id=dataset_id,
         product_id=product_id,
         user_credentials=user_credentials,
     )
     return Converter.render_details(details)
+
+
+@app.post("/datasets/{dataset_id}/{product_id}/execute")
+async def execute(
+    dataset_id: str,
+    product_id: str,
+    query: GeoQuery,
+    format: Optional[str] = "netcdf",
+    authorization: Optional[str] = Header(None, convert_underscores=True),
+):
+    """Schedule the job of data retrieving.
+
+    Parameters
+    ----------
+    dataset_id : str
+        ID of the dataset in catalog
+    product_id : str
+        ID of the product for the requested dataset (must be included for dataset with id dataset_id)
+    query : GeoQuery
+        Query for which data should be extracted
+    format : str, optional
+        Format of the resulting file, default: netcdf
+    authorization : str, optional
+        Header containing authorization token
+
+    Returns
+    -------
+    request_id : int
+        ID of the scheduled request
+
+    Raises
+    ------
+    HTTPException
+        400 if user was not authenticated properly
+        401 if user is anonymous or unauthorized
+    """
+    user_credentials = AccessManager.retrieve_credentials_from_jwt(
+        authorization
+    )
+    return DatasetManager.retrieve_data_and_get_request_id(
+        dataset_id=dataset_id,
+        product_id=product_id,
+        user_credentials=user_credentials,
+        query=query,
+        format=format
+    )

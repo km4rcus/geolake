@@ -184,7 +184,7 @@ async def query(
     product_id : str
         ID of the product for the requested dataset (must be included for dataset with id dataset_id)
     query : GeoQuery
-        Query for which estimation should be done
+        Query for which data should be extracted
     format : str, optional
         Format of the resulting file, default: netcdf
     user_token : str, optional

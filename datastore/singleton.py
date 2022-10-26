@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+"""Singleton module.
+
+The module contains metaclass called <b>Singleton</b>
+for thread-safe singleton-pattern implementation.
+"""
 from threading import Lock
 
 
 class Singleton(type):
-    """Thread-safe implementation of Singleton design pattern metaclass"""
+    """Thread-safe implementation of the singleton design pattern metaclass"""
 
     _instances = {}
     _lock: Lock = Lock()

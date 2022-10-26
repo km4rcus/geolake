@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import os
-import intake
-import json
 import logging
-import traceback
+import json
+
+import intake
+
+from geoquery.geoquery import GeoQuery
 
 from geokube.core.datacube import DataCube
 from geokube.core.dataset import Dataset
-from geoquery.geoquery import GeoQuery
 
 from .singleton import Singleton
 
@@ -39,9 +40,11 @@ class Datastore(metaclass=Singleton):
             dataset_id not in self.cache
             or product_id not in self.cache[dataset_id]
         ):
-            self._LOG.warning(
-                f"Dataset `{dataset_id}` or product `{product_id}` not found"
-                " in cache! Reading product!"
+            self._LOG.info(
+                "dataset `%s` or product `%s` not found in cache! Reading"
+                " product!",
+                dataset_id,
+                product_id,
             )
             self.cache[dataset_id][product_id] = self.catalog[dataset_id][
                 product_id
@@ -50,9 +53,16 @@ class Datastore(metaclass=Singleton):
 
     def _load_cache(self):
         for i, dataset_id in enumerate(self.dataset_list()):
+            if dataset_id == "gutta":
+                self._LOG.info(
+                    "skipping `gutta` dataset due to theerror geokube/#253"
+                )
+                continue            
             self._LOG.info(
-                "Loading cache for"
-                f" {dataset_id} ({i+1}/{len(self.dataset_list())})"
+                "loading cache for `%s` (%d/%d)",
+                dataset_id,
+                i + 1,
+                len(self.dataset_list()),
             )
             self.cache[dataset_id] = {}
             for product_id in self.product_list(dataset_id):
@@ -60,11 +70,12 @@ class Datastore(metaclass=Singleton):
                     self.cache[dataset_id][product_id] = self.catalog[
                         dataset_id
                     ][product_id].read_chunked()
-                except ValueError as err:
+                except ValueError:
                     self._LOG.error(
-                        f"Failed to load cache for `{dataset_id}.{product_id}`"
-                        f" due to error: {err}. Traceback:"
-                        f" {traceback.format_exc()}"
+                        "failed to load cache for `%s.%s`",
+                        dataset_id,
+                        product_id,
+                        exc_info=True,
                     )
 
     @staticmethod

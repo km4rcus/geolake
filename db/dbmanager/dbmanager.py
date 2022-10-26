@@ -122,15 +122,15 @@ class DBManager(metaclass=Singleton):
             "POSTGRES_PORT",
         ]:
             self._LOG.info(
-                "Attempt to load data from environment variable:"
-                f" {venv_key}..."
+                "attempt to load data from environment variable: `%s`",
+                venv_key,
             )
             if venv_key not in os.environ:
                 self._LOG.error(
-                    f"Missing required environment variable: {venv_key}"
+                    "missing required environment variable: `%s`", venv_key
                 )
                 raise KeyError(
-                    f"Missing required environment variable: {venv_key}"
+                    f"missing required environment variable: {venv_key}"
                 )
 
         user = os.environ["POSTGRES_USER"]
@@ -147,17 +147,19 @@ class DBManager(metaclass=Singleton):
     def _create_database(self):
         try:
             Base.metadata.create_all(self.__engine)
-        except Exception as e:
+        except Exception as exception:
             self._LOG.error(
-                f"Could not create a database due to an error: {e}"
+                "could not create a database due to an error", exc_info=True
             )
-            raise e
+            raise exception
 
     def get_user_details(self, user_id: int):
         with self.__session_maker() as session:
             return session.query(User).get(user_id)
 
-    def get_user_role_name(self, user_id: int):
+    def get_user_role_name(self, user_id: int | None = None):
+        if user_id is None:
+            return "public"
         with self.__session_maker() as session:
             user = session.query(User).get(user_id)
             return session.query(Role).get(user.role_id).role_name
