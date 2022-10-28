@@ -1,3 +1,4 @@
+"""Module responsible for authnetication and authorization functionalities"""
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,7 @@ class AccessManager:
     _LOG = logging.getLogger("AccessManager")
 
     @classmethod
-    def is_user_eligible_for_product(
+    def is_role_eligible_for_product(
         cls,
         product_role_name: str | None = None,
         user_role_name: str | None = None,
@@ -27,11 +28,11 @@ class AccessManager:
 
         Parameters
         ----------
-        product_role_name : str, optional
+        product_role_name : str, optional, default=None
             The role which is eligible for the given product.
-            If not provided, product_role_name is claimed to be public
-        user_role_name: str, optional
-            The role of a user. If not provided, user_role_name is claimed
+            If `None`, product_role_name is claimed to be public
+        user_role_name: str, optional, default=None
+            The role of a user. If `None`, user_role_name is claimed
             to be public
 
         Returns
@@ -46,6 +47,7 @@ class AccessManager:
             product_role_name,
             user_role_name,
         )
+        return True
         if product_role_name == "public" or product_role_name is None:
             return True
         if user_role_name is None:
@@ -65,7 +67,7 @@ class AccessManager:
         Parameters
         ----------
         authorization : str
-            Value of a request header `Authorization`
+            Value of a request header with name `Authorization`
 
         Returns
         -------

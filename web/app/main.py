@@ -1,11 +1,10 @@
+"""Endpoints for `web` component"""
 __version__ = "2.0"
 
 from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-
+from fastapi.responses import PlainTextResponse
 from geoquery.geoquery import GeoQuery
 
 from .access import AccessManager
@@ -26,6 +25,8 @@ app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
 )
+
+Converter.load_templates()
 
 
 @app.get("/")
@@ -59,13 +60,13 @@ async def get_datasets(
     datasets = DatasetManager.get_datasets_and_eligible_products_names(
         user_credentials=user_credentials
     )
-    return Converter.render_list_datasets(datasets)
+    # NOTE: we use PlainTextResponse as Jinja render already returns JSON string
+    return PlainTextResponse(Converter.render_list_datasets(datasets))
 
 
-@app.get("/datasets/{dataset_id}/{product_id}")
+@app.get("/datasets/{dataset_id}")
 async def get_details_for_product(
     dataset_id: str,
-    product_id: str,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for Webportal
@@ -74,8 +75,6 @@ async def get_details_for_product(
     ----------
     dataset_id : str
         Name of the dataset
-    product : str
-        Name of the product
 
     Returns
     -------
@@ -86,9 +85,8 @@ async def get_details_for_product(
     user_credentials = AccessManager.retrieve_credentials_from_jwt(
         authorization
     )
-    details = DatasetManager.get_details_for_product_if_eligible(
+    details = DatasetManager.get_details_for_dataset_products_if_eligible(
         dataset_id=dataset_id,
-        product_id=product_id,
         user_credentials=user_credentials,
     )
     return Converter.render_details(details)
@@ -121,12 +119,6 @@ async def execute(
     -------
     request_id : int
         ID of the scheduled request
-
-    Raises
-    ------
-    HTTPException
-        400 if user was not authenticated properly
-        401 if user is anonymous or unauthorized
     """
     user_credentials = AccessManager.retrieve_credentials_from_jwt(
         authorization
@@ -136,5 +128,5 @@ async def execute(
         product_id=product_id,
         user_credentials=user_credentials,
         query=query,
-        format=format
+        format=format,
     )

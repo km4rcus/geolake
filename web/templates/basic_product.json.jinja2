@@ -1,0 +1,89 @@
+{
+    "version": "v1",
+    "status": "OK",
+    "dataset": {
+        {%- if dataset is defined  -%}
+            "id": "{{ dataset.metadata.id|required('dataset[id]') }}",
+            "default": "{{ dataset.metadata.default }}",        
+            "description": {{ dataset.metadata.description|escape_chars }},
+            "label": "{{ dataset.metadata.label }}",
+            "how_to_cite": "{{ dataset.metadata.how_to_cite|e }}",
+            "image": "{{ dataset.metadata.image }}",
+            "attribution": "{{ dataset.metadata.attribution }}",
+            "update_frequency": "{{ dataset.metadata.update_frequency }}",
+            "doi": "{{ dataset.metadata.doi }}",
+            "publication_date": "{{ dataset.metadata.publication_date }}",
+            "contact": {
+                "name": "{{ dataset.metadata.contact.name }}",
+                "email": "{{ dataset.metadata.contact.email }}",
+                "webpage": "{{ dataset.metadata.contact.webpage }}"
+            },
+            {% if dataset.metadata.license %}   
+                "license": {
+                    "name": "{{ dataset.metadata.license.name }}",
+                    "url": "{{ dataset.metadata.license.url }}"
+                },
+            {% endif %}              
+            "keywords": "{{ dataset.metadata.keywords }}",
+            {% if dataset.metadata.related_data %}  
+                "related_data":
+                [
+                    {%- for data in dataset.metadata.related_data -%}
+                        {
+                            "name": "{{ data.name }}",
+                            "url": "{{ data.url }}"
+                        }
+                    {{ ", " if not loop.last else "" }}
+                    {%- endfor -%}
+                ],
+            {% else %}   
+                "related_data": None,
+            {% endif %}   
+                "products":
+                [
+                    {%- for prod_id, prod in dataset.products.items() -%}
+                        {
+                            "id": "{{ prod_id }}",
+                            "description": "{{ prod.description }}",
+                            "data": "{{ prod.data }}"
+                        }
+                    {{ ", " if not loop.last else "" }}
+                    {%- endfor -%}
+                ]
+            }
+        {%- endif -%}
+    },
+    "widgets":
+        [
+            {%- for widget in widgets -%}
+                {
+                    "name": "{{ widget.name }}",
+                    "label": "{{ widget.label }}",
+                    "required": "{{ widget.required }}",
+                    "parameter": "{{ widget.parameter }}",
+                    "type": "{{ widget.type }}",
+                    "help": "{{ widget.help }}",
+                    "info": "{{ widget.info }}",
+                    "details": {
+                        "values": 
+                        [
+                            {%- for val in values -%}
+                                {
+                                    "values": "{{ val.value }}",
+                                    "label": "{{ val.label }}"
+                                }
+                            {{ ", " if not loop.last else "" }}
+                            {%- endfor -%}    
+                        ]
+                    }
+                }
+            {{ ", " if not loop.last else "" }}
+            {%- endfor -%}        
+        ],
+    "widgets_order": [
+        {%- for order in widgets_order -%}
+        "{{ order}} "
+        {{ ", " if not loop.last else "" }}
+        {%- endfor -%}
+    ]
+}

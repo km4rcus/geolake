@@ -1,3 +1,5 @@
+import datetime
+import os
 import pytest
 from intake import open_catalog
 
@@ -14,7 +16,6 @@ class TestConverter:
 
     @pytest.fixture
     def eobs_ensemble_info(self):
-        breakpoint()
         info = {}
         entry = open_catalog("../resources/catalogs/external/e-obs.yaml")[
             "ensemble"
@@ -26,7 +27,6 @@ class TestConverter:
 
     @pytest.fixture
     def eobs_details(self, eobs_ensemble_info):
-        breakpoint()
         info = {}
         entry = open_catalog("../resources/catalogs/external/e-obs.yaml")
         if entry.metadata:
@@ -35,13 +35,6 @@ class TestConverter:
         for product_id in entry:
             info["products"][product_id] = eobs_ensemble_info
         return info
-
-    def test_proper_template_loading_defaults(self):
-        assert Converter.PRODUCT_TEMPLATE is None
-        assert Converter.LIST_DATASET_TEMPLATE is None
-        Converter.load_templates()
-        assert Converter.PRODUCT_TEMPLATE is not None
-        assert Converter.LIST_DATASET_TEMPLATE is not None
 
     def test_error_on_missing_template(self):
         assert Converter.TEMPLATE is None
@@ -57,3 +50,4 @@ class TestConverter:
         details_dict = json.loads(details)
         assert "version" in details
         assert details["version"] == 1.0
+        assert len(details_dict["products"]) == 1

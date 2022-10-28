@@ -20,7 +20,7 @@ class TestUserCredentials:
     def test_str_uuidv4_user_id(self):
         id_ = str(uuid.uuid4())
         uc = UserCredentials(user_id=id_, user_token="aaa")
-        assert type(id_) != type(uc.id)
+        assert not isinstance(id_, type(uc.id))
         assert str(uc.id) == id_
 
     def test_ensure_key_is_not_printed(self):

@@ -1,3 +1,4 @@
+"""Module for catalog management utils"""
 from __future__ import annotations
 
 import os
@@ -15,13 +16,14 @@ from .singleton import Singleton
 
 
 class Datastore(metaclass=Singleton):
+    """Singleton component for managing catalog data"""
 
     _LOG = logging.getLogger("Datastore")
 
     def __init__(self, cache_path: str = "./") -> None:
         if "CATALOG_PATH" not in os.environ:
             self._LOG.error(
-                "Missing required environment variable: 'CATALOG_PATH'"
+                "missing required environment variable: 'CATALOG_PATH'"
             )
             raise KeyError(
                 "Missing required environment variable: 'CATALOG_PATH'"
@@ -32,7 +34,22 @@ class Datastore(metaclass=Singleton):
         # NOTE: for executor we cannot preload cache as it exceeds memory!
         self.cache = None
 
-    def get_cached_product(self, dataset_id, product_id):
+    def get_cached_product(self, dataset_id: str, product_id: str) -> DataCube | Dataset:
+        """Get product from the cache rather than directly loading from
+        the catalog. If might be `geokube.DataCube` or `geokube.Dataset`.
+
+        Parameters
+        -------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the dataset
+
+        Returns
+        -------
+        kube : DataCube or Dataset
+            Data stored in the cache (either `geokube.DataCube` or `geokube.Dataset`)
+        """        
         if self.cache is None:
             self.cache = {}
             self._load_cache()
@@ -53,11 +70,6 @@ class Datastore(metaclass=Singleton):
 
     def _load_cache(self):
         for i, dataset_id in enumerate(self.dataset_list()):
-            if dataset_id == "gutta":
-                self._LOG.info(
-                    "skipping `gutta` dataset due to theerror geokube/#253"
-                )
-                continue            
             self._LOG.info(
                 "loading cache for `%s` (%d/%d)",
                 dataset_id,
@@ -88,30 +100,132 @@ class Datastore(metaclass=Singleton):
             )
         return dict_vals
 
-    def dataset_list(self):
+    def dataset_list(self) -> list:
+        """Get list of datasets available in the catalog stored in `catalog`
+        attribute
+
+        Returns
+        -------
+        datasets : list
+            List of datasets present in the catalog
+        """
         return list(self.catalog)
 
     def product_list(self, dataset_id: str):
+        """Get list of products available in the catalog for dataset
+        indicated by `dataset_id`
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+
+        Returns
+        -------
+        products : list
+            List of products for the dataset
+        """
         return list(self.catalog[dataset_id])
 
-    def dataset_info(self, dataset_id: str, use_cache: bool = True):
+    def dataset_info(self, dataset_id: str):
+        """Get information about the dataset and names of all available
+        products (with their metadata)
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+
+        Returns
+        -------
+        info : dict
+            Dict of short information about the dataset
+        """
         info = {}
         entry = self.catalog[dataset_id]
         if entry.metadata:
             info["metadata"] = entry.metadata
+            info["metadata"]["id"] = dataset_id
         info["products"] = {}
         for product_id in self.catalog[dataset_id]:
-            info["products"][product_id] = self.product_info(
-                dataset_id, product_id, use_cache
-            )
+            entry = self.catalog[dataset_id][product_id]
+            info["products"][product_id] = entry.metadata
+        return info
+
+    def dataset_details(self, dataset_id: str, use_cache: bool = False):
+        """Get long information about the dataset and details of all available
+        products.
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        use_cache : bool, optional, default=False
+            Data will be loaded from cache if set to `True` or directly
+            from the catalog otherwise
+
+        Returns
+        -------
+        info : dict
+            Dict of details about the dataset and its products
+        """
+        info = {}
+        entry = self.catalog[dataset_id]
+        if entry.metadata:
+            info["metadata"] = entry.metadata
+            info["metadata"]["id"] = dataset_id
+        info["products"] = {}
+        for product_id in self.catalog[dataset_id]:
+            entry = self.catalog[dataset_id][product_id]
+            info["products"][product_id] = entry.metadata
+            if use_cache:
+                info["products"][product_id]["data"] = self.get_cached_product(
+                    dataset_id, product_id
+                ).to_dict()
+            else:
+                info["products"][product_id]["data"] = (
+                    self.catalog[dataset_id][product_id].read_chunked().to_dict()
+                )
         return info
 
     def product_metadata(self, dataset_id: str, product_id: str):
+        """Get product metadata directly from the catalog.
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+
+        Returns
+        -------
+        metadata : dict
+            Metadata of the product
+        """
         return self.catalog[dataset_id][product_id].metadata
 
-    def product_info(
+    def product_details(
         self, dataset_id: str, product_id: str, use_cache: bool = False
     ):
+        """Get details for the single product
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        use_cache : bool, optional, default=False
+            Data will be loaded from cache if set to `True` or directly
+            from the catalog otherwise
+
+
+        Returns
+        -------
+        details : dict
+            Details of the product
+        """
         info = {}
         entry = self.catalog[dataset_id][product_id]
         if entry.metadata:
@@ -128,24 +242,37 @@ class Datastore(metaclass=Singleton):
 
     def query(
         self,
-        dataset: str,
-        product: str,
+        dataset_id: str,
+        product_id: str,
         query: GeoQuery | dict | str,
         compute: bool = False,
     ) -> DataCube:
-        """
-        :param dataset: dataset name
-        :param product: product name
-        :param query: subset query
-        :param path: path to store
-        :return: subsetted geokube of selected dataset product
-        """
+        """Query dataset
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        query : GeoQuery or dict or str
+            Query to be executed for the given product
+        compute : bool, optional, default=False
+            If True, resulting data of DataCube will be computed, otherwise
+            DataCube with `dask.Delayed` object will be returned
+
+
+        Returns
+        -------
+        kube : DataCube
+            DataCube processed according to `query`
+        """    
         if isinstance(query, str):
             query = json.loads(query)
         if isinstance(query, dict):
             query = GeoQuery(**query)
         # NOTE: we always use catalog directly and single product cache
-        kube = self.catalog[dataset][product].read_chunked()
+        kube = self.catalog[dataset_id][product_id].read_chunked()
         if isinstance(kube, Dataset):
             kube = kube.filter(**query.filters)
         if query.variable:

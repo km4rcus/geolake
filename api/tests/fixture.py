@@ -66,7 +66,7 @@ def data_store():
         inst.dataset_list = MagicMock(return_value=["e-obs", "era5"])
         inst.product_list = MagicMock(side_effect=_get_prods_for_ds)
         inst.product_metadata = MagicMock(side_effect=_get_prods_meta)
-        inst.product_info = MagicMock(side_effect=_get_prods_info)
+        inst.product_details = MagicMock(side_effect=_get_prods_info)
         yield inst
 
 
