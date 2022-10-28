@@ -11,7 +11,7 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .datastore.datastore import Datastore
-from .util import UserCredentials
+from .util import UserCredentials, log_execution_time
 from .access import AccessManager
 
 
@@ -20,9 +20,12 @@ class DatasetManager:
     and submitting a request"""
 
     _LOG = logging.getLogger("DatasetManager")
+    _LOG.setLevel(logging.DEBUG)
+    _LOG.addHandler(logging.StreamHandler())
     _DATASTORE = Datastore()
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_datasets_and_eligible_products_names(
         cls, user_credentials: UserCredentials
     ) -> list:
@@ -64,6 +67,7 @@ class DatasetManager:
         return datasets
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_details_for_dataset_products_if_eligible(
         cls,
         dataset_id: str,
@@ -117,6 +121,7 @@ class DatasetManager:
         )
 
     @classmethod
+    @log_execution_time(_LOG)
     def _get_dataset_information_from_details_dict(
         cls,
         dataset_dict: dict,
@@ -153,6 +158,7 @@ class DatasetManager:
         return dataset_dict
 
     @classmethod
+    @log_execution_time(_LOG)
     def retrieve_data_and_get_request_id(
         cls,
         user_credentials: UserCredentials,

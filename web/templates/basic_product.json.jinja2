@@ -45,7 +45,7 @@
                         {
                             "id": "{{ prod_id }}",
                             "description": "{{ prod.description }}",
-                            "data": "{{ prod.data }}"
+                            "data": {{ prod.data }}
                         }
                     {{ ", " if not loop.last else "" }}
                     {%- endfor -%}

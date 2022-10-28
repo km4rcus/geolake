@@ -1,4 +1,4 @@
-"""Module for catalog management utils"""
+"""Module for catalog management classes and functions"""
 from __future__ import annotations
 
 import os
@@ -13,6 +13,7 @@ from geokube.core.datacube import DataCube
 from geokube.core.dataset import Dataset
 
 from .singleton import Singleton
+from .util import log_execution_time
 
 
 class Datastore(metaclass=Singleton):
@@ -21,6 +22,8 @@ class Datastore(metaclass=Singleton):
     _LOG = logging.getLogger("Datastore")
 
     def __init__(self, cache_path: str = "./") -> None:
+        self._LOG.setLevel(logging.DEBUG)
+        self._LOG.addHandler(logging.StreamHandler())
         if "CATALOG_PATH" not in os.environ:
             self._LOG.error(
                 "missing required environment variable: 'CATALOG_PATH'"
@@ -34,6 +37,7 @@ class Datastore(metaclass=Singleton):
         # NOTE: for executor we cannot preload cache as it exceeds memory!
         self.cache = None
 
+    @log_execution_time(_LOG)
     def get_cached_product(self, dataset_id: str, product_id: str) -> DataCube | Dataset:
         """Get product from the cache rather than directly loading from
         the catalog. If might be `geokube.DataCube` or `geokube.Dataset`.
@@ -49,7 +53,7 @@ class Datastore(metaclass=Singleton):
         -------
         kube : DataCube or Dataset
             Data stored in the cache (either `geokube.DataCube` or `geokube.Dataset`)
-        """        
+        """
         if self.cache is None:
             self.cache = {}
             self._load_cache()
@@ -68,6 +72,7 @@ class Datastore(metaclass=Singleton):
             ].read_chunked()
         return self.cache[dataset_id][product_id]
 
+    @log_execution_time(_LOG)
     def _load_cache(self):
         for i, dataset_id in enumerate(self.dataset_list()):
             self._LOG.info(
@@ -100,6 +105,7 @@ class Datastore(metaclass=Singleton):
             )
         return dict_vals
 
+    @log_execution_time(_LOG)
     def dataset_list(self) -> list:
         """Get list of datasets available in the catalog stored in `catalog`
         attribute
@@ -111,6 +117,7 @@ class Datastore(metaclass=Singleton):
         """
         return list(self.catalog)
 
+    @log_execution_time(_LOG)
     def product_list(self, dataset_id: str):
         """Get list of products available in the catalog for dataset
         indicated by `dataset_id`
@@ -127,6 +134,7 @@ class Datastore(metaclass=Singleton):
         """
         return list(self.catalog[dataset_id])
 
+    @log_execution_time(_LOG)
     def dataset_info(self, dataset_id: str):
         """Get information about the dataset and names of all available
         products (with their metadata)
@@ -152,6 +160,7 @@ class Datastore(metaclass=Singleton):
             info["products"][product_id] = entry.metadata
         return info
 
+    @log_execution_time(_LOG)
     def dataset_details(self, dataset_id: str, use_cache: bool = False):
         """Get long information about the dataset and details of all available
         products.
@@ -188,6 +197,7 @@ class Datastore(metaclass=Singleton):
                 )
         return info
 
+    @log_execution_time(_LOG)
     def product_metadata(self, dataset_id: str, product_id: str):
         """Get product metadata directly from the catalog.
 
@@ -205,6 +215,7 @@ class Datastore(metaclass=Singleton):
         """
         return self.catalog[dataset_id][product_id].metadata
 
+    @log_execution_time(_LOG)
     def product_details(
         self, dataset_id: str, product_id: str, use_cache: bool = False
     ):
@@ -240,6 +251,7 @@ class Datastore(metaclass=Singleton):
             )
         return info
 
+    @log_execution_time(_LOG)
     def query(
         self,
         dataset_id: str,

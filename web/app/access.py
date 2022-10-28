@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 from db.dbmanager.dbmanager import DBManager
 
-from .util import UserCredentials
+from .util import UserCredentials, log_execution_time
 
 
 class AccessManager:
@@ -18,6 +18,7 @@ class AccessManager:
     _LOG = logging.getLogger("AccessManager")
 
     @classmethod
+    @log_execution_time(_LOG)
     def is_role_eligible_for_product(
         cls,
         product_role_name: str | None = None,
@@ -60,6 +61,7 @@ class AccessManager:
         return False
 
     @classmethod
+    @log_execution_time(_LOG)
     def retrieve_credentials_from_jwt(cls, authorization) -> UserCredentials:
         """Get credentials based on JWT token or public profile,
         if `authorization` header is not provided.

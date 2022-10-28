@@ -1,4 +1,8 @@
 """Utils module"""
+from functools import wraps
+import datetime
+import logging
+
 from typing import Optional
 from pydantic import BaseModel, UUID4
 
@@ -57,3 +61,25 @@ class UserCredentials(BaseModel):
             f"<UserCredentials(id={self.id}, key=***,"
             f" is_public={self.is_public}>"
         )
+
+
+def log_execution_time(logger: logging.Logger):
+    """Decorator logging execution time of the method or function"""
+
+    def inner(func):
+        @wraps(func)
+        def wrapper(*args, **kwds):
+            exec_start_time = datetime.datetime.now()
+            try:
+                return func(*args, **kwds)
+            finally:
+                exec_time = datetime.datetime.now() - exec_start_time
+                logger.info(
+                    "execution of `%s` function took %s",
+                    func.__name__,
+                    exec_time,
+                )
+
+        return wrapper
+
+    return inner

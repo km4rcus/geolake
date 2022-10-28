@@ -60,7 +60,7 @@ async def get_datasets(
     datasets = DatasetManager.get_datasets_and_eligible_products_names(
         user_credentials=user_credentials
     )
-    # NOTE: we use PlainTextResponse as Jinja render already returns JSON string
+    # NOTE: use PlainTextResponse as Jinja render already returns JSON string
     return PlainTextResponse(Converter.render_list_datasets(datasets))
 
 
@@ -110,9 +110,9 @@ async def execute(
         ID of the product for the requested dataset (must be included for dataset with id dataset_id)
     query : GeoQuery
         Query for which data should be extracted
-    format : str, optional
+    format : str, optional, default="netcdf"
         Format of the resulting file, default: netcdf
-    authorization : str, optional
+    authorization : str, optional, default=None
         Header containing authorization token
 
     Returns

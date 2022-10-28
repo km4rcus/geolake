@@ -7,12 +7,17 @@ from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
 from jinja2 import exceptions as ex
 
+from .util import log_execution_time
+
 
 class Converter:
     """Class managing rendering datasets and details based on Jinja2
     templates"""
 
     _LOG = logging.getLogger("Converter")
+    _LOG.setLevel(logging.DEBUG)
+    _LOG.addHandler(logging.StreamHandler())
+
     RESOURCE_DIR = os.path.join(".", "templates")
     DEFAULT_LIST_DETAILS_TEMPLATE_FILE = "basic_list_datasets.json.jinja2"
     DEFAULT_PRODUCT_TEMPLATE_FILE = "basic_product.json.jinja2"
@@ -70,6 +75,7 @@ class Converter:
             raise exception
 
     @classmethod
+    @log_execution_time(_LOG)
     def render_list_datasets(cls, details: list) -> str:
         """Render datasets list JSON file based on associated Jinja2
         template and provided `details` object.
@@ -88,6 +94,7 @@ class Converter:
         return cls.LIST_DATASET_TEMPLATE.render(data=details)
 
     @classmethod
+    @log_execution_time(_LOG)
     def render_details(cls, details: dict) -> str:
         """Render dataset details JSON file based on associated Jinja2
         template and provided `details` object.
@@ -102,10 +109,10 @@ class Converter:
         json_details
             JSON text with details rendered accoridng to Jinja2 template
         """
-        cls._LOG.debug("rendering details for")
+        cls._LOG.debug("rendering details")
         # TODO: add method for widget-dict creation
         # args = cls.construct_dict(details)
-        return json.loads(cls.PRODUCT_TEMPLATE.render(dataset=details))
+        return cls.PRODUCT_TEMPLATE.render(dataset=details)
 
 
 class Widget:
