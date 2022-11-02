@@ -4,24 +4,20 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import HTTPException
-import pika
-
-from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .datastore.datastore import Datastore
 from .util import UserCredentials, log_execution_time
 from .access import AccessManager
+from .meta import LoggableMeta
+from .exceptions import MissingKeyInCatalogEntryError
 
 
-class DatasetManager:
+class DatasetManager(metaclass=LoggableMeta):
     """The component for dataset management, including getting details
     and submitting a request"""
 
     _LOG = logging.getLogger("DatasetManager")
-    _LOG.setLevel(logging.DEBUG)
-    _LOG.addHandler(logging.StreamHandler())
     _DATASTORE = Datastore()
 
     @classmethod
@@ -42,6 +38,11 @@ class DatasetManager:
         datasets : list
             A list of datasets information (including metadata and
             eligible products lists)
+
+        Raises
+        -------
+        MissingKeyInCatalogEntryError
+            If the dataset catalog entry does not contain the required key
         """
         cls._LOG.debug("getting all eligible products for datasets...")
         user_role_name = DBManager().get_user_role_name(user_credentials.id)
@@ -90,8 +91,8 @@ class DatasetManager:
 
         Raises
         -------
-        HTTPException
-            400 if dataset details does not contain `products` key
+        MissingKeyInCatalogEntryError
+            If the dataset catalog entry does not contain the required key
         """
         cls._LOG.debug(
             "getting details for eligible products of `%s`", dataset_id
@@ -100,24 +101,11 @@ class DatasetManager:
         details = Datastore().dataset_details(
             dataset_id=dataset_id, use_cache=True
         )
-        if (products := details.get("products")) and isinstance(
-            products, dict
-        ):
-            return cls._get_dataset_information_from_details_dict(
-                dataset_dict=details,
-                user_role_name=user_role_name,
-                dataset_id=dataset_id,
-                user_credentials=user_credentials,
-            )
-        cls._LOG.error(
-            "dataset `%s` details does not contain `products` key", dataset_id
-        )
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"dataset `{dataset_id}` details does not contain"
-                " `products` key"
-            ),
+        return cls._get_dataset_information_from_details_dict(
+            dataset_dict=details,
+            user_role_name=user_role_name,
+            dataset_id=dataset_id,
+            user_credentials=user_credentials,
         )
 
     @classmethod
@@ -141,10 +129,15 @@ class DatasetManager:
                     user_role_name=user_role_name,
                 )
             }
-        except KeyError:
-            cls._LOG.info(
-                "dataset `%s` does not have products defined", dataset_id
+        except KeyError as err:
+            cls._LOG.error(
+                "dataset `%s` does not have products defined",
+                dataset_id,
+                exc_info=True,
             )
+            raise MissingKeyInCatalogEntryError(
+                key="products", dataset=dataset_id
+            ) from err
         else:
             if len(eligible_prods) == 0:
                 cls._LOG.debug(
@@ -156,61 +149,3 @@ class DatasetManager:
         finally:
             dataset_dict["products"] = eligible_prods
         return dataset_dict
-
-    @classmethod
-    @log_execution_time(_LOG)
-    def retrieve_data_and_get_request_id(
-        cls,
-        user_credentials: UserCredentials,
-        dataset_id: str,
-        product_id: str,
-        query: GeoQuery,
-        format: str,
-    ):
-        """Schedule a query and return an ID of the request.
-
-        Parameters
-        ----------
-        user_credentials : UserCredentials
-            Current user credentials
-        dataset_id : str
-            ID of the dataset
-        product_id : str
-            ID of the product for the dataset `dataset_id`
-        query :  GeoQuery
-            An object representing a query to execute
-        format : str
-            The format of the resulting file
-
-        Returns
-        -------
-        request_id : int
-            An ID of the scheduled request
-        """
-        broker_conn = pika.BlockingConnection(
-            pika.ConnectionParameters(host="broker")
-        )
-        broker_channel = broker_conn.channel()
-
-        request_id = DBManager().create_request(
-            user_id=user_credentials.id,
-            dataset=dataset_id,
-            product=product_id,
-            query=query.json(),
-        )
-
-        # TODO: find a separator; for the moment use "\"
-        message = f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}\\{format}"
-
-        broker_channel.basic_publish(
-            exchange="",
-            routing_key="query_queue",
-            body=message,
-            properties=pika.BasicProperties(
-                delivery_mode=2,  # make message persistent
-            ),
-        )
-        broker_conn.close()
-        return request_id
-
-    ######################################################

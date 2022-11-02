@@ -1,7 +1,7 @@
 fastapi
 pydantic
+aiohttp
 uvicorn
-pika
 intake
 pytest
 jinja2

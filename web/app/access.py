@@ -4,14 +4,15 @@ from __future__ import annotations
 import logging
 import requests
 import jwt
-from fastapi import HTTPException
 
 from db.dbmanager.dbmanager import DBManager
 
 from .util import UserCredentials, log_execution_time
+from .meta import LoggableMeta
+from .exceptions import AuthenticationFailed
 
 
-class AccessManager:
+class AccessManager(metaclass=LoggableMeta):
     """The component for managing access to data, authentication, and
     authorization of a user"""
 
@@ -75,6 +76,11 @@ class AccessManager:
         -------
         user_credentials : UserCredentials
             Current user credentials
+
+        Raises
+        -------
+        AuthenticationFailed
+            If user was not authenticated properly
         """
         cls._LOG.debug("getting credentials based on JWT")
         response = requests.get("https://auth01.cmcc.it/realms/DDS")
@@ -97,7 +103,4 @@ class AccessManager:
                 user_id=user_id, user_token=user_details.api_key
             )
         cls._LOG.info("no user found for id `%s`", user_id)
-        raise HTTPException(
-            status_code=401,
-            detail="User is not authorized!",
-        )
+        raise AuthenticationFailed

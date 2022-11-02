@@ -3,56 +3,21 @@
     "status": "OK",
     "data": 
     [
-        {%- for dset in data -%}
+        {%- for dataset in data -%}
         {
-            "id": {{ dset.metadata.id|required('dataset[id]') }},
-            "default": {{ dset.metadata.default }},        
-            "description": {{ dset.metadata.description|escape_chars }},
-            "label": {{ dset.metadata.label }},
-            "how_to_cite": {{ dset.metadata.how_to_cite|e }},
-            "image": {{ dset.metadata.image }},
-            "attribution": {{ dset.metadata.attribution }},
-            "update_frequency": {{ dset.metadata.update_frequency }},
-            "doi": {{ dset.metadata.doi }},
-            "publication_date": {{ dset.metadata.publication_date }},
-            "contact": {
-                "name": {{ dset.metadata.contact.name }},
-                "email": {{ dset.metadata.contact.email }},
-                "webpage": {{ dset.metadata.contact.webpage }}
-            },
-            {% if dset.metadata.license %}   
-                "license": {
-                    "name": {{ dset.metadata.license.name }},
-                    "url": {{ dset.metadata.license.url }}
-                },
-            {% endif %}              
-            "keywords": {{ dset.metadata.keywords }},
-            {% if dset.metadata.related_data %}  
-            "related_data":
-            [
-                {%- for data in dset.metadata.related_data -%}
-                    {
-                        "name": {{ data.name }},
-                        "url": {{ data.url }}
-                    }
-                {{ ", " if not loop.last else "" }}
-                {%- endfor -%}
-            ],
-            {% else %}   
-            "related_data": None,
-            {% endif %}   
+            {% include 'basic_single_details.json.jinja2' %}
             "products":
             [
-                {%- for prod_id, prod_metadata in dset.products.items() -%}
+                {%- for prod_id, prod_metadata in dataset.products.items() -%}
                     {
-                        "id": {{ prod_id }},
-                        "description": {{ prod_metadata.description }}
+                        "id": "{{ prod_id }}",
+                        "description": "{{ prod_metadata.description }}"
                     }
                 {{ ", " if not loop.last else "" }}
                 {%- endfor -%}
             ]
-        }
-        {{ ", " if not loop.last else "" }}
+            }
+            {{ ", " if not loop.last else "" }}
         {%- endfor -%}        
     ]
 }

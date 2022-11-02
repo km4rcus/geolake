@@ -35,3 +35,11 @@ def required(load, key):
 def escape_chars(load):
     """Escape characters by converting to JSON"""
     return json.dumps(load)
+
+
+@register_filter
+def to_json(load):
+    """Convert `load` to JSON representation"""
+    if isinstance(load, Undefined):
+        return None
+    return json.dumps(load)

@@ -24,6 +24,7 @@ spec:
         - --
         - uvicorn
         - app.main:app
+        - --proxy-headers
         - --host
         - 0.0.0.0
         - --port
@@ -43,7 +44,9 @@ spec:
           value: '5432'
         - name: POSTGRES_USER
           value: dds
-        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a118
+        - name: API_URL
+          value: http://192.168.118.98:8080
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a174
         name: web
         ports:
         - containerPort: 80

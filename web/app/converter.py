@@ -1,22 +1,21 @@
 """Module containing utils classes for view data for the Webportal"""
 import os
-import json
 import logging
+from collections import defaultdict, OrderedDict
 
 from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
 from jinja2 import exceptions as ex
 
 from .util import log_execution_time
+from .meta import LoggableMeta
 
 
-class Converter:
+class Converter(metaclass=LoggableMeta):
     """Class managing rendering datasets and details based on Jinja2
     templates"""
 
     _LOG = logging.getLogger("Converter")
-    _LOG.setLevel(logging.DEBUG)
-    _LOG.addHandler(logging.StreamHandler())
 
     RESOURCE_DIR = os.path.join(".", "templates")
     DEFAULT_LIST_DETAILS_TEMPLATE_FILE = "basic_list_datasets.json.jinja2"
@@ -112,7 +111,62 @@ class Converter:
         cls._LOG.debug("rendering details")
         # TODO: add method for widget-dict creation
         # args = cls.construct_dict(details)
-        return cls.PRODUCT_TEMPLATE.render(dataset=details)
+        widgets = cls._convert_products_details_to_widgets(details["products"])
+        return cls.PRODUCT_TEMPLATE.render(
+            dataset=details, widgets=[], widgets_order=[]
+        )
+
+    @classmethod
+    @log_execution_time(_LOG)
+    def _convert_products_details_to_widgets(
+        cls, products_details: dict
+    ) -> list:
+        all_prods_details = {}
+        for prod_id, prod_det in products_details.items():
+            all_prods_details.update(
+                cls._convert_single_product_details_to_widgets(prod_det["details"])
+            )
+
+        return all_prods_details
+
+    @classmethod
+    def _convert_single_product_details_to_widgets(cls, prod_details: list[dict]):
+        attrs_opts = Converter._get_attributes_options(prod_details)        
+        raise ValueError(prod_details)
+        details = prod_details["details"]
+        if isinstance(details, dict):
+            # it means we have just DataCube
+            pass
+        elif isinstance(details, list):
+            # it means we have a Dataset - so list[dict]
+            pass
+        else:
+            raise TypeError(
+                f"Unexpected type of 'details' value: '{type(details)}'."
+                " Expected 'dict' or 'list'"
+            )
+        return {prod_details["id"]: [Converter._get_widget_for_fields(...)]}
+
+    @staticmethod
+    def _get_attributes_options(details: list[dict], sort_keys=False, sort_values=False):
+        attrs_opts = defaultdict(list)
+        for kube_det in details:
+            for att_id, att_val in kube_det["attributes"].items():
+                attrs_opts[att_id].append(att_val)
+        if sort_keys:
+            attrs_opts = OrderedDict(attrs_opts)
+        if sort_values:
+            for key in attrs_opts.keys():
+                attrs_opts[key] = sorted(attrs_opts[key])
+        return attrs_opts
+
+    @staticmethod
+    def _get_widget_for_fields(fields: dict):
+        pass
+
+    @staticmethod
+    def _get_widget_for_attrs(attrs: dict):
+        pass
 
 
 class Widget:
