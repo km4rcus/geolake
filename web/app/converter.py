@@ -148,7 +148,7 @@ class Converter(metaclass=LoggableMeta):
         return {prod_details["id"]: [Converter._get_widget_for_fields(...)]}
 
     @staticmethod
-    def _get_attributes_options(details: list[dict], sort_keys=False, sort_values=False):
+    def _get_attribute_widget(details: list[dict], sort_keys=False, sort_values=False):
         attrs_opts = defaultdict(list)
         for kube_det in details:
             for att_id, att_val in kube_det["attributes"].items():
@@ -159,6 +159,10 @@ class Converter(metaclass=LoggableMeta):
             for key in attrs_opts.keys():
                 attrs_opts[key] = sorted(attrs_opts[key])
         return attrs_opts
+
+# w = Widget(wname=attr_name, wlabel=DatasetManager.unwrap(attr.get('label', {attr_name})), wrequired=False,
+#                     wparameter=attr_name, wtype='StringList',
+#                     wdetails={'values': values})        
 
     @staticmethod
     def _get_widget_for_fields(fields: dict):
