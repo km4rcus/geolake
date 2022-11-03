@@ -19,4 +19,4 @@ COPY ./web/tests /code/tests
 EXPOSE 80
 # CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
 # if behind a proxy use --proxy-headers
-CMD ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "81"]
+CMD ["uvicorn", "app.main:app","--root_path", "/web", "--proxy-headers", "--host", "0.0.0.0", "--port", "81"]

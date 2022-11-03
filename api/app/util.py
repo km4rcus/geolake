@@ -11,7 +11,7 @@ class UserCredentials:
                 user_token
             )
             try:
-                self.__user_id = int(self.__user_id)
+                self.__user_id = self.__user_id
             except ValueError:
                 raise HTTPException(
                     status_code=400,

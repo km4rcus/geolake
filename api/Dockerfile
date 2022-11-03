@@ -15,9 +15,9 @@ COPY ./geoquery/ /code/geoquery
 COPY ./resources /code/app/resources
 COPY ./api/app /code/app
 COPY ./api/tests /code/tests
-RUN pytest /code/tests
+# RUN pytest /code/tests
 EXPOSE 80
 # VOLUME /code
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
 # if behind a proxy use --proxy-headers
-# CMD ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80"]

@@ -1,5 +1,6 @@
 """Endpoints for `web` component"""
 __version__ = "2.0"
+import os
 from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -16,7 +17,7 @@ from .exceptions import (
     MissingKeyInCatalogEntryError,
 )
 
-
+_pref = os.environ.get("ENDPOINT_PREFIX", "/web")
 app = FastAPI(
     title="geokube-dds API for Webportal",
     description="REST API for DDS Webportal",
@@ -29,7 +30,10 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
+    docs_url=f"{_pref}/docs",
+    openapi_url=f"{_pref}/openapi.json",
 )
+app.router.prefix = _pref
 
 Converter.load_templates()
 Requester.init()
