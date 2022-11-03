@@ -69,9 +69,10 @@ class DatasetManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def get_details_for_dataset_products_if_eligible(
+    def get_details_for_product_if_eligible(
         cls,
         dataset_id: str,
+        product_id: str,
         user_credentials: UserCredentials,
     ) -> dict:
         """Get details for the given product indicated by `dataset_id`
@@ -80,6 +81,8 @@ class DatasetManager(metaclass=LoggableMeta):
         Parameters
         ----------
         dataset_id : str
+            ID of the dataset
+        product_id : str
             ID of the dataset
         user_credentials : UserCredentials
             Current user credentials
@@ -98,15 +101,14 @@ class DatasetManager(metaclass=LoggableMeta):
             "getting details for eligible products of `%s`", dataset_id
         )
         user_role_name = DBManager().get_user_role_name(user_credentials.id)
-        details = Datastore().dataset_details(
-            dataset_id=dataset_id, use_cache=True
+        details = Datastore().product_details(
+            dataset_id=dataset_id, product_id=product_id, use_cache=True
         )
-        return cls._get_dataset_information_from_details_dict(
-            dataset_dict=details,
+        AccessManager.assert_is_role_eligible(
+            product_role_name=details["metadata"].get("role"),
             user_role_name=user_role_name,
-            dataset_id=dataset_id,
-            user_credentials=user_credentials,
         )
+        return details
 
     @classmethod
     @log_execution_time(_LOG)

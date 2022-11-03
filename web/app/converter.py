@@ -1,7 +1,6 @@
 """Module containing utils classes for view data for the Webportal"""
 import os
 import logging
-from collections import defaultdict, OrderedDict
 
 from jinja2 import Environment, FileSystemLoader
 from jinja2.environment import Template
@@ -111,9 +110,12 @@ class Converter(metaclass=LoggableMeta):
         cls._LOG.debug("rendering details")
         # TODO: add method for widget-dict creation
         # args = cls.construct_dict(details)
-        widgets = cls._convert_products_details_to_widgets(details["products"])
+        return details
+        widgets, widgets_order = cls._convert_products_details_to_widgets(
+            details["products"]
+        )
         return cls.PRODUCT_TEMPLATE.render(
-            dataset=details, widgets=[], widgets_order=[]
+            dataset=details, widgets=widgets, widgets_order=widgets_order
         )
 
     @classmethod
@@ -123,106 +125,79 @@ class Converter(metaclass=LoggableMeta):
     ) -> list:
         all_prods_details = {}
         for prod_id, prod_det in products_details.items():
-            all_prods_details.update(
-                cls._convert_single_product_details_to_widgets(prod_det["details"])
-            )
+            all_prods_details[
+                prod_id
+            ] = cls._convert_single_product_details_to_widgets(prod_det)
 
         return all_prods_details
 
     @classmethod
-    def _convert_single_product_details_to_widgets(cls, prod_details: list[dict]):
-        attrs_opts = Converter._get_attributes_options(prod_details)        
-        raise ValueError(prod_details)
-        details = prod_details["details"]
-        if isinstance(details, dict):
-            # it means we have just DataCube
-            pass
-        elif isinstance(details, list):
-            # it means we have a Dataset - so list[dict]
-            pass
-        else:
-            raise TypeError(
-                f"Unexpected type of 'details' value: '{type(details)}'."
-                " Expected 'dict' or 'list'"
-            )
-        return {prod_details["id"]: [Converter._get_widget_for_fields(...)]}
+    def _convert_single_product_details_to_widgets(cls, prod_details: dict):
+        data = {"widgets": [], "widgets_order": [], "constraints": None}
+        attrs_widgets, attrs_widgets_order = Converter.get_attrs_widgets(
+            prod_details
+        )
+        data["widgets"].extend(attrs_widgets)
+        data["widgets_order"].extend(attrs_widgets_order)
+
+        field_widget = Converter.get_field_widget(prod_details)
+        data["widgets"].append(field_widget)
+        data["widgets_order"].append("variable")
+
+        temporal_widgets = ...
+        data["widgets"].extend(temporal_widgets)
+        data["widgets_order"].append("temporal_coverage")
+
+        spatial_widgets, spatial_widgets_order = ...
+        data["widgets"].extend(spatial_widgets)
+        data["widgets_order"].append(spatial_widgets_order)
 
     @staticmethod
-    def _get_attribute_widget(details: list[dict], sort_keys=False, sort_values=False):
+    def get_attrs_widgets(prod_details: dict):
+        attr_labels = {
+            att_det["name"]: att_det.get("label", att_det["name"])
+            for att_det in prod_details.get("filters", [])
+        }
         attrs_opts = defaultdict(list)
-        for kube_det in details:
+        for kube_det in prod_details["details"]:
             for att_id, att_val in kube_det["attributes"].items():
                 attrs_opts[att_id].append(att_val)
-        if sort_keys:
-            attrs_opts = OrderedDict(attrs_opts)
-        if sort_values:
-            for key in attrs_opts.keys():
-                attrs_opts[key] = sorted(attrs_opts[key])
-        return attrs_opts
-
-# w = Widget(wname=attr_name, wlabel=DatasetManager.unwrap(attr.get('label', {attr_name})), wrequired=False,
-#                     wparameter=attr_name, wtype='StringList',
-#                     wdetails={'values': values})        
+        for key in attrs_opts.keys():
+            attrs_opts[key] = sorted(attrs_opts[key])
+        widgets = []
+        for att_key, att_opts in attrs_opts.items():
+            w = Widget(
+                wname=att_key,
+                wlabel=attr_labels[att_key],
+                wrequired=False,
+                wparameter=att_key,
+                wtype="StringList",
+                wdetails={"values": att_opts},
+            )
+            widgets.append(w)
+        widgets_order = list(attr_labels.keys())
+        return (widgets, widgets_order)
 
     @staticmethod
-    def _get_widget_for_fields(fields: dict):
+    def get_field_widgets(prod_details: dict):
+        return None
+        # kube_det["datacube"]["fields"].keys() for kube_det in prod_details["details"]
+
+    @staticmethod
+    def _get_all_fields(prod_details: list):
+        for kube_det in prod_details:
+            kube_det["fields"]
+        details = prod_details["details"]
+
+    @staticmethod
+    def _get_attribute_options(details: list[dict], sort_values=False):
+
+        return attrs_opts
+
+    @staticmethod
+    def _get_widget_for_fields(details: list[dict], sort_values=False):
         pass
 
     @staticmethod
     def _get_widget_for_attrs(attrs: dict):
         pass
-
-
-class Widget:
-    """Class representing a single Widget in the Webportal"""
-
-    def __init__(
-        self,
-        wname,
-        wlabel,
-        wrequired,
-        wparameter,
-        wtype,
-        wdetails=None,
-        whelp=None,
-        winfo=None,
-    ):
-        self.__data = {
-            "name": str(wname),
-            "label": str(wlabel),
-            "required": bool(wrequired),
-            "parameter": str(wparameter) if wparameter is not None else None,
-            "type": str(wtype),
-            "details": wdetails,
-            "help": whelp,
-            "info": winfo,
-        }
-
-    def __getitem__(self, key):
-        return self.__data[key]
-
-    def to_dict(self):
-        """Return dictionary representation of a Widget
-
-        Returns
-        -------
-        widget_dict
-            Dictionary with keys being attributes of a Widget object
-        """
-        return self.__data.copy()
-
-    @classmethod
-    def from_dict(cls, data):
-        """Construct Widget object based on the provided dictionary
-
-        Parameters
-        ----------
-        data : dict
-            Dict representing attributes of a Widget
-
-        Returns
-        -------
-        widget
-            Widget object
-        """
-        return Widget(**data)

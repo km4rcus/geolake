@@ -1,20 +1,11 @@
 {
     "version": "v1",
     "status": "OK",
+    "id": "{{ prod_id }}",
+    "label": "{{ prod_label }}",
     "dataset": {
         {%- if dataset is defined  -%}
             {% include 'basic_single_details.json.jinja2' %}
-            "products":
-            [
-                {%- for prod_id, prod_metadata in dataset.products.items() -%}
-                    {
-                        "id": "{{ prod_id }}",
-                        "description": "{{ prod_metadata.description }}"
-                    }
-                {{ ", " if not loop.last else "" }}
-                {%- endfor -%}
-            ]     
-            }       
         {%- endif -%}
     },
     "widgets":
