@@ -3,7 +3,7 @@ import os
 import json
 import pytest
 
-from app.converter import ListOfDatasets
+from web.app.models import ListOfDatasets
 
 
 class TestConverter:

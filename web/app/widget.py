@@ -1,6 +1,6 @@
 """Module with tools for widgets management"""
 import logging
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from typing import Any, ClassVar, Optional
 
@@ -8,7 +8,7 @@ from pydantic import BaseModel, root_validator, validator, validate_arguments
 
 from .meta import LoggableMeta
 from .util import log_execution_time
-from .converter import DatasetMetadata
+from .models import Filter, Product, WidgetsCollection
 
 
 class Widget:
@@ -66,101 +66,12 @@ class Widget:
         return Widget(**data)
 
 
-class _Filter(BaseModel):
-    name: Optional[str] = None
-    user_defined: Optional[bool] = True
-    label: Optional[str] = None
-
-    @root_validator
-    def match_label(cls, values):
-        if values["label"] is None:
-            values["label"] = values["name"]
-        return values
-
-    @validator("user_defined", pre=True)
-    def maybe_cast_user_defined(cls, value):
-        if isinstance(value, str):
-            return value.lower() in ["t", "true"]
-        elif isinstance(value, bool):
-            return value
-        else:
-            raise TypeError
-
-
-class _Domain(BaseModel):
-    crs: dict[str, Any]
-    coordinates: dict[str, Any]
-
-
-class _Kube(BaseModel):
-    domain: _Domain
-    fields: list[str]
-
-    @validator("fields", pre=True)
-    def match_fields(cls, fields):
-        return list(fields.keys())
-
-
-class _DatasetRow(BaseModel):
-    attributes: dict[str, str]
-    datacube: _Kube
-
-
-class ProductDatasetMetadata(BaseModel):
-    catalog_dir: str
-    filters: Optional[dict[str, _Filter]] = None
-    role: Optional[str] = "public"
-
-    @validator("filters", pre=True)
-    def match_filters(cls, filters):
-        if isinstance(filters, dict):
-            return filters
-        if isinstance(filters, list):
-            return {item["name"]: item for item in filters}
-        raise TypeError
-
-    @validator("role")
-    def match_role(cls, role):
-        assert role in ["public", "admin", "internal"]
-        return role
-
-
-class _Product(BaseModel):
-    _SUPPORTED_FORMATS_LABELS: ClassVar[dict[str, str]] = {
-        "grib": "GRIB",
-        "pickle": "PICKLE",
-        "netcdf": "netCDF",
-        "geotiff": "geoTIFF",
-    }
-    id: str
-    data: list[_DatasetRow]
-    metadata: ProductDatasetMetadata
-    description: Optional[str] = None
-    dataset: DatasetMetadata
-
-    @validator("description", always=True)
-    def match_description(cls, value, values):
-        if value is None:
-            return values["id"]
-        return value
-
-
-class WidgetsCollection(BaseModel):
-    version: Optional[str] = "v1"
-    status: Optional[str] = "OK"
-    id: str
-    label: str
-    dataset: DatasetMetadata
-    widgets: list[dict]
-    widgets_order: list[str]
-
-
 class WidgetFactory(metaclass=LoggableMeta):
     _LOG = logging.getLogger("Widget")
 
     @log_execution_time(_LOG)
     @validate_arguments
-    def __init__(self, product: _Product):
+    def __init__(self, product: Product):
         self._d = product
         self._wid = []
         self._wid_order = []
@@ -188,10 +99,18 @@ class WidgetFactory(metaclass=LoggableMeta):
         return self._wid_order[key]
 
     def compute_variable_widget(self, sort_keys: bool = True) -> None:
-        all_fields = set()
+        all_fields = {}
         for dr in self._d.data:
-            all_fields.update(dr.datacube.fields)
-        values = [{"value": ..., "label": ...}]
+            for field in dr.datacube.fields:
+                if field.name in all_fields:
+                    continue
+                all_fields[field.name] = {
+                    "value": field.name,
+                    "label": field.description,
+                }
+        if sort_keys:
+            all_fields = OrderedDict(all_fields)
+        # TODO: in geokube add label/description to to_dict for fields
         self._wid.append(
             Widget(
                 wname="variable",
@@ -199,11 +118,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                 wrequired=True,
                 wparameter="variable",
                 wtype="StringList",
-                wdetails={
-                    "values": sorted(list(all_fields))
-                    if sort_keys
-                    else list(all_fields)
-                },
+                wdetails={"values": all_fields},
             ).to_dict()
         )
         self._wid_order.append("variable")
@@ -214,10 +129,14 @@ class WidgetFactory(metaclass=LoggableMeta):
             for att_name, att_val in dr.attributes.items():
                 attrs_opts[att_name].add(att_val)
         for att_name, att_opts in attrs_opts.items():
-            flt = self._d.metadata.filters.get(att_name, _Filter)
+            flt = self._d.metadata.filters.get(att_name, Filter)
             if not flt.user_defined:
                 # then it is skipped and user cannot manipulate it
                 continue
+            att_opts = list(att_opts)
+            if sort_keys:
+                att_opts = sorted(att_opts)
+            values = [{"value": key, "label": key} for key in att_opts]
             label = flt.label if flt.label is not None else att_name
             wid = Widget(
                 wname=att_name,
@@ -225,11 +144,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                 wrequired=False,
                 wparameter=att_name,
                 wtype="StringList",
-                wdetails={
-                    "values": sorted(list(att_opts))
-                    if sort_keys
-                    else list(att_opts)
-                },
+                wdetails={"values": values},
             )
             self._wid.append(wid.to_dict())
             self._wid_order.append(att_name)

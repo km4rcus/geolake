@@ -8,7 +8,7 @@ from fastapi.responses import Response
 from geoquery.geoquery import GeoQuery
 
 from .access import AccessManager
-from .converter import ListOfDatasets
+from .models import ListOfDatasets
 from .dataset import DatasetManager
 from .requester import Requester
 from .widget import WidgetFactory
@@ -99,6 +99,7 @@ async def get_details_product(
             ),
         ) from err
     else:
+        # return details
         return WidgetFactory(details).widgets
 
 

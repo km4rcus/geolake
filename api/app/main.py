@@ -31,7 +31,7 @@ app = FastAPI(
     docs_url=f"{_pref}/docs",
     openapi_url=f"{_pref}/openapi.json",
 )
-app.router.prefix = _pref    
+app.router.prefix = _pref
 
 
 @app.get("/")

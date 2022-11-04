@@ -22,8 +22,6 @@ class Datastore(metaclass=Singleton):
     _LOG = logging.getLogger("Datastore")
 
     def __init__(self, cache_path: str = "./") -> None:
-        self._LOG.setLevel(logging.DEBUG)
-        self._LOG.addHandler(logging.StreamHandler())
         if "CATALOG_PATH" not in os.environ:
             self._LOG.error(
                 "missing required environment variable: 'CATALOG_PATH'"
@@ -38,7 +36,9 @@ class Datastore(metaclass=Singleton):
         self.cache = None
 
     @log_execution_time(_LOG)
-    def get_cached_product(self, dataset_id: str, product_id: str) -> DataCube | Dataset:
+    def get_cached_product(
+        self, dataset_id: str, product_id: str
+    ) -> DataCube | Dataset:
         """Get product from the cache rather than directly loading from
         the catalog. If might be `geokube.DataCube` or `geokube.Dataset`.
 
@@ -158,43 +158,7 @@ class Datastore(metaclass=Singleton):
         for product_id in self.catalog[dataset_id]:
             entry = self.catalog[dataset_id][product_id]
             info["products"][product_id] = entry.metadata
-        return info
-
-    @log_execution_time(_LOG)
-    def dataset_details(self, dataset_id: str, use_cache: bool = False):
-        """Get long information about the dataset and details of all available
-        products.
-
-        Parameters
-        ----------
-        dataset_id : str
-            ID of the dataset
-        use_cache : bool, optional, default=False
-            Data will be loaded from cache if set to `True` or directly
-            from the catalog otherwise
-
-        Returns
-        -------
-        info : dict
-            Dict of details about the dataset and its products
-        """
-        info = {}
-        entry = self.catalog[dataset_id]
-        if entry.metadata:
-            info["metadata"] = entry.metadata
-            info["metadata"]["id"] = dataset_id
-        info["products"] = {}
-        for product_id in self.catalog[dataset_id]:
-            entry = self.catalog[dataset_id][product_id]
-            info["products"][product_id] = entry.metadata
-            if use_cache:
-                info["products"][product_id]["data"] = self.get_cached_product(
-                    dataset_id, product_id
-                ).to_dict()
-            else:
-                info["products"][product_id]["data"] = (
-                    self.catalog[dataset_id][product_id].read_chunked().to_dict()
-                )
+            info["products"][product_id]["description"] = entry.description
         return info
 
     @log_execution_time(_LOG)
@@ -211,7 +175,7 @@ class Datastore(metaclass=Singleton):
         Returns
         -------
         metadata : dict
-            Metadata of the product
+            DatasetMetadata of the product
         """
         return self.catalog[dataset_id][product_id].metadata
 
@@ -241,6 +205,9 @@ class Datastore(metaclass=Singleton):
         entry = self.catalog[dataset_id][product_id]
         if entry.metadata:
             info["metadata"] = entry.metadata
+        info["description"] = entry.description
+        info["id"] = product_id
+        info["dataset"] = self.dataset_info(dataset_id=dataset_id)
         if use_cache:
             info["data"] = self.get_cached_product(
                 dataset_id, product_id
@@ -278,7 +245,7 @@ class Datastore(metaclass=Singleton):
         -------
         kube : DataCube
             DataCube processed according to `query`
-        """    
+        """
         if isinstance(query, str):
             query = json.loads(query)
         if isinstance(query, dict):
