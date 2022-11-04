@@ -45,8 +45,10 @@ spec:
         - name: POSTGRES_USER
           value: dds
         - name: API_URL
-          value: http://192.168.118.98:8080
-        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a174
+          value: http://ddshub.cmcc.it/api
+        - name: ENDPOINT_PREFIX
+          value: /web
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a226
         name: web
         ports:
         - containerPort: 80

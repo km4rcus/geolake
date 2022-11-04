@@ -43,7 +43,9 @@ spec:
           value: '5432'
         - name: POSTGRES_USER
           value: dds
-        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a99
+        - name: ENDPOINT_PREFIX
+          value: /api
+        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a103
         name: api
         ports:
         - containerPort: 80

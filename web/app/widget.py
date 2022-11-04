@@ -1,8 +1,14 @@
+"""Module with tools for widgets management"""
+import logging
 from collections import defaultdict
 
 from typing import Any, ClassVar, Optional
 
-from pydantic import BaseModel, root_validator, validator, Field
+from pydantic import BaseModel, root_validator, validator, validate_arguments
+
+from .meta import LoggableMeta
+from .util import log_execution_time
+from .converter import DatasetMetadata
 
 
 class Widget:
@@ -100,8 +106,7 @@ class _DatasetRow(BaseModel):
     datacube: _Kube
 
 
-class _Product(BaseModel):
-    details: list[_DatasetRow]
+class ProductDatasetMetadata(BaseModel):
     catalog_dir: str
     filters: Optional[dict[str, _Filter]] = None
     role: Optional[str] = "public"
@@ -120,82 +125,114 @@ class _Product(BaseModel):
         return role
 
 
-class _Dataset(BaseModel):
+class _Product(BaseModel):
     _SUPPORTED_FORMATS_LABELS: ClassVar[dict[str, str]] = {
         "grib": "GRIB",
         "pickle": "PICKLE",
         "netcdf": "netCDF",
         "geotiff": "geoTIFF",
     }
+    id: str
+    data: list[_DatasetRow]
+    metadata: ProductDatasetMetadata
+    description: Optional[str] = None
+    dataset: DatasetMetadata
 
-    metadata: dict[str, Any]
-    products: dict[str, _Product]
-    formats: Optional[list[str]] = Field(default_factory=list)
-
-    @property
-    def supported_format_mapping(self):
-        return [
-            {"value": item, "label": self._SUPPORTED_FORMATS_LABELS[item]}
-            for item in self.formats
-        ]
+    @validator("description", always=True)
+    def match_description(cls, value, values):
+        if value is None:
+            return values["id"]
+        return value
 
 
-class WidgetFactory:
-    def __init__(self, dataset: _Dataset):
-        self._d = dataset
-        self._wid = defaultdict(list)
-        self._wid_order = defaultdict(list)
+class WidgetsCollection(BaseModel):
+    version: Optional[str] = "v1"
+    status: Optional[str] = "OK"
+    id: str
+    label: str
+    dataset: DatasetMetadata
+    widgets: list[dict]
+    widgets_order: list[str]
+
+
+class WidgetFactory(metaclass=LoggableMeta):
+    _LOG = logging.getLogger("Widget")
+
+    @log_execution_time(_LOG)
+    @validate_arguments
+    def __init__(self, product: _Product):
+        self._d = product
+        self._wid = []
+        self._wid_order = []
         self.compute_variable_widget()
         self.compute_attrs_widgets()
         self.compute_temporal_widgets()
         self.compute_spatial_widgets()
         self.compute_format_widget()
 
+    @property
+    @log_execution_time(_LOG)
+    def widgets(self) -> dict:
+        return WidgetsCollection(
+            id=self._d.id,
+            label=self._d.description,
+            dataset=self._d.dataset,
+            widgets=self._wid,
+            widgets_order=self._wid_order,
+        )
+
     def get_widgets_for(self, key: str):
         return self._wid[key]
 
-    def get_widgets_order(self, key: str):
+    def get_widgets_order_for(self, key: str):
         return self._wid_order[key]
 
-    def compute_variable_widget(self) -> None:
-        for prod_id, prod in self._d.products.items():
-            all_fields = set()
-            for dr in prod.details:
-                all_fields.update(dr.datacube.fields)
-            self._wid[prod_id].append(
-                Widget(
-                    wname="variable",
-                    wlabel="Variables",
-                    wrequired=True,
-                    wparameter="variable",
-                    wtype="StringList",
-                    wdetails={"values": list(all_fields)},
-                ).to_dict()
-            )
-            self._wid_order[prod_id].append("variable")
+    def compute_variable_widget(self, sort_keys: bool = True) -> None:
+        all_fields = set()
+        for dr in self._d.data:
+            all_fields.update(dr.datacube.fields)
+        values = [{"value": ..., "label": ...}]
+        self._wid.append(
+            Widget(
+                wname="variable",
+                wlabel="Variables",
+                wrequired=True,
+                wparameter="variable",
+                wtype="StringList",
+                wdetails={
+                    "values": sorted(list(all_fields))
+                    if sort_keys
+                    else list(all_fields)
+                },
+            ).to_dict()
+        )
+        self._wid_order.append("variable")
 
-    def compute_attrs_widgets(self) -> None:
-        for prod_id, prod in self._d.products.items():
-            attrs_opts = defaultdict(set)
-            for dr in prod.details:
-                for att_name, att_val in dr.attributes.items():
-                    attrs_opts[att_name].add(att_val)
-            for att_name, att_opts in attrs_opts.items():
-                flt = prod.filters.get(att_name, _Filter)
-                if not flt.user_defined:
-                    # then it is skipped and user cannot manipulate it
-                    continue
-                label = flt.label if flt.label is not None else att_name
-                wid = Widget(
-                    wname=att_name,
-                    wlabel=label,
-                    wrequired=False,
-                    wparameter=att_name,
-                    wtype="StringList",
-                    wdetails={"values": list(att_opts)},
-                )
-                self._wid[prod_id].append(wid.to_dict())
-                self._wid_order[prod_id].append(att_name)
+    def compute_attrs_widgets(self, sort_keys: bool = True) -> None:
+        attrs_opts = defaultdict(set)
+        for dr in self._d.data:
+            for att_name, att_val in dr.attributes.items():
+                attrs_opts[att_name].add(att_val)
+        for att_name, att_opts in attrs_opts.items():
+            flt = self._d.metadata.filters.get(att_name, _Filter)
+            if not flt.user_defined:
+                # then it is skipped and user cannot manipulate it
+                continue
+            label = flt.label if flt.label is not None else att_name
+            wid = Widget(
+                wname=att_name,
+                wlabel=label,
+                wrequired=False,
+                wparameter=att_name,
+                wtype="StringList",
+                wdetails={
+                    "values": sorted(list(att_opts))
+                    if sort_keys
+                    else list(att_opts)
+                },
+            )
+            self._wid.append(wid.to_dict())
+            self._wid_order.append(att_name)
 
     def compute_temporal_widgets(self) -> None:
         pass
@@ -204,14 +241,15 @@ class WidgetFactory:
         pass
 
     def compute_format_widget(self) -> None:
-        for prod_id, prod in self._d.products.items():
-            w = Widget(
-                wname="format",
-                wlabel="Format",
-                wrequired=True,
-                wparameter="format",
-                wtype="FileFormat",
-                wdetails={"values": self._d.supported_format_mapping},
-            )
-            self._wid[prod_id].append(w.to_dict())
-            self._wid_order[prod_id].append("format")
+        w = Widget(
+            wname="format",
+            wlabel="Format",
+            wrequired=True,
+            wparameter="format",
+            wtype="FileFormat",
+            wdetails={
+                "values": [{"value": "netcdf", "label": "netCDF"}]
+            },  # TODO:
+        )
+        self._wid.append(w.to_dict())
+        self._wid_order.append("format")

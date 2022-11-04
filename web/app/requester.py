@@ -19,7 +19,7 @@ class Requester(metaclass=LoggableMeta):
     def init(cls):
         cls._API_URL = os.environ.get("API_URL", "https://ddshub.cmcc.it/api")
         cls._LOG.info(
-            "'API_URL' virtual environment collected: %s", cls._API_URL
+            "'API_URL' environment variable collected: %s", cls._API_URL
         )
         cls._IS_INIT = True
 

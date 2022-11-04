@@ -3,14 +3,15 @@ __version__ = "2.0"
 import os
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import Response
 from geoquery.geoquery import GeoQuery
 
 from .access import AccessManager
-from .converter import Converter
+from .converter import ListOfDatasets
 from .dataset import DatasetManager
 from .requester import Requester
+from .widget import WidgetFactory
 from .exceptions import (
     AuthenticationFailed,
     AuthorizationFailed,
@@ -32,17 +33,16 @@ app = FastAPI(
     },
     docs_url=f"{_pref}/docs",
     openapi_url=f"{_pref}/openapi.json",
+    on_startup=[
+        Requester.init
+    ],  # NOTE: eventually, load Datastore cache on startup
 )
 app.router.prefix = _pref
 
-Converter.load_templates()
-Requester.init()
-
 
 @app.get("/")
-async def dds_info(req: Request):
+async def dds_info():
     """Return current version of the DDS API for the Webportal"""
-    return req.scope.get("root_path")
     return f"DDS Webportal API {__version__}"
 
 
@@ -63,10 +63,7 @@ async def get_datasets(
             status_code=401, detail="User could not be authenticated"
         ) from err
     else:
-        return Response(
-            content=Converter.render_list_datasets(datasets),
-            media_type="application/json",
-        )
+        return ListOfDatasets.from_details(datasets)
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
@@ -102,11 +99,7 @@ async def get_details_product(
             ),
         ) from err
     else:
-        return details
-        return Response(
-            content=Converter.render_details(details),
-            media_type="application/json",
-        )
+        return WidgetFactory(details).widgets
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
