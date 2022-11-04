@@ -48,7 +48,7 @@ spec:
           value: http://ddshub.cmcc.it/api
         - name: ENDPOINT_PREFIX
           value: /web
-        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a240
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a241
         name: web
         ports:
         - containerPort: 80

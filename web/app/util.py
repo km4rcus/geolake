@@ -75,8 +75,9 @@ def log_execution_time(logger: logging.Logger):
             finally:
                 exec_time = datetime.datetime.now() - exec_start_time
                 logger.info(
-                    "execution of `%s` function took %s",
+                    "execution of '%s' function from '%s' package took %s",
                     func.__name__,
+                    func.__module__,
                     exec_time,
                 )
 
