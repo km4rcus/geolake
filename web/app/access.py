@@ -7,7 +7,7 @@ import jwt
 
 from db.dbmanager.dbmanager import DBManager
 
-from .util import UserCredentials, log_execution_time
+from .utils import UserCredentials, log_execution_time
 from .meta import LoggableMeta
 from .exceptions import AuthenticationFailed, AuthorizationFailed
 
@@ -111,10 +111,13 @@ class AccessManager(metaclass=LoggableMeta):
             If user was not authenticated properly
         """
         cls._LOG.debug("getting credentials based on JWT")
-        response = requests.get("https://auth01.cmcc.it/realms/DDS")
+        response = requests.get(
+            "https://auth01.cmcc.it/realms/DDS", timeout=10
+        )
+        # NOTE: public key 2nd and 3rd lines cannot be indented
         keycloak_public_key = f"""-----BEGIN PUBLIC KEY-----
-    {response.json()['public_key']}
-    -----END PUBLIC KEY-----"""
+{response.json()['public_key']}
+-----END PUBLIC KEY-----"""
         if not authorization:
             cls._LOG.info(
                 "`authorization` header is empty! using public profile"

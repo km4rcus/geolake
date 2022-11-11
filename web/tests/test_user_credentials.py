@@ -4,7 +4,7 @@ import uuid
 
 from pydantic import ValidationError
 
-from app.util import UserCredentials
+from app.utils import UserCredentials
 
 
 class TestUserCredentials:

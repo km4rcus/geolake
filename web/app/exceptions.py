@@ -1,4 +1,4 @@
-"""Module with exceptions definitions"""
+"""Module with definitions of exceptions for 'web' component"""
 
 
 class AuthorizationFailed(ValueError):
@@ -18,3 +18,7 @@ class MissingKeyInCatalogEntryError(KeyError):
         )
         self.key = key
         self.dataset = dataset
+
+
+class GeokubeAPIRequestFailed(RuntimeError):
+    """Error while sending request to geokube-dds API"""

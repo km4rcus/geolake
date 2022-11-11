@@ -4,18 +4,19 @@ import os
 from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 from geoquery.geoquery import GeoQuery
 
 from .access import AccessManager
-from .models import ListOfDatasets
+from .models import ListOfDatasets, ListOfRequests
 from .dataset import DatasetManager
-from .requester import Requester
+from .requester import GeokubeAPIRequester
 from .widget import WidgetFactory
 from .exceptions import (
     AuthenticationFailed,
     AuthorizationFailed,
     MissingKeyInCatalogEntryError,
+    GeokubeAPIRequestFailed,
 )
 
 _pref = os.environ.get("ENDPOINT_PREFIX", "/web")
@@ -34,10 +35,21 @@ app = FastAPI(
     docs_url=f"{_pref}/docs",
     openapi_url=f"{_pref}/openapi.json",
     on_startup=[
-        Requester.init
+        GeokubeAPIRequester.init
     ],  # NOTE: eventually, load Datastore cache on startup
 )
 app.router.prefix = _pref
+
+# TODO: origins should be limited!
+ORIGINS = "*"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -99,7 +111,6 @@ async def get_details_product(
             ),
         ) from err
     else:
-        # return details
         return WidgetFactory(details).widgets
 
 
@@ -116,16 +127,17 @@ async def execute(
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
         )
-        response = await Requester.post(
-            url=f"/datasets/{dataset_id}/{product_id}/execute",
-            data=query,
-            params={"format": format},
+        response = GeokubeAPIRequester.post(
+            url=f"/datasets/{dataset_id}/{product_id}/execute?format={format}",
+            data=query.json(),
             user_credentials=user_credentials,
         )
     except AuthenticationFailed as err:
         raise HTTPException(
             status_code=401, detail="User could not be authenticated"
         ) from err
+    except GeokubeAPIRequestFailed as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
     else:
         return response
 
@@ -142,14 +154,60 @@ async def estimate(
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
         )
-        resposen = await Requester.post(
+        response = GeokubeAPIRequester.post(
             url=f"/datasets/{dataset_id}/{product_id}/estimate",
-            data=query,
+            data=query.json(),
             user_credentials=user_credentials,
         )
     except AuthenticationFailed as err:
         raise HTTPException(
             status_code=401, detail="User could not be authenticated"
         ) from err
+    except GeokubeAPIRequestFailed as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
     else:
-        return resposen
+        return response
+
+
+# TODO: !!!access should be restricted!!!
+@app.get("/get_api_key")
+async def get_api_key(
+    authorization: Optional[str] = Header(None, convert_underscores=True),
+):
+    """Get API key for a user the given Authorization token"""
+    try:
+        user_credentials = AccessManager.retrieve_credentials_from_jwt(
+            authorization
+        )
+    except AuthenticationFailed as err:
+        raise HTTPException(
+            status_code=401, detail="User could not be authenticated"
+        ) from err
+    except GeokubeAPIRequestFailed as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+    else:
+        return {"key": f"{user_credentials.id}:{user_credentials.key}"}
+
+
+@app.get("/requests")
+async def get_requests(
+    authorization: Optional[str] = Header(None, convert_underscores=True),
+):
+    """Get requests for a user the given Authorization token"""
+    try:
+        user_credentials = AccessManager.retrieve_credentials_from_jwt(
+            authorization
+        )
+        response_json = GeokubeAPIRequester.get(
+            url="/requests", user_credentials=user_credentials
+        )
+    except AuthenticationFailed as err:
+        raise HTTPException(
+            status_code=401, detail="User could not be authenticated"
+        ) from err
+    except GeokubeAPIRequestFailed as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+    else:
+        requests = ListOfRequests(data=response_json)
+        requests.add_requests_url_prefix(GeokubeAPIRequester._API_URL)
+        return requests

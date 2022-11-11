@@ -7,7 +7,7 @@ import logging
 from db.dbmanager.dbmanager import DBManager
 
 from .datastore.datastore import Datastore
-from .util import UserCredentials, log_execution_time
+from .utils import UserCredentials, log_execution_time
 from .access import AccessManager
 from .meta import LoggableMeta
 from .exceptions import MissingKeyInCatalogEntryError

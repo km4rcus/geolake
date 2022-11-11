@@ -13,7 +13,6 @@ COPY ./db/dbmanager /code/db/dbmanager
 COPY ./geoquery/ /code/geoquery
 COPY ./resources /code/app/resources
 COPY ./web/app /code/app
-COPY ./web/templates /code/templates
 COPY ./web/tests /code/tests
 # RUN pytest /code/tests
 EXPOSE 80

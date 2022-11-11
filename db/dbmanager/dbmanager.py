@@ -28,10 +28,16 @@ from .singleton import Singleton
 
 @unique
 class RequestStatus(Enum_):
+    """Status of the Request"""
+
     PENDING = auto()
     RUNNING = auto()
     DONE = auto()
     FAILED = auto()
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.PENDING
 
 
 class _Repr:
@@ -85,17 +91,20 @@ class Request(Base):
     product = Column(String(255))
     query = Column(JSON())
     estimate_size_bytes = Column(Integer)
-    download_id = Column(Integer, unique=True)
     created_on = Column(DateTime, nullable=False)
     last_update = Column(DateTime)
     fail_reason = Column(String(1000))
+    download = relationship("Download", uselist=False, lazy="selectin")
 
 
 class Download(Base):
     __tablename__ = "downloads"
     download_id = Column(Integer, primary_key=True)
     download_uri = Column(String(255))
-    storage_id = Column(Integer)
+    request_id = Column(
+        Integer, ForeignKey("requests.request_id"), nullable=False
+    )
+    storage_id = Column(Integer, ForeignKey("storages.storage_id"))
     location_path = Column(String(255))
     size_bytes = Column(Integer)
     created_on = Column(DateTime, nullable=False)
@@ -175,7 +184,7 @@ class DBManager(metaclass=Singleton):
                 raise ValueError(
                     f"Request with id: {request_id} doesn't exist"
                 )
-            return session.query(Download).get(request_details.download_id)
+            return request_details.download
 
     def create_request(
         self,
@@ -186,7 +195,6 @@ class DBManager(metaclass=Singleton):
         worker_id: int | None = None,
         priority: str | None = None,
         estimate_size_bytes: int | None = None,
-        download_id: int | None = None,
         status: RequestStatus = RequestStatus.PENDING,
     ) -> int:
         # TODO: Add more request-related parameters to this method.
@@ -200,7 +208,6 @@ class DBManager(metaclass=Singleton):
                 product=product,
                 query=query,
                 estimate_size_bytes=estimate_size_bytes,
-                download_id=download_id,
                 created_on=datetime.utcnow(),
             )
             session.add(request)
@@ -217,25 +224,23 @@ class DBManager(metaclass=Singleton):
         fail_reason: str = None,
     ) -> int:
         with self.__session_maker() as session:
-            download_id = None
+            request = session.query(Request).get(request_id)
+            request.status = status
+            request.worker_id = worker_id
+            request.last_update = datetime.utcnow()
+            request.fail_reason = fail_reason
+            session.commit()
             if status is RequestStatus.DONE:
                 download = Download(
                     location_path=location_path,
                     storage_id=0,
+                    request_id=request.request_id,
                     created_on=datetime.utcnow(),
                     download_uri=f"/download/{request_id}",
                     size_bytes=size_bytes,
                 )
                 session.add(download)
                 session.commit()
-                download_id = download.download_id
-            request = session.query(Request).get(request_id)
-            request.status = status
-            request.worker_id = worker_id
-            request.last_update = datetime.utcnow()
-            request.download_id = download_id
-            request.fail_reason = fail_reason
-            session.commit()
             return request.request_id
 
     def get_request_status_and_reason(
@@ -252,15 +257,14 @@ class DBManager(metaclass=Singleton):
         with self.__session_maker() as session:
             return session.query(User).get(user_id).requests
 
-    def get_download_details_for_request_id(self, request_id) -> str:
+    def get_download_details_for_request_id(self, request_id) -> Download:
         with self.__session_maker() as session:
             request_details = session.query(Request).get(request_id)
             if request_details is None:
                 raise IndexError(
                     f"Request with id: `{request_id}` does not exist!"
                 )
-            download_id = request_details.download_id
-            return session.query(Download).get(download_id)
+            return request_details.download
 
     def create_worker(
         self,
