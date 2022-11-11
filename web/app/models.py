@@ -237,7 +237,7 @@ class Request(BaseModel):
         values["request_json"] = json.loads(values.pop("query", "{}"))
         values["submission_date"] = values.pop("created_on", None)
         values["status"] = RequestStatusDTO(
-            RequestStatus(values["status"]).name
+            RequestStatus(values["status"]).value
         )
         if download := values.get("download"):
             values["url"] = download.get("download_uri")
