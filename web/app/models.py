@@ -12,12 +12,10 @@ from db.dbmanager.dbmanager import RequestStatus
 
 class RequestStatusDTO(Enum):
     """DTO enum for request statuses"""
-
-    DONE = "Completed"
-    RUNNING = "Running"
-    FAILED = "Failed"
-    PENDING = "Pending"
-
+    Completed = "DONE"
+    Running = "RUNNING"
+    Pending = "PENDING"
+    Failed = "FAILED"
 
 class Contact(BaseModel):
     """Contact DTO of dataset metadata"""
@@ -230,15 +228,15 @@ class Request(BaseModel):
     duration: Optional[timedelta] = None
     size: Optional[int] = None
     url: Optional[str] = None
-    status: RequestStatusDTO
+    status: str
 
     @root_validator(pre=True)
     def match_keys(cls, values):
         values["request_json"] = json.loads(values.pop("query", "{}"))
         values["submission_date"] = values.pop("created_on", None)
         values["status"] = RequestStatusDTO(
-            RequestStatus(values["status"]).value
-        )
+            RequestStatus(values["status"]).name
+        ).name
         if download := values.get("download"):
             values["url"] = download.get("download_uri")
             values["end_date"] = download.get("created_on")
