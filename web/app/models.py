@@ -261,7 +261,10 @@ class Request(BaseModel):
         prefix : str
             Prefix to add to the URL
         """
-        self.url = "".join([prefix, self.url])
+        if self.url:
+            self.url = "".join([prefix, self.url])
+        else:
+            self.url = None
 
 
 class ListOfRequests(BaseModel):
