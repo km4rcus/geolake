@@ -16,6 +16,16 @@ class RequestManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
+    def get_request_result_size(cls, request_id: int) -> float:
+        if request := DBManager().get_request_details(request_id):
+            return request.download.size_bytes
+        raise HTTPException(
+            status_code=400,
+            detail=f"Request with ID '{request_id}' was not found!",
+        )
+
+    @classmethod
+    @log_execution_time(_LOG)
     def get_requests_details_for_user(
         cls, user_credentials: UserCredentials
     ) -> list[DBManager.Request]:

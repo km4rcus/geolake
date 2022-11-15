@@ -131,8 +131,13 @@ async def get_request_status(request_id: int):
     )
     if status is RequestStatus.FAILED:
         return {"status": status.name, "fail_reason": reason}
-    else:
-        return {"status": status.name}
+    return {"status": status.name}
+
+
+@app.get("/requests/{request_id}/size")
+async def get_request_resulting_size(request_id: int):
+    """Get size of the file being the result of the request"""
+    return RequestManager.get_request_result_size(request_id=request_id)
 
 
 @app.get("/download/{request_id}")

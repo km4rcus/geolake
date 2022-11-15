@@ -147,9 +147,7 @@ class DatasetManager(metaclass=LoggableMeta):
             cls._LOG.info("attempt to execute query by an anonymous user!")
             raise HTTPException(
                 status_code=401,
-                detail=(
-                    "Anonymouse user cannot execute queries! Please log in!"
-                ),
+                detail="Anonymouse user cannot execute queries!",
             )
         broker_conn = pika.BlockingConnection(
             pika.ConnectionParameters(host="broker")
