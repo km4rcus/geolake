@@ -9,11 +9,12 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
+from .meta import LoggableMeta
 from ..datastore.datastore import Datastore
-from ..util import UserCredentials
+from ..util import UserCredentials, log_execution_time
 
 
-class DatasetManager:
+class DatasetManager(metaclass=LoggableMeta):
 
     _LOG = logging.getLogger("DatasetManager")
 
@@ -49,6 +50,7 @@ class DatasetManager:
                 )
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_eligible_products_for_all_datasets(
         cls,
         user_credentials: UserCredentials,
@@ -70,6 +72,7 @@ class DatasetManager:
         return datasets
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_eligible_products_for_dataset(
         cls, user_credentials: UserCredentials, dataset_id: str
     ) -> list[str]:
@@ -94,6 +97,7 @@ class DatasetManager:
         return eligible_products_for_dataset
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_details_if_product_eligible(
         cls,
         user_credentials: UserCredentials,
@@ -129,6 +133,7 @@ class DatasetManager:
             )
 
     @classmethod
+    @log_execution_time(_LOG)
     def retrieve_data_and_get_request_id(
         cls,
         user_credentials: UserCredentials,
@@ -173,6 +178,7 @@ class DatasetManager:
         return request_id
 
     @classmethod
+    @log_execution_time(_LOG)
     def estimate(
         cls,
         dataset_id: str,

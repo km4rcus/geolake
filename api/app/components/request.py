@@ -6,19 +6,21 @@ from geoquery.geoquery import GeoQuery
 from db.dbmanager.dbmanager import DBManager
 
 from .access import AccessManager
-from ..util import UserCredentials
+from .meta import LoggableMeta
+from ..util import UserCredentials, log_execution_time
 
 
-class RequestManager:
+class RequestManager(metaclass=LoggableMeta):
 
     _LOG = logging.getLogger("RequestManager")
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_requests_details_for_user(
         cls, user_credentials: UserCredentials
     ) -> list[DBManager.Request]:
         if user_credentials.is_public:
-            cls._LOG.debug("Attempt to get requests for anonymous user!")
+            cls._LOG.debug("attempt to get requests for anonymous user!")
             raise HTTPException(
                 status_code=401, detail="Anonymous user doesn't have requests!"
             )
@@ -27,6 +29,7 @@ class RequestManager:
         )
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_request_status_for_request_id(
         cls, request_id: int
     ) -> DBManager.Request:
@@ -34,34 +37,37 @@ class RequestManager:
             status, reason = DBManager().get_request_status_and_reason(
                 request_id
             )
-        except IndexError as e:
-            cls._LOG.error(f"Request with id: `{request_id}` was not found!")
+        except IndexError as err:
+            cls._LOG.error("request with id: '%s' was not found!", request_id)
             raise HTTPException(
                 status_code=400,
                 detail=f"Request with id: {request_id} does not exist!",
-            )
+            ) from err
         return status, reason
 
     @classmethod
+    @log_execution_time(_LOG)
     def get_request_uri_for_request_id(cls, request_id) -> str:
         try:
             download_details = DBManager().get_download_details_for_request_id(
                 request_id
             )
-        except IndexError as e:
-            cls._LOG.error(f"Request with id: `{request_id}` was not found!")
+        except IndexError as err:
+            cls._LOG.error("request with id: '%s' was not found!", request_id)
             raise HTTPException(
                 status_code=400,
                 detail=f"Request with id: `{request_id}` does not exist",
-            )
+            ) from err
         if download_details is None:
             (
                 request_status,
-                fail_reason,
+                _,
             ) = DBManager().get_request_status_and_reason(request_id)
             cls._LOG.info(
-                f"Download URI not found for request id: `{request_id}`."
-                f" Request status is `{request_status}`"
+                "download URI not found for request id: '%s'."
+                " Request status is '%s'",
+                request_id,
+                request_status,
             )
             raise HTTPException(
                 status_code=400,

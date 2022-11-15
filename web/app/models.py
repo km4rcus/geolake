@@ -12,10 +12,12 @@ from db.dbmanager.dbmanager import RequestStatus
 
 class RequestStatusDTO(Enum):
     """DTO enum for request statuses"""
+
     Completed = "DONE"
     Running = "RUNNING"
     Pending = "PENDING"
     Failed = "FAILED"
+
 
 class Contact(BaseModel):
     """Contact DTO of dataset metadata"""
@@ -245,6 +247,7 @@ class Request(BaseModel):
 
     @validator("duration", pre=True)
     def match_duration(cls, value, values):
+        # TODO: fix, duration is always null in resulting JSON
         if last_update := values.get("end_date"):
             return last_update - values["submission_date"]
         return value

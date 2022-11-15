@@ -3,10 +3,8 @@ import os
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
-from enum import Enum
-from pydantic import BaseModel
 
-from db.dbmanager.dbmanager import DBManager, RequestStatus
+from db.dbmanager.dbmanager import RequestStatus
 from geoquery.geoquery import GeoQuery
 
 from .components.access import AccessManager
@@ -41,7 +39,7 @@ async def dds_info():
 
 
 @app.get("/datasets")
-async def datasets(
+async def get_datasets(
     user_token: Optional[str] = Header(None, convert_underscores=True)
 ):
     """List all products eligible for a user defined by user_token"""
@@ -52,7 +50,7 @@ async def datasets(
 
 
 @app.get("/datasets/{dataset_id}")
-async def dataset(
+async def get_products(
     dataset_id: str,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
@@ -64,7 +62,7 @@ async def dataset(
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
-async def dataset(
+async def get_product_details(
     dataset_id: str,
     product_id: str,
     user_token: Optional[str] = Header(None, convert_underscores=True),
@@ -174,9 +172,10 @@ async def get_request_uri(
 
 
 @app.delete("/requests/{request_id}/")
-async def get_request_uri(
+async def delete_request_uri(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
+    """Delete the request with 'request_id' from the database"""
     # TODO:
     raise HTTPException(status_code=400, detail="NotImplementedError")

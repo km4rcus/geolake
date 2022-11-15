@@ -6,10 +6,11 @@ import logging
 from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager
 
-from ..util import UserCredentials
+from ..util import UserCredentials, log_execution_time
+from .meta import LoggableMeta
 
 
-class AccessManager:
+class AccessManager(metaclass=LoggableMeta):
 
     _LOG = logging.getLogger("AccessManager")
 
@@ -22,17 +23,18 @@ class AccessManager:
             )
 
     @classmethod
+    @log_execution_time(_LOG)
     def authenticate_user(cls, user_credentials: UserCredentials) -> bool:
         cls._LOG.debug(
-            f"Authenticating the user with the user_id: {user_credentials.id}"
+            "authenticating the user with the user_id: %s", user_credentials.id
         )
         if user_credentials.is_public:
-            cls._LOG.debug(f"Authentication successful. User is anonymouse!")
+            cls._LOG.debug("authentication successful. User is anonymouse!")
             return True
         user = DBManager().get_user_details(user_credentials.id)
         if user is None:
             cls._LOG.info(
-                f"The user with id `{user_credentials.id}` does not exist!"
+                "user with id '%s' does not exist!", user_credentials.id
             )
             raise HTTPException(
                 status_code=400,
@@ -42,26 +44,30 @@ class AccessManager:
             )
         if user.api_key != user_credentials.key:
             cls._LOG.info(
-                "Authentication failed! The key provided for the user_id"
-                f" {user_credentials.id} was not valid!"
+                "authentication failed! The key provided for the user_id '%s'"
+                " was not valid!",
+                user_credentials.id,
             )
             raise HTTPException(
                 status_code=400,
                 detail=f"The provided key is not valid.",
             )
         cls._LOG.debug(
-            f"Authentication successful. User_id: {user_credentials.id}!"
+            "authentication successful. User_id '%s'!", user_credentials.id
         )
 
     @classmethod
+    @log_execution_time(_LOG)
     def is_user_eligible_for_role(
         cls,
         user_credentials: UserCredentials,
         product_role_name: None | str = "public",
     ) -> bool:
         cls._LOG.debug(
-            "Verifying eligibility of the user_id:"
-            f" {user_credentials.id} against role_name: {product_role_name}"
+            "verifying eligibility of the user_id '%s' against role_name:"
+            " '%s'",
+            user_credentials.id,
+            product_role_name,
         )
         if product_role_name == "public":
             return True
@@ -76,12 +82,15 @@ class AccessManager:
             return False
 
     @classmethod
+    @log_execution_time(_LOG)
     def is_user_eligible_for_request(
         cls, user_credentials: UserCredentials, request_id: int
     ) -> bool:
         cls._LOG.debug(
-            "Verifying eligibility of the user_id:"
-            f" {user_credentials.id} against request_id: {request_id}"
+            "verifying eligibility of the user_id: '%s' against request_id:"
+            " '%s'",
+            user_credentials.id,
+            request_id,
         )
         return True
         # NOTE: currently everyone is eligible for each download

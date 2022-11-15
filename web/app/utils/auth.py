@@ -1,3 +1,4 @@
+"""Module with utils related to authentication and authorization"""
 from pydantic import BaseModel, UUID4
 from typing import Optional
 

@@ -1,6 +1,9 @@
 """Utils module for geokube-dds API component"""
 from __future__ import annotations
 
+from functools import wraps
+import datetime
+import logging
 
 from uuid import UUID
 from fastapi import HTTPException
@@ -79,3 +82,26 @@ def _get_user_id_and_key_from_token(user_token: str):
         ) from err
     else:
         return (user_id, api_key)
+
+
+def log_execution_time(logger: logging.Logger):
+    """Decorator logging execution time of the method or function"""
+
+    def inner(func):
+        @wraps(func)
+        def wrapper(*args, **kwds):
+            exec_start_time = datetime.datetime.now()
+            try:
+                return func(*args, **kwds)
+            finally:
+                exec_time = datetime.datetime.now() - exec_start_time
+                logger.info(
+                    "execution of '%s' function from '%s' package took %s",
+                    func.__name__,
+                    func.__module__,
+                    exec_time,
+                )
+
+        return wrapper
+
+    return inner

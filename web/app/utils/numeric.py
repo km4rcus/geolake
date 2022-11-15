@@ -1,3 +1,4 @@
+"""Module with utils for number handling"""
 from numbers import Number
 
 
