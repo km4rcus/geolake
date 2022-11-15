@@ -278,7 +278,9 @@ class ListOfRequests(BaseModel):
     def sort_data(cls, value):
         if value is not None and len(value) > 0:
             return sorted(
-                value, key=lambda request: request.end_date, reverse=True
+                value,
+                key=lambda request: request.submission_date,
+                reverse=True,
             )
         return value
 
