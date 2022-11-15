@@ -274,6 +274,14 @@ class ListOfRequests(BaseModel):
     status: Optional[str] = "OK"
     data: Optional[list[Request]]
 
+    @validator("data")
+    def sort_data(cls, value):
+        if value is not None and len(value) > 0:
+            return sorted(
+                value, key=lambda request: request.end_date, reverse=True
+            )
+        return value
+
     def add_requests_url_prefix(self, prefix: str):
         """Add inplace prefix to URL of each Request in 'data' attribute
         by calling Request.add_url_prefix method
