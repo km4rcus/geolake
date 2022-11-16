@@ -251,10 +251,9 @@ class Request(BaseModel):
             # NOTE: we remove microseconds parts (after dot)
             # NOTE: we add 1 second to get rid of 00:00:00
             return str(
-                last_update
-                - values["submission_date"]
-                + datetime.timedelta(seconds=1)
-            ).split(".", maxsplit=1)
+                (last_update - values["submission_date"])
+                + timedelta(seconds=1)
+            ).split(".", maxsplit=1)[0]
         return value
 
     def add_url_prefix(self, prefix):
