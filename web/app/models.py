@@ -227,7 +227,7 @@ class Request(BaseModel):
     request_json: dict
     submission_date: datetime
     end_date: Optional[datetime] = None
-    duration: Optional[timedelta] = None
+    duration: Optional[str] = None
     size: Optional[int] = None
     url: Optional[str] = None
     status: str
@@ -245,11 +245,16 @@ class Request(BaseModel):
             values["size"] = download.get("size_bytes")
         return values
 
-    @validator("duration", pre=True)
+    @validator("duration", pre=True, always=True)
     def match_duration(cls, value, values):
-        # TODO: fix, duration is always null in resulting JSON
         if last_update := values.get("end_date"):
-            return last_update - values["submission_date"]
+            # NOTE: we remove microseconds parts (after dot)
+            # NOTE: we add 1 second to get rid of 00:00:00
+            return str(
+                last_update
+                - values["submission_date"]
+                + datetime.timedelta(seconds=1)
+            ).split(".", maxsplit=1)
         return value
 
     def add_url_prefix(self, prefix):
