@@ -1,3 +1,4 @@
+"""Module with tools for files management"""
 from __future__ import annotations
 
 import os
@@ -18,7 +19,27 @@ class FileManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def prepare_request_for_download_and_get_path(cls, request_id: str | int):
+    def prepare_request_for_download_and_get_path(cls, request_id: int):
+        """Get location path of the file being the result of
+        the request with `request_id`.
+
+        Parameters
+        ----------
+        request_id : int
+            ID of the request
+
+        Returns
+        -------
+        path : str
+            The location of the resulting file
+
+        Raises
+        -------
+        HTTPException
+            404 if:
+                a) the request does not exist or is not finished yet,
+                b) the request was finished, but file was not found
+        """
         cls._LOG.debug(f"Preparing downloads for request id: {request_id}...")
         db = DBManager()
         (

@@ -1,3 +1,4 @@
+"""Module with tools for request management"""
 from __future__ import annotations
 
 import logging
@@ -17,6 +18,23 @@ class RequestManager(metaclass=LoggableMeta):
     @classmethod
     @log_execution_time(_LOG)
     def get_request_result_size(cls, request_id: int) -> float:
+        """Get size of the file being the result of the request with `request_id`
+
+        Parameters
+        ----------
+        request_id : int
+            ID of the request
+
+        Returns
+        -------
+        size : int
+            Size in bytes
+
+        Raises
+        -------
+        HTTPException
+            400 if the request was not found
+        """
         if request := DBManager().get_request_details(request_id):
             return request.download.size_bytes
         raise HTTPException(
@@ -29,6 +47,23 @@ class RequestManager(metaclass=LoggableMeta):
     def get_requests_details_for_user(
         cls, user_credentials: UserCredentials
     ) -> list[DBManager.Request]:
+        """Get details of all requests for the user.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Returns
+        -------
+        requests : list
+            List of all requests done by the user
+
+        Raises
+        -------
+        HTTPException
+            401 if method is executed for anonymous user
+        """
         if user_credentials.is_public:
             cls._LOG.debug("attempt to get requests for anonymous user!")
             raise HTTPException(
@@ -42,7 +77,20 @@ class RequestManager(metaclass=LoggableMeta):
     @log_execution_time(_LOG)
     def get_request_status_for_request_id(
         cls, request_id: int
-    ) -> DBManager.Request:
+    ) -> tuple[str, str]:
+        """Get request status and the reason of the eventual fail.
+        The second item is `None`, it status is other than failed.
+
+        Parameters
+        ----------
+        request_id : int
+            ID of the request
+
+        Returns
+        -------
+        status : tuple
+            Tuple of status and, eventually, fail reason.
+        """
         try:
             status, reason = DBManager().get_request_status_and_reason(
                 request_id
@@ -58,6 +106,23 @@ class RequestManager(metaclass=LoggableMeta):
     @classmethod
     @log_execution_time(_LOG)
     def get_request_uri_for_request_id(cls, request_id) -> str:
+        """Get URI for the request.
+
+        Parameters
+        ----------
+        request_id : int
+            ID of the request
+
+        Returns
+        -------
+        uri : str
+            URI for the download associated with the given request
+
+        Raises
+        -------
+        HTTPException
+            400 if the request does not generated the file
+        """
         try:
             download_details = DBManager().get_download_details_for_request_id(
                 request_id

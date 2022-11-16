@@ -1,3 +1,4 @@
+"""Module with tools for dataset and details retrieving"""
 from __future__ import annotations
 
 import os
@@ -20,6 +21,25 @@ class DatasetManager(metaclass=LoggableMeta):
 
     @classmethod
     def assert_product_exists(cls, dataset_id, product_id: None | str = None):
+        """Assert that the dataset or product exist.
+        If `product_id` is set, the method verifies if it belongs to the
+        dataset with ID in `dataset_id`.
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str, optional
+            ID of the product
+
+        Raises
+        -------
+        HTTPException
+            400 if:
+                a) dataset with `dataset_id` does not exist,
+                b) product for the given dataset does not exist
+                c) product might exist, but it does not belong to the dataset `dataset_id`
+        """
         dset = Datastore(cache_path="/cache")
         if dataset_id not in dset.dataset_list():
             cls._LOG.info(
@@ -55,6 +75,29 @@ class DatasetManager(metaclass=LoggableMeta):
         cls,
         user_credentials: UserCredentials,
     ) -> dict[str, list[str]]:
+        """Get eligible products for all datasets defined in the catalog.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Returns
+        -------
+        products : dict
+            The dictionary of datasets and products in the form:
+            ```python
+            {
+                dataset_id_1: [prod_id_1, prod_id_2, ...],
+                dataset_id_2: ...
+            }
+            ```
+
+        Raises
+        -------
+        HTTPException
+            400 if user does not exist or the key is not valid
+        """
         cls._LOG.debug(
             "getting eligible products for user_id: `%s`", user_credentials.id
         )
@@ -76,6 +119,26 @@ class DatasetManager(metaclass=LoggableMeta):
     def get_eligible_products_for_dataset(
         cls, user_credentials: UserCredentials, dataset_id: str
     ) -> list[str]:
+        """Get eligible products only for the dataset with id in `dataset_id`.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Returns
+        -------
+        products : list
+            The dictionary of datasets and products in the form:
+            ```python
+            [prod_id_1, prod_id_2, ...]
+            ```
+
+        Raises
+        -------
+        HTTPException
+            400 if user does not exist or the key is not valid
+        """
         cls._LOG.debug(
             "getting eligible products for user_id: `%s`, dataset_id: `%s`",
             user_credentials.id,
@@ -103,7 +166,29 @@ class DatasetManager(metaclass=LoggableMeta):
         user_credentials: UserCredentials,
         dataset_id: str,
         product_id: str,
-    ) -> list[str]:
+    ) -> dict:
+        """Get details for the given product, if the user is eligible
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+
+        Returns
+        -------
+        details : dict
+            The dictionary with details of the product
+
+        Raises
+        -------
+        HTTPException
+            400 if user does not exist or the key is not valid
+            401 if the user is not authorized for the given product
+        """
         cls._LOG.debug(
             "getting details for user_id: `%s`, dataset_id: `%s`, product_id:"
             " `%s`",
@@ -142,6 +227,32 @@ class DatasetManager(metaclass=LoggableMeta):
         query: GeoQuery,
         format: str,
     ):
+        """Query the data and return the ID of the request.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        query : GeoQuery
+            Query to perform
+        format : str
+            Format of the data
+
+        Returns
+        -------
+        request_id : int
+            ID of the request
+
+        Raises
+        -------
+        HTTPException
+            400 if user does not exist or the key is not valid
+            401 if anonymous user attempts to execute a query
+        """
         AccessManager.authenticate_user(user_credentials)
         if user_credentials.is_public:
             cls._LOG.info("attempt to execute query by an anonymous user!")
@@ -183,6 +294,31 @@ class DatasetManager(metaclass=LoggableMeta):
         product_id: str,
         query: GeoQuery,
     ):
+        """Estimate the size of the resulting data.
+        No authentication is needed for estimation query.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        query : GeoQuery
+            Query to perform
+
+        Returns
+        -------
+        size_details : dict
+            Estimated size of  the query in the form:
+            ```python
+            {
+                "value": val,
+                "units": units
+            }
+            ```
+        """
         try:
             query_bytes_estimation = (
                 Datastore(cache_path="/cache")

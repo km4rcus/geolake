@@ -1,3 +1,4 @@
+"""Module with tools for access management"""
 from __future__ import annotations
 
 
@@ -16,6 +17,18 @@ class AccessManager(metaclass=LoggableMeta):
 
     @classmethod
     def assert_is_admin(cls, user_credentials: UserCredentials) -> bool:
+        """Assert that user has an 'admin' role
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Returns
+        -------
+        is_admin : bool
+            Flag which indicate if the user has 'admin' role
+        """
         if DBManager().get_user_role_name(user_credentials.id) != "admin":
             raise HTTPException(
                 status_code=401,
@@ -24,7 +37,20 @@ class AccessManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def authenticate_user(cls, user_credentials: UserCredentials) -> bool:
+    def authenticate_user(cls, user_credentials: UserCredentials):
+        """Authenticate user given the credentials.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Raises
+        -------
+        HTTPException
+            400 if user does not exist or the key is not valid
+
+        """
         cls._LOG.debug(
             "authenticating the user with the user_id: %s", user_credentials.id
         )
@@ -63,6 +89,22 @@ class AccessManager(metaclass=LoggableMeta):
         user_credentials: UserCredentials,
         product_role_name: None | str = "public",
     ) -> bool:
+        """Check if user is eligible for the given product's role.
+        If no product role name is defined, it's treated as the 'public'
+        profile.
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+        product_role_name : str, optional, default="public"
+            The name of the product's role
+
+        Returns
+        -------
+        is_eligible : bool
+            `True` if user is eligible, `False` otherwise
+        """
         cls._LOG.debug(
             "verifying eligibility of the user_id '%s' against role_name:"
             " '%s'",
@@ -86,6 +128,20 @@ class AccessManager(metaclass=LoggableMeta):
     def is_user_eligible_for_request(
         cls, user_credentials: UserCredentials, request_id: int
     ) -> bool:
+        """Check if user is eligible to see request's details
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+        request_id : int, optional, default="public"
+            ID of the request to check
+
+        Returns
+        -------
+        is_eligible : bool
+            `True` if user is eligible, `False` otherwise
+        """
         cls._LOG.debug(
             "verifying eligibility of the user_id: '%s' against request_id:"
             " '%s'",
