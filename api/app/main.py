@@ -156,14 +156,13 @@ async def download_request_result(
             request_id=request_id
         )
         return FileResponse(path=path, filename=path)
-    else:
-        raise HTTPException(
-            status_code=401,
-            detail=(
-                f"User with id: {user_credentials.id} is not authorized for"
-                f" results of the request with id {request_id}"
-            ),
-        )
+    raise HTTPException(
+        status_code=401,
+        detail=(
+            f"User with id: {user_credentials.id} is not authorized for"
+            f" results of the request with id {request_id}"
+        ),
+    )
 
 
 @app.get("/requests/{request_id}/uri")

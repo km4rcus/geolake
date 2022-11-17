@@ -95,6 +95,7 @@ def log_execution_time(logger: logging.Logger):
                 return func(*args, **kwds)
             finally:
                 exec_time = datetime.datetime.now() - exec_start_time
+                # NOTE: maybe logging should be on DEBUG level
                 logger.info(
                     "execution of '%s' function from '%s' package took %s",
                     func.__name__,
