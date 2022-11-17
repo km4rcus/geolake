@@ -26,6 +26,13 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from .singleton import Singleton
 
 
+def is_true(item) -> bool:
+    """If `item` represents `True` value"""
+    if isinstance(item, str):
+        return item.lower() in ["y", "yes", "true", "t"]
+    return bool(item)
+
+
 @unique
 class RequestStatus(Enum_):
     """Status of the Request"""
@@ -149,7 +156,9 @@ class DBManager(metaclass=Singleton):
         database = os.environ["POSTGRES_DB"]
 
         url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
-        self.__engine = create_engine(url, echo=True)
+        self.__engine = create_engine(
+            url, echo=is_true(os.environ.get("ECHO_DB", False))
+        )
         self.__session_maker = sessionmaker(bind=self.__engine)
         Base.metadata.create_all(self.__engine)
 
