@@ -14,6 +14,7 @@ from ..util import log_execution_time
 
 
 class FileManager(metaclass=LoggableMeta):
+    """Manager class to handle files produced by geokube-dds"""
 
     _LOG = logging.getLogger("FileManager")
 
@@ -40,7 +41,7 @@ class FileManager(metaclass=LoggableMeta):
                 a) the request does not exist or is not finished yet,
                 b) the request was finished, but file was not found
         """
-        cls._LOG.debug(f"Preparing downloads for request id: {request_id}...")
+        cls._LOG.debug("preparing downloads for request id: %s", request_id)
         db = DBManager()
         (
             request_status,

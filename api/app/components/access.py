@@ -12,6 +12,7 @@ from .meta import LoggableMeta
 
 
 class AccessManager(metaclass=LoggableMeta):
+    """Manager that handles access to the geokube-dds"""
 
     _LOG = logging.getLogger("AccessManager")
 
@@ -56,7 +57,6 @@ class AccessManager(metaclass=LoggableMeta):
         )
         if user_credentials.is_public:
             cls._LOG.debug("authentication successful. User is anonymouse!")
-            return True
         user = DBManager().get_user_details(user_credentials.id)
         if user is None:
             cls._LOG.info(
@@ -76,7 +76,7 @@ class AccessManager(metaclass=LoggableMeta):
             )
             raise HTTPException(
                 status_code=400,
-                detail=f"The provided key is not valid.",
+                detail="The provided key is not valid.",
             )
         cls._LOG.debug(
             "authentication successful. User_id '%s'!", user_credentials.id
