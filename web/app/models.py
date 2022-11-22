@@ -50,7 +50,8 @@ class ProdId(BaseModel):
 
 
 class DatasetMetadata(BaseModel):
-    """Dataset metadata DTO with information about name, default product, description, etc."""
+    """Dataset metadata DTO with information about name,
+    default product, description, etc."""
 
     id: str
     default: Optional[str] = None
@@ -78,6 +79,8 @@ class DatasetMetadata(BaseModel):
             {"id": prod_key, "description": prod.get("description")}
             for prod_key, prod in values["products"].items()
         ]
+        if values.get("default") is None and len(prods) > 0:
+            values["metadata"]["default"] = prods[0]["id"]
         return dict(products=prods, **values["metadata"])
 
 

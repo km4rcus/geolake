@@ -83,10 +83,11 @@ async def estimate(
     product_id: str,
     query: GeoQuery,
     user_token: Optional[str] = Header(None, convert_underscores=True),
+    unit: str = None,
 ):
     """Estimate the resulting size of the query"""
     return DatasetManager.estimate(
-        dataset_id=dataset_id, product_id=product_id, query=query
+        dataset_id=dataset_id, product_id=product_id, query=query, unit=unit
     )
 
 

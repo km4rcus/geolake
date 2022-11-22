@@ -75,6 +75,8 @@ class Datastore(metaclass=Singleton):
     @log_execution_time(_LOG)
     def _load_cache(self):
         for i, dataset_id in enumerate(self.dataset_list()):
+            if dataset_id == "medsea-rea-e3r1":
+                continue
             self._LOG.info(
                 "loading cache for `%s` (%d/%d)",
                 dataset_id,
@@ -208,6 +210,23 @@ class Datastore(metaclass=Singleton):
         info["description"] = entry.description
         info["id"] = product_id
         info["dataset"] = self.dataset_info(dataset_id=dataset_id)
+        if use_cache:
+            info["data"] = self.get_cached_product(
+                dataset_id, product_id
+            ).to_dict()
+        else:
+            info["data"] = (
+                self.catalog[dataset_id][product_id].read_chunked().to_dict()
+            )
+        return info
+
+    def product_info(
+        self, dataset_id: str, product_id: str, use_cache: bool = False
+    ):
+        info = {}
+        entry = self.catalog[dataset_id][product_id]
+        if entry.metadata:
+            info["metadata"] = entry.metadata
         if use_cache:
             info["data"] = self.get_cached_product(
                 dataset_id, product_id

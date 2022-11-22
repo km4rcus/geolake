@@ -294,6 +294,7 @@ class DatasetManager(metaclass=LoggableMeta):
         dataset_id: str,
         product_id: str,
         query: GeoQuery,
+        unit: str | None,
     ):
         """Estimate the size of the resulting data.
         No authentication is needed for estimation query.
@@ -308,6 +309,9 @@ class DatasetManager(metaclass=LoggableMeta):
             ID of the product
         query : GeoQuery
             Query to perform
+        unit : str
+            One of unit [bytes, kB, MB, GB] to present the result. If `None`,
+            unit will be inferred.
 
         Returns
         -------
@@ -340,7 +344,22 @@ class DatasetManager(metaclass=LoggableMeta):
                     " not exist!"
                 ),
             ) from exception
-        return _make_bytes_readable_dict(size_bytes=query_bytes_estimation)
+        return (
+            _make_bytes_readable_dict(size_bytes=query_bytes_estimation)
+            if unit is None
+            else _convert_bytes(query_bytes_estimation, unit)
+        )
+
+
+def _convert_bytes(size_bytes: int, unit: str) -> float:
+    unit = unit.lower()
+    if unit == "kb":
+        return size_bytes / 1024
+    if unit == "mb":
+        return size_bytes / 1048576
+    if unit == "gb":
+        return size_bytes / 1073741824
+    raise ValueError(f"unsupported unit: {unit}")
 
 
 def _make_bytes_readable_dict(size_bytes: int) -> dict:

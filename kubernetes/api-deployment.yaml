@@ -47,17 +47,17 @@ spec:
           value: /api
         - name: ECHO_DB
           value: 'false'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a116
+        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a120
         name: api
         ports:
         - containerPort: 80
         resources:
           limits:
             cpu: 500m
-            memory: 4Gi
+            memory: 8Gi
           requests:
             cpu: 250m
-            memory: 4Gi
+            memory: 6Gi
         volumeMounts:
         - mountPath: /catalog
           name: catalog

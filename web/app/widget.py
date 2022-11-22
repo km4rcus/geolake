@@ -10,8 +10,7 @@ from pandas.tseries.frequencies import to_offset
 from pydantic import validate_arguments
 
 from .meta import LoggableMeta
-from .utils import log_execution_time
-from .utils import log_execution_time
+from .utils import log_execution_time, maybe_round_value
 from .models import Filter, Product, WidgetsCollection, Kube
 
 
@@ -146,7 +145,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                 wrequired=True,
                 wparameter="variable",
                 wtype="StringList",
-                wdetails={"values": all_fields},
+                wdetails={"values": list(all_fields.values())},
             ).to_dict()
         )
         self._wid_order.append("variable")
@@ -161,10 +160,12 @@ class WidgetFactory(metaclass=LoggableMeta):
             for att_name, att_val in dr.attributes.items():
                 attrs_opts[att_name].add(att_val)
         for att_name, att_opts in attrs_opts.items():
-            flt = self._d.metadata.filters.get(att_name, Filter)
-            if not flt.user_defined:
-                # then it is skipped and user cannot manipulate it
+            # 'filters' section is not required for metadata
+            if (self._d.metadata.filters is None) or (
+                not self._d.metadata.filters.get(att_name, Filter).user_defined
+            ):
                 continue
+            flt = self._d.metadata.filters.get(att_name, Filter)
             att_opts = list(att_opts)
             if sort_keys:
                 att_opts = sorted(att_opts)
@@ -194,6 +195,8 @@ class WidgetFactory(metaclass=LoggableMeta):
             if "time" not in coords:
                 continue
             time_vals = np.array(coords["time"]["values"], dtype=np.datetime64)
+            if len(time_vals) < 2:
+                continue
             time_offset = to_offset(pd.Series(time_vals).diff().mode().item())
             current_time_unit = time_offset.name
             current_time_step = time_offset.n
@@ -412,15 +415,13 @@ class WidgetFactory(metaclass=LoggableMeta):
             if not aux_kube_coords_names:
                 continue
             for coord_name in aux_kube_coords_names:
+                vals = np.array(coords[coord_name]["values"]).astype(np.float)
+                aux_coords["values"] = sorted(vals)
                 for agg in [max, min]:
                     aux_coords[coord_name][agg.__name__] = agg(
                         [
                             aux_coords[coord_name][agg.__name__],
-                            agg(
-                                np.array(coords[coord_name]["values"]).astype(
-                                    np.float
-                                )
-                            ),
+                            agg(vals),
                         ]
                     )
         if not aux_coords:
@@ -444,7 +445,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                     "value": val,
                     "label": maybe_round_value(val, self._NUMBER_OF_DECIMALS),
                 }
-                for val in coords[coord_name]["value"]
+                for val in aux_coords[coord_name]["values"]
             ]
 
             wid = Widget(

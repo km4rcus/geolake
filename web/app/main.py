@@ -35,13 +35,13 @@ app = FastAPI(
     docs_url=f"{_pref}/docs",
     openapi_url=f"{_pref}/openapi.json",
     on_startup=[
-        GeokubeAPIRequester.init
+        GeokubeAPIRequester.init,
     ],  # NOTE: eventually, load Datastore cache on startup
 )
 app.router.prefix = _pref
 
 # TODO: origins should be limited!
-ORIGINS = "*"
+ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -155,7 +155,7 @@ async def estimate(
             authorization
         )
         response = GeokubeAPIRequester.post(
-            url=f"/datasets/{dataset_id}/{product_id}/estimate",
+            url=f"/datasets/{dataset_id}/{product_id}/estimate?unit=GB",
             data=query.json(),
             user_credentials=user_credentials,
         )
@@ -166,7 +166,9 @@ async def estimate(
     except GeokubeAPIRequestFailed as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
-        return response
+        return DatasetManager.wrap_estimate_size_message(
+            dataset_id, product_id, response.get("value")
+        )
 
 
 # TODO: !!!access should be restricted!!!

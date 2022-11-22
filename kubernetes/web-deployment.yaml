@@ -50,17 +50,17 @@ spec:
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a386
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a402
         name: web
         ports:
         - containerPort: 80
         resources:
           limits:
             cpu: 500m
-            memory: 4Gi
+            memory: 8Gi
           requests:
             cpu: 250m
-            memory: 4Gi
+            memory: 8Gi
         volumeMounts:
         - mountPath: /catalog
           name: catalog

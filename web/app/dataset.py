@@ -22,6 +22,48 @@ class DatasetManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
+    def wrap_estimate_size_message(
+        cls, dataset_id: str, product_id: str, estimated_size_gb: int
+    ):
+        """Wrap estimate size result into the message expected by the Webportal
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        estimated_size_gb : int
+            Estimated size in gigabytes
+
+        Returns
+        -------
+        message : dict
+            A dicitonary with keys `status` and `message`
+        """
+        status = "OK"
+        # NOTE: set 10 GB as default limit
+        maximum_allowed_size_gb = cls._DATASTORE.product_metadata(
+            dataset_id, product_id
+        ).get("maximum_query_size_gb", 10)
+        if dataset_id in []:
+            msg = "Size estimation is not currently supported for this dataset"
+        if estimated_size_gb is None:
+            status = "Error"
+            msg = "Could not estimate the size for that dataset"
+        if estimated_size_gb > maximum_allowed_size_gb:
+            status = "Error"
+            msg = (
+                f"Estimated request size ({estimated_size_gb} GB) is more than"
+                f" maximum allowed size ({maximum_allowed_size_gb} GB). Please"
+                " review your query"
+            )
+        else:
+            msg = f"Estimated request size: {estimated_size_gb} GB"
+        return {"status": status, "message": msg}
+
+    @classmethod
+    @log_execution_time(_LOG)
     def get_datasets_and_eligible_products_names(
         cls, user_credentials: UserCredentials
     ) -> list:
