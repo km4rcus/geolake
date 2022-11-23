@@ -31,7 +31,7 @@ spec:
         - '80'
         env:
         - name: LOGGING_LEVEL
-          value: INFO
+          value: DEBUG
         - name: CATALOG_PATH
           value: /catalog/catalog.yaml
         - name: POSTGRES_DB
@@ -50,7 +50,7 @@ spec:
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a402
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a408
         name: web
         ports:
         - containerPort: 80

@@ -47,7 +47,7 @@ spec:
           value: /api
         - name: ECHO_DB
           value: 'false'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a120
+        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a124
         name: api
         ports:
         - containerPort: 80

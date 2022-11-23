@@ -112,7 +112,7 @@ class Filter(BaseModel):
     @validator("user_defined", pre=True)
     def maybe_cast_user_defined(cls, value):
         if isinstance(value, str):
-            return value.lower() in ["t", "true", "yes"]
+            return value.lower() in ["t", "true", "yes", "y"]
         elif isinstance(value, bool):
             return value
         else:
@@ -120,7 +120,8 @@ class Filter(BaseModel):
 
 
 class Domain(BaseModel):
-    """Domain DTO of the kube. It contains cooridnate reference system and coordinates"""
+    """Domain DTO of the kube. It contains cooridnate
+    reference system and coordinates"""
 
     crs: dict[str, Any]
     coordinates: dict[str, Any]
@@ -210,7 +211,8 @@ class Product(BaseModel):
 
 
 class WidgetsCollection(BaseModel):
-    """DTO including all information required by the Web Portal to render datasets"""
+    """DTO including all information required by the Web Portal to render
+    datasets"""
 
     version: Optional[str] = "v1"
     status: Optional[str] = "OK"

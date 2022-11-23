@@ -77,7 +77,6 @@ class AccessManager(metaclass=LoggableMeta):
             product_role_name,
             user_role_name,
         )
-        return True
         if product_role_name == "public" or product_role_name is None:
             return True
         if user_role_name is None:

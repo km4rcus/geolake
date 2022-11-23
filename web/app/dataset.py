@@ -190,6 +190,6 @@ class DatasetManager(metaclass=LoggableMeta):
                     dataset_id,
                     user_credentials.id,
                 )
-        finally:
-            dataset_dict["products"] = eligible_prods
+            else:
+                dataset_dict["products"] = eligible_prods
         return dataset_dict
