@@ -194,6 +194,7 @@ class WidgetFactory(metaclass=LoggableMeta):
             )
             if "time" not in coords:
                 continue
+            raise ValueError(coords["time"]["values"])
             time_vals = np.array(coords["time"]["values"], dtype=np.datetime64)
             if len(time_vals) < 2:
                 continue
@@ -416,7 +417,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                 continue
             for coord_name in aux_kube_coords_names:
                 vals = np.array(coords[coord_name]["values"]).astype(np.float)
-                aux_coords["values"] = sorted(vals)
+                aux_coords[coord_name]["values"] = sorted(vals)
                 for agg in [max, min]:
                     aux_coords[coord_name][agg.__name__] = agg(
                         [
@@ -445,7 +446,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                     "value": val,
                     "label": maybe_round_value(val, self._NUMBER_OF_DECIMALS),
                 }
-                for val in aux_coords[coord_name]["values"]
+                for val in coord_value["values"]
             ]
 
             wid = Widget(

@@ -75,8 +75,6 @@ class Datastore(metaclass=Singleton):
     @log_execution_time(_LOG)
     def _load_cache(self):
         for i, dataset_id in enumerate(self.dataset_list()):
-            if dataset_id == "medsea-rea-e3r1":
-                continue
             self._LOG.info(
                 "loading cache for `%s` (%d/%d)",
                 dataset_id,
@@ -117,7 +115,14 @@ class Datastore(metaclass=Singleton):
         datasets : list
             List of datasets present in the catalog
         """
-        return list(self.catalog)
+        datasets = set(self.catalog)
+        datasets -= {
+            "medsea-rea-e3r1",
+            "medsea-cmip5-projections-biogeochemistry",
+        }
+        # NOTE: medsae cmip uses cftime.DatetimeNoLeap as time
+        # need to think how to handle it
+        return sorted(list(datasets))
 
     @log_execution_time(_LOG)
     def product_list(self, dataset_id: str):
