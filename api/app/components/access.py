@@ -25,15 +25,35 @@ class AccessManager(metaclass=LoggableMeta):
         user_credentials : UserCredentials
             The credentials of the current user
 
-        Returns
+        Raises
         -------
-        is_admin : bool
-            Flag which indicate if the user has 'admin' role
+        HTTPException
+            401 if user is not an admin
         """
         if DBManager().get_user_role_name(user_credentials.id) != "admin":
             raise HTTPException(
                 status_code=401,
                 detail=f"User `{user_credentials.id}` is not an admin!",
+            )
+
+    @classmethod
+    def assert_not_public(cls, user_credentials: UserCredentials) -> bool:
+        """Assert that user is authenticated
+
+        Parameters
+        ----------
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Raises
+        -------
+        HTTPException
+            401 if user is public
+        """
+        if user_credentials.is_public:
+            raise HTTPException(
+                status_code=401,
+                detail="You need to authenticate!",
             )
 
     @classmethod
@@ -56,7 +76,7 @@ class AccessManager(metaclass=LoggableMeta):
             "authenticating the user with the user_id: %s", user_credentials.id
         )
         if user_credentials.is_public:
-            cls._LOG.debug("authentication successful. User is anonymouse!")
+            cls._LOG.debug("user is anonymouse!")
         user = DBManager().get_user_details(user_credentials.id)
         if user is None:
             cls._LOG.info(
@@ -111,17 +131,16 @@ class AccessManager(metaclass=LoggableMeta):
             user_credentials.id,
             product_role_name,
         )
-        if product_role_name == "public":
+        if product_role_name is None or product_role_name == "public":
             return True
         if user_credentials.is_public:
             return False
         user_role_name = DBManager().get_user_role_name(user_credentials.id)
         if user_role_name == "admin":
             return True
-        elif user_role_name == product_role_name:
+        if user_role_name == product_role_name:
             return True
-        else:
-            return False
+        return False
 
     @classmethod
     @log_execution_time(_LOG)
@@ -148,13 +167,11 @@ class AccessManager(metaclass=LoggableMeta):
             user_credentials.id,
             request_id,
         )
-        return True
-        # NOTE: currently everyone is eligible for each download
-        # request_details = DBManager().get_request_details(
-        #     request_id=request_id
-        # )
-        # if (request_details is not None) and (
-        #     str(request_details.user_id) == str(user_id)
-        # ):
-        #     return True
-        # return False
+        request_details = DBManager().get_request_details(
+            request_id=request_id
+        )
+        if (request_details is not None) and (
+            str(request_details.user_id) == str(user_credentials.id)
+        ):
+            return True
+        return False
