@@ -16,7 +16,7 @@ spec:
         geodds.service: broker
     spec:
       containers:
-        - image: rabbitmq:3
+        - image: rabbitmq:3-management
           name: broker
           resources:
             requests:
