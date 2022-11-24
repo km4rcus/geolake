@@ -13,15 +13,15 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
     """The class handling requests to geokube dds API"""
 
     _LOG = logging.getLogger("GeokubeAPIRequester")
-    _API_URL: str = None
+    API_URL: str = None
     _IS_INIT: bool = False
 
     @classmethod
     def init(cls):
         """Initialize class with API URL"""
-        cls._API_URL = os.environ.get("API_URL", "https://ddshub.cmcc.it/api")
+        cls.API_URL = os.environ.get("API_URL", "https://ddshub.cmcc.it/api")
         cls._LOG.info(
-            "'API_URL' environment variable collected: %s", cls._API_URL
+            "'API_URL' environment variable collected: %s", cls.API_URL
         )
         cls._IS_INIT = True
 
@@ -47,7 +47,6 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
                 user_credentials
             )
         )
-        # "User-Token": "d9152e98-9de8-4064-b281-f61f8cecffe9:arZFgTatrOJpJ3egHEjRUyTUDt763SX6uAI4m2CVT4I",
         return headers
 
     @classmethod
@@ -65,7 +64,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
         ----------
         url : str
             Path to which the query should be send. It is created as
-            f"{GeokubeAPIRequester._API_URL}{url}"
+            f"{GeokubeAPIRequester.API_URL{url}"
         data : str
             JSON payload of the request
         user_credentials : UserCredentials
@@ -82,7 +81,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
             If request failed due to any reason
         """
         assert cls._IS_INIT, "GeokubeAPIRequester was not initialized!"
-        target_url = f"{cls._API_URL}{url}"
+        target_url = f"{cls.API_URL}{url}"
         headers = cls._prepare_headers(user_credentials)
         cls._LOG.debug("sending POST request to %s", target_url)
         cls._LOG.debug("payload of the POST request: %s", data)
@@ -116,7 +115,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
         ----------
         url : str
             Path to which the query should be send. It is created as
-            f"{GeokubeAPIRequester._API_URL}{url}"
+            f"{GeokubeAPIRequester.API_URL}{url}"
         user_credentials : UserCredentials
             Credentials of the current user
 
@@ -131,7 +130,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
             If request failed due to any reason
         """
         assert cls._IS_INIT, "GeokubeAPIRequester was not initialized!"
-        target_url = f"{cls._API_URL}{url}"
+        target_url = f"{cls.API_URL}{url}"
         headers = cls._prepare_headers(user_credentials)
         cls._LOG.debug("sending GET request to %s", target_url)
         response = requests.get(

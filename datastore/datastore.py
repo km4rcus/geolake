@@ -282,8 +282,8 @@ class Datastore(metaclass=Singleton):
             kube = kube[query.variable]
         if query.area:
             kube = kube.geobbox(**query.area)
-        if query.locations:
-            kube = kube.locations(**query.locations)
+        if query.location:
+            kube = kube.location(**query.location)
         if query.time:
             kube = kube.sel(
                 **{

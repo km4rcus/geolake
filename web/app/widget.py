@@ -194,7 +194,6 @@ class WidgetFactory(metaclass=LoggableMeta):
             )
             if "time" not in coords:
                 continue
-            raise ValueError(coords["time"]["values"])
             time_vals = np.array(coords["time"]["values"], dtype=np.datetime64)
             if len(time_vals) < 2:
                 continue
@@ -489,8 +488,10 @@ class WidgetFactory(metaclass=LoggableMeta):
             wparameter="format",
             wtype="FileFormat",
             wdetails={
-                "values": [{"value": "netcdf", "label": "netCDF"}]
-            },  # TODO:
+                "values": [
+                    {"value": "netcdf", "label": "netCDF", "ext": ".nc"}
+                ]
+            },  # TODO: more formats
         )
         self._wid.append(wid.to_dict())
         self._wid_order.append("format")

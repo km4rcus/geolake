@@ -44,7 +44,7 @@ class ProdId(BaseModel):
 
     @root_validator(pre=True)
     def preprocess_load(cls, values):
-        if "description" not in values:
+        if "description" not in values or values["description"] is None:
             values["description"] = values["id"]
         return values
 
@@ -103,9 +103,9 @@ class Filter(BaseModel):
     user_defined: Optional[bool] = False
     label: Optional[str] = None
 
-    @root_validator
+    @root_validator(pre=True)
     def match_label(cls, values):
-        if values["label"] is None:
+        if "label" not in values or values["label"] is None:
             values["label"] = values["name"]
         return values
 
@@ -133,7 +133,7 @@ class Field(BaseModel):
     name: str
     description: Optional[str] = None
 
-    @root_validator
+    @root_validator(pre=True)
     def match_description(cls, values):
         if values["description"] is None:
             values["description"] = values["name"]

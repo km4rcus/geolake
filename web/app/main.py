@@ -211,5 +211,5 @@ async def get_requests(
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
         requests = ListOfRequests(data=response_json)
-        requests.add_requests_url_prefix(GeokubeAPIRequester._API_URL)
+        requests.add_requests_url_prefix(GeokubeAPIRequester.API_URL)
         return requests
