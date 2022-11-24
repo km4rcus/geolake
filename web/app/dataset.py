@@ -10,7 +10,10 @@ from .datastore.datastore import Datastore
 from .utils import UserCredentials, log_execution_time
 from .access import AccessManager
 from .meta import LoggableMeta
-from .exceptions import MissingKeyInCatalogEntryError
+from .exceptions import (
+    MissingKeyInCatalogEntryError,
+    NoEligibleProductInDatasetError,
+)
 
 
 class DatasetManager(metaclass=LoggableMeta):
@@ -92,21 +95,29 @@ class DatasetManager(metaclass=LoggableMeta):
         for dataset_id in cls._DATASTORE.dataset_list():
             if dataset_id == "visir":
                 cls._LOG.info(
-                    "skipping `visir` dataset due to theerror geokube/#253"
+                    "skipping `visir` dataset due to the error geokube/#253"
                 )
                 continue
             cls._LOG.debug(
                 "getting info and eligible products for `%s`", dataset_id
             )
             dataset_info = cls._DATASTORE.dataset_info(dataset_id=dataset_id)
-            datasets.append(
-                cls._get_dataset_information_from_details_dict(
-                    dataset_dict=dataset_info,
-                    user_role_name=user_role_name,
-                    dataset_id=dataset_id,
-                    user_credentials=user_credentials,
+            try:
+                datasets.append(
+                    cls._get_dataset_information_from_details_dict(
+                        dataset_dict=dataset_info,
+                        user_role_name=user_role_name,
+                        dataset_id=dataset_id,
+                        user_credentials=user_credentials,
+                    )
                 )
-            )
+            except NoEligibleProductInDatasetError:
+                cls._LOG.debug(
+                    f"dataset '{dataset_id}' will not be considered. no"
+                    " eligible products for the user role name"
+                    f" '{user_role_name}'"
+                )
+                continue
         return datasets
 
     @classmethod
@@ -189,6 +200,9 @@ class DatasetManager(metaclass=LoggableMeta):
                     " `%s`. dataset skipped",
                     dataset_id,
                     user_credentials.id,
+                )
+                raise NoEligibleProductInDatasetError(
+                    dataset_id=dataset_id, user_role_name=user_role_name
                 )
             else:
                 dataset_dict["products"] = eligible_prods

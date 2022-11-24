@@ -20,5 +20,16 @@ class MissingKeyInCatalogEntryError(KeyError):
         self.dataset = dataset
 
 
+class NoEligibleProductInDatasetError(ValueError):
+    """No eligible products in the dataset Error"""
+
+    def __init__(self, dataset_id: str, user_role_name) -> None:
+        msg = (
+            f"No eligible products for the dataset '{dataset_id}' for the user"
+            f" role '{user_role_name}'"
+        )
+        super().__init__(msg)
+
+
 class GeokubeAPIRequestFailed(RuntimeError):
     """Error while sending request to geokube-dds API"""
