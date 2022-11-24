@@ -47,7 +47,7 @@ spec:
           value: /api
         - name: ECHO_DB
           value: 'false'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a129
+        image: rg.fr-par.scw.cloud/ddsr/geodds-api:v0.1a138
         name: api
         ports:
         - containerPort: 80
@@ -62,7 +62,7 @@ spec:
         - mountPath: /catalog
           name: catalog
           readOnly: true
-        - mountPath: /work/services/dds/cache
+        - mountPath: /work/services/dds/DDS-2.0/cache
           name: cache
           readOnly: false
         - mountPath: /data
@@ -76,13 +76,13 @@ spec:
       restartPolicy: Always
       volumes:
       - hostPath:
-          path: /work/services/dds/dds-catalog/Catalog
+          path: /work/services/dds/DDS-2.0/catalog/Catalog
         name: catalog
       - hostPath:
-          path: /work/services/dds/downloads
+          path: /work/services/dds/DDS-2.0/downloads
         name: downloads
       - hostPath:
-          path: /work/services/dds/cache
+          path: /work/services/dds/DDS-2.0/cache
         name: cache
       - hostPath:
           path: /data

@@ -43,22 +43,22 @@ spec:
           value: dds
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a101
+        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a105
         name: executor
         ports:
         - containerPort: 8787
         resources:
           limits:
             cpu: '4'
-            memory: 4Gi
+            memory: 16Gi
           requests:
             cpu: '4'
-            memory: 4Gi
+            memory: 16Gi
         volumeMounts:
         - mountPath: /catalog
           name: catalog
           readOnly: false
-        - mountPath: /work/services/dds/cache
+        - mountPath: /work/services/dds/DDS-2.0/cache
           name: cache
           readOnly: false
         - mountPath: /data
@@ -71,13 +71,13 @@ spec:
       restartPolicy: Always
       volumes:
       - hostPath:
-          path: /work/services/dds/dds-catalog/Catalog
+          path: /work/services/dds/DDS-2.0/catalog/Catalog
         name: catalog
       - hostPath:
-          path: /work/services/dds/downloads
+          path: /work/services/dds/DDS-2.0/downloads
         name: downloads
       - hostPath:
-          path: /work/services/dds/cache
+          path: /work/services/dds/DDS-2.0/cache
         name: cache
       - hostPath:
           path: /data

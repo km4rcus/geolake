@@ -50,7 +50,7 @@ spec:
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a413
+        image: rg.fr-par.scw.cloud/ddsr/geodds-web:v0.1a424
         name: web
         ports:
         - containerPort: 80
@@ -65,7 +65,7 @@ spec:
         - mountPath: /catalog
           name: catalog
           readOnly: true
-        - mountPath: /work/services/dds/cache
+        - mountPath: /work/services/dds/DDS-2.0/cache
           name: cache
           readOnly: false
         - mountPath: /data
@@ -76,10 +76,10 @@ spec:
       restartPolicy: Always
       volumes:
       - hostPath:
-          path: /work/services/dds/dds-catalog/Catalog
+          path: /work/services/dds/DDS-2.0/catalog/Catalog
         name: catalog
       - hostPath:
-          path: /work/services/dds/cache
+          path: /work/services/dds/DDS-2.0/cache
         name: cache
       - hostPath:
           path: /data
