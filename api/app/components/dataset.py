@@ -270,7 +270,7 @@ class DatasetManager(metaclass=LoggableMeta):
             user_id=user_credentials.id,
             dataset=dataset_id,
             product=product_id,
-            query=query.json(),
+            query=query.original_query_json(),
         )
 
         # TODO: find a separator; for the moment use "\"
@@ -354,12 +354,14 @@ class DatasetManager(metaclass=LoggableMeta):
 def _convert_bytes(size_bytes: int, unit: str) -> float:
     unit = unit.lower()
     if unit == "kb":
-        return size_bytes / 1024
-    if unit == "mb":
-        return size_bytes / 1048576
-    if unit == "gb":
-        return size_bytes / 1073741824
-    raise ValueError(f"unsupported unit: {unit}")
+        value = size_bytes / 1024
+    elif unit == "mb":
+        value = size_bytes / 1024**2
+    elif unit == "gb":
+        value = size_bytes / 1024**3
+    else:
+        raise ValueError(f"unsupported unit: {unit}")
+    return {"value": value, "units": unit}
 
 
 def _make_bytes_readable_dict(size_bytes: int) -> dict:

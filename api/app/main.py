@@ -4,6 +4,7 @@ import os
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from db.dbmanager.dbmanager import RequestStatus
 from geoquery.geoquery import GeoQuery
@@ -31,6 +32,16 @@ app = FastAPI(
     openapi_url=f"{_pref}/openapi.json",
 )
 app.router.prefix = _pref
+
+ORIGINS = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")

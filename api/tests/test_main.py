@@ -186,7 +186,7 @@ def test_fail_to_execute_query_if_not_authenticated(
         "datasets/era5/reanalysis/execute",
         json={
             "variable": ["mean_air_temperature"],
-            "locations": {"latitude": 10, "longitude": 25},
+            "location": {"latitude": 10, "longitude": 25},
         },
     )
     access_manager.authenticate_user.assert_called_once()
