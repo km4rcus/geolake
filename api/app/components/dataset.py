@@ -361,6 +361,8 @@ def _convert_bytes(size_bytes: int, unit: str) -> float:
         value = size_bytes / 1024**3
     else:
         raise ValueError(f"unsupported unit: {unit}")
+    if (value := round(value, 2)) == 0.00:
+        value = 0.01
     return {"value": value, "units": unit}
 
 
@@ -376,4 +378,6 @@ def _make_bytes_readable_dict(size_bytes: int) -> dict:
     if val > 1024:
         units = "GB"
         val /= 1024
+    if (val := round(val, 2)) == 0.00:
+        val = 0.01
     return {"value": val, "units": units}
