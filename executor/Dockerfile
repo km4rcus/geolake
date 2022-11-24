@@ -1,8 +1,11 @@
-FROM continuumio/miniconda3
+FROM condaforge/miniforge3
 WORKDIR /code
-RUN conda install -c conda-forge xesmf cartopy psycopg2 -y
-COPY ./executor/requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN conda install --yes --freeze-installed \
+    xesmf cartopy psycopg2 pika bokeh dask distributed intake pydantic sqlalchemy \
+    netCDF4 scipy xarray=2022.3.0 \
+    && conda clean -afy
+#COPY ./executor/requirements.txt /code/requirements.txt
+#RUN pip install --no-cache-dir -r requirements.txt
 COPY geokube_packages/geokube-0.2a0-py3-none-any.whl /code
 COPY geokube_packages/intake_geokube-0.1a0-py3-none-any.whl /code
 RUN pip install /code/geokube-0.2a0-py3-none-any.whl
