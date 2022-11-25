@@ -16,6 +16,7 @@
 
 import os
 import json
+import time
 import pika
 import logging
 import traceback
@@ -110,7 +111,26 @@ class Executor(metaclass=LoggableMeta):
                 "attempt to get result for the request",
                 extra={"track_id": request_id},
             )
-            location_path = future.result()
+            for _ in range(int(os.environ.get("RESULT_CHECK_RETRIES", 30))):
+                if future.done():
+                    self._LOG.debug(
+                        "result is done",
+                        extra={"track_id": request_id},
+                    )
+                    location_path = future.result()
+                    break
+                self._LOG.debug(
+                    "result is not ready yet. sleeping 30 sec",
+                    extra={"track_id": request_id},
+                )
+                time.sleep(30)
+            else:
+                self._LOG.info(
+                    "processing timout",
+                    extra={"track_id": request_id},
+                )
+                status = RequestStatus.FAILED
+                fail_reason = "Processing timeout"
         except Exception as e:
             self._LOG.error(
                 "failed to get result",

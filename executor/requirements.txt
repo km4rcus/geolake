@@ -1,5 +1,5 @@
 pika
-bokeh
+bokeh>=2.4.2
 dask
 distributed
 intake
