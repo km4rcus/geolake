@@ -450,7 +450,7 @@ class WidgetFactory(metaclass=LoggableMeta):
 
             wid = Widget(
                 wname=f"{coord_name}_list",
-                wlabel=coord_name,
+                wlabel=coord_name.title(),
                 wrequired=False,
                 wparameter=coord_name,
                 wtype="StringList",
@@ -472,7 +472,7 @@ class WidgetFactory(metaclass=LoggableMeta):
             ]
             wid = Widget(
                 wname=f"{coord_name}_range",
-                wlabel=coord_name,
+                wlabel=coord_name.title(),
                 wrequired=False,
                 wparameter=coord_name,
                 wtype="NumberRange",

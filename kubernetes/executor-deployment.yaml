@@ -25,7 +25,7 @@ spec:
         - python
         - ./app/main.py
         env:
-        - name: LOGGING_FORMAT
+        - name: LOGGING_LEVEL
           value: DEBUG
         - name: CATALOG_PATH
           value: /catalog/catalog.yaml
@@ -45,7 +45,7 @@ spec:
           value: dds
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a108
+        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a111
         name: executor
         ports:
         - containerPort: 8787

@@ -26,7 +26,7 @@ from geokube.core.datacube import DataCube
 from datastore.datastore import Datastore
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
-from .meta import LoggableMeta
+from meta import LoggableMeta
 
 _BASE_DOWNLOAD_PATH = "/downloads"
 
