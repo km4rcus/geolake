@@ -6,7 +6,7 @@ metadata:
   name: executor
   namespace: geodds
 spec:
-  replicas: 1
+  replicas: 4
   selector:
     matchLabels:
       geodds.service: executor
@@ -25,6 +25,8 @@ spec:
         - python
         - ./app/main.py
         env:
+        - name: LOGGING_FORMAT
+          value: DEBUG
         - name: CATALOG_PATH
           value: /catalog/catalog.yaml
         - name: CACHE_PATH
@@ -43,7 +45,7 @@ spec:
           value: dds
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a106
+        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a108
         name: executor
         ports:
         - containerPort: 8787
