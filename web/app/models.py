@@ -126,6 +126,12 @@ class Domain(BaseModel):
     crs: dict[str, Any]
     coordinates: dict[str, Any]
 
+    @validator("coordinates", pre=True)
+    def match_coords(cls, value):
+        if isinstance(value, dict):
+            return {item["axis"].lower(): item for item in value.values()}
+        return value
+
 
 class Field(BaseModel):
     """Single field DTO of the kube"""
@@ -135,7 +141,7 @@ class Field(BaseModel):
 
     @root_validator(pre=True)
     def match_description(cls, values):
-        if values["description"] is None:
+        if "description" not in values or values["description"] is None:
             values["description"] = values["name"]
         return values
 

@@ -429,7 +429,7 @@ class WidgetFactory(metaclass=LoggableMeta):
         for coord_name, coord_value in aux_coords.items():
             wid = Widget(
                 wname=coord_name,
-                wlabel=coord_name,  # maybe label?
+                wlabel=coord_name.title(),  # maybe label?
                 wrequired=True,
                 wparameter=None,
                 wtype="ExclusiveFrame",
