@@ -18,7 +18,7 @@ from ..util import UserCredentials, log_execution_time
 class DatasetManager(metaclass=LoggableMeta):
     """Manager that handles dataset present in the geokube-dds catalog"""
 
-    _LOG = logging.getLogger("DatasetManager")
+    _LOG = logging.getLogger("geokube.DatasetManager")
 
     @classmethod
     def assert_product_exists(cls, dataset_id, product_id: None | str = None):

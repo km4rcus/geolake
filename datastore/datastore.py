@@ -19,7 +19,7 @@ from .util import log_execution_time
 class Datastore(metaclass=Singleton):
     """Singleton component for managing catalog data"""
 
-    _LOG = logging.getLogger("Datastore")
+    _LOG = logging.getLogger("geokube.Datastore")
 
     def __init__(self, cache_path: str = "./") -> None:
         if "CATALOG_PATH" not in os.environ:
@@ -283,7 +283,7 @@ class Datastore(metaclass=Singleton):
         if query.area:
             kube = kube.geobbox(**query.area)
         if query.location:
-            kube = kube.location(**query.location)
+            kube = kube.locations(**query.location)
         if query.time:
             kube = kube.sel(
                 **{

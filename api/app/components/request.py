@@ -14,7 +14,7 @@ from ..util import UserCredentials, log_execution_time
 class RequestManager(metaclass=LoggableMeta):
     """Manager that handles requests stored in geokube-dds system"""
 
-    _LOG = logging.getLogger("RequestManager")
+    _LOG = logging.getLogger("geokube.RequestManager")
 
     @classmethod
     @log_execution_time(_LOG)

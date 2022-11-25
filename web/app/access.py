@@ -16,7 +16,7 @@ class AccessManager(metaclass=LoggableMeta):
     """The component for managing access to data, authentication, and
     authorization of a user"""
 
-    _LOG = logging.getLogger("AccessManager")
+    _LOG = logging.getLogger("geokube.AccessManager")
 
     @classmethod
     @log_execution_time(_LOG)

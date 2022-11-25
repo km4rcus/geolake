@@ -14,7 +14,7 @@ from .meta import LoggableMeta
 class AccessManager(metaclass=LoggableMeta):
     """Manager that handles access to the geokube-dds"""
 
-    _LOG = logging.getLogger("AccessManager")
+    _LOG = logging.getLogger("geokube.AccessManager")
 
     @classmethod
     def assert_is_admin(cls, user_credentials: UserCredentials) -> bool:

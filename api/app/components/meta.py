@@ -15,8 +15,12 @@ class LoggableMeta(type):
                 "%(asctime)s %(name)s %(levelname)s %(lineno)d %(message)s",
             )
             formatter = logging.Formatter(format_)
-            res._LOG.setLevel(os.environ.get("LOGGING_LEVEL", "INFO"))
+            logging_level = os.environ.get("LOGGING_LEVEL", "INFO")
+            res._LOG.setLevel(logging_level)
             stream_handler = logging.StreamHandler()
             stream_handler.setFormatter(formatter)
+            stream_handler.setLevel(logging_level)
             res._LOG.addHandler(stream_handler)
+            for handler in logging.getLogger("geokube").handlers:
+                handler.setFormatter(formatter)
         return res

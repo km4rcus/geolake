@@ -35,7 +35,7 @@ app = FastAPI(
     docs_url=f"{_pref}/docs",
     openapi_url=f"{_pref}/openapi.json",
     on_startup=[
-        GeokubeAPIRequester.init,
+        GeokubeAPIRequester.init
     ],  # NOTE: eventually, load Datastore cache on startup
 )
 app.router.prefix = _pref

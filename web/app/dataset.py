@@ -20,7 +20,7 @@ class DatasetManager(metaclass=LoggableMeta):
     """The component for dataset management, including getting details
     and submitting a request"""
 
-    _LOG = logging.getLogger("DatasetManager")
+    _LOG = logging.getLogger("geokube.DatasetManager")
     _DATASTORE = Datastore()
 
     @classmethod

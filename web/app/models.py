@@ -6,7 +6,14 @@ from enum import Enum
 from typing import Any, ClassVar, Optional, Union
 from datetime import date, datetime, timedelta
 
-from pydantic import BaseModel, AnyHttpUrl, HttpUrl, validator, root_validator
+from pydantic import (
+    BaseModel,
+    AnyHttpUrl,
+    HttpUrl,
+    validator,
+    root_validator,
+    Field as PydanticField,
+)
 from db.dbmanager.dbmanager import RequestStatus
 
 
@@ -100,7 +107,7 @@ class Filter(BaseModel):
     """Filter DTO of product metadata"""
 
     name: Optional[str] = None
-    user_defined: Optional[bool] = False
+    user_defined: Optional[bool] = True
     label: Optional[str] = None
 
     @root_validator(pre=True)
@@ -119,17 +126,36 @@ class Filter(BaseModel):
             raise TypeError
 
 
+class Coordinate(BaseModel):
+    """DTO for single coordinate"""
+
+    name: str
+    axis: str
+    values: list[Any]
+    label: Optional[str] = None
+    units: Optional[str] = None
+
+    @validator("label", always=True)
+    def match_label(cls, value, values):
+        if value is None:
+            return values["axis"].capitalize()
+        return value
+
+
 class Domain(BaseModel):
     """Domain DTO of the kube. It contains cooridnate
     reference system and coordinates"""
 
     crs: dict[str, Any]
-    coordinates: dict[str, Any]
+    coordinates: dict[str, Coordinate]
 
     @validator("coordinates", pre=True)
     def match_coords(cls, value):
         if isinstance(value, dict):
-            return {item["axis"].lower(): item for item in value.values()}
+            return {
+                item["axis"].lower(): dict(**item, name=key)
+                for key, item in value.items()
+            }
         return value
 
 
@@ -171,7 +197,7 @@ class ProductMetadata(BaseModel):
     """Product metadata DTO"""
 
     catalog_dir: str
-    filters: Optional[dict[str, Filter]] = None
+    filters: Optional[dict[str, Filter]] = PydanticField(default_factory=dict)
     role: Optional[str] = "public"
 
     @validator("filters", pre=True)

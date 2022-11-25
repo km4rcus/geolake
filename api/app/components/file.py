@@ -16,7 +16,7 @@ from ..util import log_execution_time
 class FileManager(metaclass=LoggableMeta):
     """Manager class to handle files produced by geokube-dds"""
 
-    _LOG = logging.getLogger("FileManager")
+    _LOG = logging.getLogger("geokube.FileManager")
 
     @classmethod
     @log_execution_time(_LOG)

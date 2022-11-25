@@ -101,6 +101,11 @@ class WidgetFactory(metaclass=LoggableMeta):
         self._compute_auxiliary_coords_widgets()
         self._compute_format_widget()
 
+    def _is_for_skipping(self, name):
+        if (flt := self._d.metadata.filters.get(name)) is not None:
+            return not flt.user_defined
+        return False
+
     @property
     @log_execution_time(_LOG)
     def widgets(self) -> dict:
@@ -132,6 +137,8 @@ class WidgetFactory(metaclass=LoggableMeta):
             for field in fields:
                 if field.name in all_fields:
                     continue
+                if self._is_for_skipping(field.name):
+                    continue
                 all_fields[field.name] = {
                     "value": field.name,
                     "label": field.description,
@@ -160,17 +167,16 @@ class WidgetFactory(metaclass=LoggableMeta):
             for att_name, att_val in dr.attributes.items():
                 attrs_opts[att_name].add(att_val)
         for att_name, att_opts in attrs_opts.items():
-            # 'filters' section is not required for metadata
-            if (self._d.metadata.filters is None) or (
-                not self._d.metadata.filters.get(att_name, Filter).user_defined
-            ):
+            if self._is_for_skipping(att_name):
                 continue
-            flt = self._d.metadata.filters.get(att_name, Filter)
+            if (flt := self._d.metadata.filters.get(att_name)) is not None:
+                label = flt.label
+            else:
+                label = att_name
             att_opts = list(att_opts)
             if sort_keys:
                 att_opts = sorted(att_opts)
             values = [{"value": key, "label": key} for key in att_opts]
-            label = flt.label if flt.label is not None else att_name
             wid = Widget(
                 wname=att_name,
                 wlabel=label,
@@ -194,7 +200,7 @@ class WidgetFactory(metaclass=LoggableMeta):
             )
             if "time" not in coords:
                 continue
-            time_vals = np.array(coords["time"]["values"], dtype=np.datetime64)
+            time_vals = np.array(coords["time"].values, dtype=np.datetime64)
             if len(time_vals) < 2:
                 continue
             time_offset = to_offset(pd.Series(time_vals).diff().mode().item())
@@ -335,9 +341,7 @@ class WidgetFactory(metaclass=LoggableMeta):
             if "latitude" not in coords or "longitude" not in coords:
                 continue
             for coord_name in ["latitude", "longitude"]:
-                values = np.array(coords[coord_name]["values"]).astype(
-                    np.float
-                )
+                values = np.array(coords[coord_name].values).astype(np.float)
                 spatial_coords[coord_name]["max"] = max(
                     [spatial_coords[coord_name]["max"], np.max(values)]
                 )
@@ -403,33 +407,72 @@ class WidgetFactory(metaclass=LoggableMeta):
         )
         self._wid.append(wid.to_dict())
 
+    def _get_aux_coord_names(self, all_coords_names):
+        return list(set(all_coords_names) - self._MAIN_COORDS)
+
     def _compute_auxiliary_coords_widgets(self) -> None:
-        aux_coords = defaultdict(min_max_dict)
+        aux_coords = defaultdict(dict)
         for dr in self._d.data:
             coords = (
                 dr.domain.coordinates
                 if isinstance(dr, Kube)
                 else dr.datacube.domain.coordinates
             )
-            aux_kube_coords_names = set(coords.keys()) - self._MAIN_COORDS
-            if not aux_kube_coords_names:
+            if (
+                len(
+                    aux_kube_coords_names := self._get_aux_coord_names(
+                        coords.keys()
+                    )
+                )
+                == 0
+            ):
                 continue
             for coord_name in aux_kube_coords_names:
-                vals = np.array(coords[coord_name]["values"]).astype(np.float)
-                aux_coords[coord_name]["values"] = sorted(vals)
-                for agg in [max, min]:
-                    aux_coords[coord_name][agg.__name__] = agg(
+                if self._is_for_skipping(coord_name):
+                    continue
+                # TODO: `vals` might be 2d. what to do? compute uniqe?
+                vals = np.unique(np.array(coords[coord_name].values))
+                try:
+                    vals = vals.astype(np.float)
+                except ValueError:
+                    self._LOG.info(
+                        "skipping coordinate '%s' - non-castable to float"
+                        " (%s)",
+                        coord_name,
+                        vals,
+                    )
+                    continue
+                # elif (cast_vals := WidgetFactory._maybe_cast_to_datetime64(vals)) is not None:
+                #     vals = cast_vals
+
+                if "min" in aux_coords[coord_name]:
+                    aux_coords[coord_name]["min"] = min(
                         [
-                            aux_coords[coord_name][agg.__name__],
-                            agg(vals),
+                            aux_coords[coord_name]["min"],
+                            min(vals),
                         ]
                     )
+                else:
+                    aux_coords[coord_name]["min"] = min(vals)
+                if "max" in aux_coords[coord_name]:
+                    aux_coords[coord_name]["max"] = max(
+                        [
+                            aux_coords[coord_name]["max"],
+                            max(vals),
+                        ]
+                    )
+                else:
+                    aux_coords[coord_name]["max"] = max(vals)
+
+                aux_coords[coord_name]["values"] = sorted(vals)
+                aux_coords[coord_name]["label"] = coords[coord_name].label
+                aux_coords[coord_name]["name"] = coords[coord_name].name
         if not aux_coords:
             return
         for coord_name, coord_value in aux_coords.items():
             wid = Widget(
                 wname=coord_name,
-                wlabel=coord_name.title(),  # maybe label?
+                wlabel=coord_value["label"],
                 wrequired=True,
                 wparameter=None,
                 wtype="ExclusiveFrame",
@@ -450,35 +493,35 @@ class WidgetFactory(metaclass=LoggableMeta):
 
             wid = Widget(
                 wname=f"{coord_name}_list",
-                wlabel=coord_name.title(),
+                wlabel=coord_value["label"],
                 wrequired=False,
-                wparameter=coord_name,
+                wparameter=coord_value["name"],
                 wtype="StringList",
                 wdetails={"values": values},
             )
             self._wid.append(wid.to_dict())
-
-            range_ = [
-                {
-                    "name": "start",
-                    "label": f"Min {coord_name}",
-                    "range": coord_value["min"],
-                },
-                {
-                    "name": "stop",
-                    "label": f"Max {coord_name}",
-                    "range": coord_value["max"],
-                },
-            ]
-            wid = Widget(
-                wname=f"{coord_name}_range",
-                wlabel=coord_name.title(),
-                wrequired=False,
-                wparameter=coord_name,
-                wtype="NumberRange",
-                wdetails={"fields": range_},
-            )
-            self._wid.append(wid.to_dict())
+            if "max" in coord_value and "min" in coord_value:
+                range_ = [
+                    {
+                        "name": "start",
+                        "label": f"Min {coord_name}",
+                        "range": coord_value["min"],
+                    },
+                    {
+                        "name": "stop",
+                        "label": f"Max {coord_name}",
+                        "range": coord_value["max"],
+                    },
+                ]
+                wid = Widget(
+                    wname=f"{coord_name}_range",
+                    wlabel=coord_name.title(),
+                    wrequired=False,
+                    wparameter=coord_value["name"],
+                    wtype="NumberRange",
+                    wdetails={"fields": range_},
+                )
+                self._wid.append(wid.to_dict())
 
     def _compute_format_widget(self) -> None:
         wid = Widget(
