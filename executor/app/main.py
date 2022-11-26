@@ -22,6 +22,8 @@ import logging
 import traceback
 from dask.distributed import Client, LocalCluster
 
+import threading, functools
+
 from geokube.core.datacube import DataCube
 
 from datastore.datastore import Datastore
@@ -51,8 +53,9 @@ class Executor(metaclass=LoggableMeta):
         self._datastore = Datastore(cache_path=cache_path)
         self._store = store_path
         broker_conn = pika.BlockingConnection(
-            pika.ConnectionParameters(host=broker)
+            pika.ConnectionParameters(host=broker, heartbeat=10),
         )
+        self._conn = broker_conn
         self._channel = broker_conn.channel()
         self._db = DBManager()
 
@@ -77,7 +80,18 @@ class Executor(metaclass=LoggableMeta):
         )
         self._dask_client = Client(dask_cluster)
 
-    def query(self, channel, method, properties, body):
+    def ack_message(self, channel, delivery_tag):
+        """Note that `channel` must be the same pika channel instance via which
+        the message being ACKed was retrieved (AMQP protocol constraint).
+        """
+        if channel.is_open:
+            channel.basic_ack(delivery_tag)
+        else:
+            # Channel is already closed, so we can't ACK this message;
+            # log and/or do something that makes sense for your app in this case.
+            pass
+
+    def query(self, connection, channel, delivery_tag, body):
         m = body.decode().split("\\")
         request_id = m[0]
         dataset_id = m[1]
@@ -168,8 +182,17 @@ class Executor(metaclass=LoggableMeta):
         self._LOG.debug(
             "acknowledging request", extra={"track_id": request_id}
         )
-        channel.basic_ack(delivery_tag=method.delivery_tag)
+        cb = functools.partial(self.ack_message, channel, delivery_tag)
+        connection.add_callback_threadsafe(cb)
+#        channel.basic_ack(delivery_tag)
         self._LOG.debug("request acknowledged", extra={"track_id": request_id})
+
+    def on_message(self, channel, method_frame, header_frame, body, args):
+        (connection, threads) = args
+        delivery_tag = method_frame.delivery_tag
+        t = threading.Thread(target=self.query, args=(connection, channel, delivery_tag, body))
+        t.start()
+        threads.append(t)
 
     def subscribe(self, etype):
         self._LOG.debug(
@@ -177,8 +200,12 @@ class Executor(metaclass=LoggableMeta):
         )
         self._channel.queue_declare(queue=f"{etype}_queue", durable=True)
         self._channel.basic_qos(prefetch_count=1)
+
+        threads = []
+        on_message_callback = functools.partial(self.on_message, args=(self._conn, threads))
+        
         self._channel.basic_consume(
-            queue=f"{etype}_queue", on_message_callback=getattr(self, etype)
+            queue=f"{etype}_queue", on_message_callback=on_message_callback
         )
 
     def listen(self):
