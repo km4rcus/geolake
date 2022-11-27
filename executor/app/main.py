@@ -143,6 +143,8 @@ class Executor(metaclass=LoggableMeta):
                     "processing timout",
                     extra={"track_id": request_id},
                 )
+                # cancel processing restarting the cluster
+                self._dask_client.restart()
                 status = RequestStatus.FAILED
                 fail_reason = "Processing timeout"
         except Exception as e:

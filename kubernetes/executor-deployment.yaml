@@ -26,7 +26,7 @@ spec:
         - ./app/main.py
         env:
         - name: RESULT_CHECK_RETRIES
-          value: '30'
+          value: '5'
         - name: LOGGING_LEVEL
           value: DEBUG
         - name: CATALOG_PATH
@@ -47,7 +47,7 @@ spec:
           value: dds
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a132
+        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a136
         name: executor
         ports:
         - containerPort: 8787
