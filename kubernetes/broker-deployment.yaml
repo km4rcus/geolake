@@ -16,13 +16,24 @@ spec:
         geodds.service: broker
     spec:
       containers:
-        - image: rabbitmq:3-management
+        - image: rabbitmq:3.9.25-management-alpine
           name: broker
           resources:
             requests:
-              memory: "128Mi"
+              memory: "256Mi"
               cpu: "500m"
             limits:
-              memory: "128Mi"
+              memory: "256Mi"
               cpu: "500m"
+          volumeMounts:
+            - name: config
+              mountPath: "/etc/rabbitmq/rabbitmq.conf"
+              subPath: rabbitmq.conf
       restartPolicy: Always
+      volumes:
+        - name: config
+          configMap:
+            name: broker-config
+            items:
+              - key: "rabbitmq.conf"
+                path: "rabbitmq.conf"
