@@ -186,13 +186,15 @@ class Executor(metaclass=LoggableMeta):
         )
         cb = functools.partial(self.ack_message, channel, delivery_tag)
         connection.add_callback_threadsafe(cb)
-#        channel.basic_ack(delivery_tag)
+        #        channel.basic_ack(delivery_tag)
         self._LOG.debug("request acknowledged", extra={"track_id": request_id})
 
     def on_message(self, channel, method_frame, header_frame, body, args):
         (connection, threads) = args
         delivery_tag = method_frame.delivery_tag
-        t = threading.Thread(target=self.query, args=(connection, channel, delivery_tag, body))
+        t = threading.Thread(
+            target=self.query, args=(connection, channel, delivery_tag, body)
+        )
         t.start()
         threads.append(t)
 
@@ -204,8 +206,10 @@ class Executor(metaclass=LoggableMeta):
         self._channel.basic_qos(prefetch_count=1)
 
         threads = []
-        on_message_callback = functools.partial(self.on_message, args=(self._conn, threads))
-        
+        on_message_callback = functools.partial(
+            self.on_message, args=(self._conn, threads)
+        )
+
         self._channel.basic_consume(
             queue=f"{etype}_queue", on_message_callback=on_message_callback
         )
