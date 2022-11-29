@@ -102,9 +102,16 @@ class WidgetFactory(metaclass=LoggableMeta):
         self._compute_format_widget()
 
     def _is_for_skipping(self, name):
+        self._LOG.debug("checking if '%s' should be skipped", name)
         if (flt := self._d.metadata.filters.get(name)) is not None:
             return not flt.user_defined
         return False
+
+    def _maybe_get_label(self, name, default=None):
+        self._LOG.debug("checking label for '%s'", name)
+        if (flt := self._d.metadata.filters.get(name)) is not None:
+            return flt.label
+        return default if default is not None else name
 
     @property
     @log_execution_time(_LOG)
@@ -141,7 +148,9 @@ class WidgetFactory(metaclass=LoggableMeta):
                     continue
                 all_fields[field.name] = {
                     "value": field.name,
-                    "label": field.description,
+                    "label": self._maybe_get_label(
+                        field.name, field.description
+                    ),
                 }
         if sort_keys:
             all_fields = OrderedDict(all_fields)
@@ -430,6 +439,7 @@ class WidgetFactory(metaclass=LoggableMeta):
             for coord_name in aux_kube_coords_names:
                 if self._is_for_skipping(coord_name):
                     continue
+
                 # TODO: `vals` might be 2d. what to do? compute uniqe?
                 vals = np.unique(np.array(coords[coord_name].values))
                 try:
@@ -465,7 +475,9 @@ class WidgetFactory(metaclass=LoggableMeta):
                     aux_coords[coord_name]["max"] = max(vals)
 
                 aux_coords[coord_name]["values"] = sorted(vals)
-                aux_coords[coord_name]["label"] = coords[coord_name].label
+                aux_coords[coord_name]["label"] = self._maybe_get_label(
+                    coord_name, coords[coord_name].label
+                )
                 aux_coords[coord_name]["name"] = coords[coord_name].name
         if not aux_coords:
             return
