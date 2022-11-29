@@ -137,7 +137,7 @@ class Executor(metaclass=LoggableMeta):
                     "result is not ready yet. sleeping 30 sec",
                     extra={"track_id": request_id},
                 )
-                time.sleep(30)
+                time.sleep(int(os.environ.get("SLEEP_SEC", 30)))
             else:
                 self._LOG.info(
                     "processing timout",

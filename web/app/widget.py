@@ -91,6 +91,7 @@ class WidgetFactory(metaclass=LoggableMeta):
     @log_execution_time(_LOG)
     @validate_arguments
     def __init__(self, product: Product):
+        self._LOG.debug(f"provided filters: %s", product.metadata.filters)
         self._d = product
         self._wid = []
         self._wid_order = []
@@ -104,13 +105,19 @@ class WidgetFactory(metaclass=LoggableMeta):
     def _is_for_skipping(self, name):
         self._LOG.debug("checking if '%s' should be skipped", name)
         if (flt := self._d.metadata.filters.get(name)) is not None:
+            self._LOG.debug(
+                "should '%s' be skipped - %s ", name, not flt.user_defined
+            )
             return not flt.user_defined
+        self._LOG.debug("filter for '%s' was not found. retaining", name)
         return False
 
     def _maybe_get_label(self, name, default=None):
         self._LOG.debug("checking label for '%s'", name)
         if (flt := self._d.metadata.filters.get(name)) is not None:
+            self._LOG.debug("found label for '%s' - ", not flt.label)
             return flt.label
+        self._LOG.debug("filter for '%s' was not found", name)
         return default if default is not None else name
 
     @property
@@ -498,7 +505,9 @@ class WidgetFactory(metaclass=LoggableMeta):
             values = [
                 {
                     "value": val,
-                    "label": maybe_round_value(val, self._NUMBER_OF_DECIMALS),
+                    "label": "{:.2f}".format(
+                        maybe_round_value(val, self._NUMBER_OF_DECIMALS)
+                    ),
                 }
                 for val in coord_value["values"]
             ]
