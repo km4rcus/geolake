@@ -19,7 +19,6 @@ from .exceptions import (
     GeokubeAPIRequestFailed,
 )
 
-_pref = os.environ.get("ENDPOINT_PREFIX", "/web")
 app = FastAPI(
     title="geokube-dds API for Webportal",
     description="REST API for DDS Webportal",
@@ -32,13 +31,11 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    docs_url=f"{_pref}/docs",
-    openapi_url=f"{_pref}/openapi.json",
+    root_path = os.environ.get("ENDPOINT_PREFIX", "/web"),
     on_startup=[
         GeokubeAPIRequester.init
     ],  # NOTE: eventually, load Datastore cache on startup
 )
-app.router.prefix = _pref
 
 # TODO: origins should be limited!
 ORIGINS = ["*"]

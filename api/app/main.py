@@ -15,7 +15,6 @@ from .components.file import FileManager
 from .components.request import RequestManager
 from .util import UserCredentials
 
-_pref = os.environ.get("ENDPOINT_PREFIX", "/api")
 app = FastAPI(
     title="geokube-dds API",
     description="REST API for geokube-dds",
@@ -28,10 +27,8 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    docs_url=f"{_pref}/docs",
-    openapi_url=f"{_pref}/openapi.json",
+    root_path = os.environ.get("ENDPOINT_PREFIX", "/api"),
 )
-app.router.prefix = _pref
 
 ORIGINS = ["*"]
 
