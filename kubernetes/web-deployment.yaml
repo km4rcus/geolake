@@ -46,11 +46,13 @@ spec:
           value: dds
         - name: API_URL
           value: http://api:8080
+        - name: DOWNLOAD_PREFIX
+          value: https://ddshub.cmcc.it/api
         - name: ENDPOINT_PREFIX
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a5
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a8
         name: web
         ports:
         - containerPort: 80

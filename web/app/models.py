@@ -190,7 +190,7 @@ class DatasetRow(BaseModel):
     """DTO contatining attributes and associated datacube"""
 
     attributes: dict[str, str]
-    datacube: Kube
+    datacube: Optional[Kube]
 
 
 class ProductMetadata(BaseModel):
@@ -303,7 +303,7 @@ class Request(BaseModel):
             Prefix to add to the URL
         """
         if self.url:
-            self.url = "".join([prefix, self.url])
+            self.url = "/".join([prefix, self.url])
         else:
             self.url = None
 
