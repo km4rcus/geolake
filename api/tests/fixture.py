@@ -16,7 +16,7 @@ def client():
 def access_manager():
     with patch("app.components.dataset.AccessManager") as p:
         p.authenticate_user = MagicMock(return_value=True)
-        p.is_user_eligible_for_role = MagicMock(
+        p.is_user_eligible_for_product = MagicMock(
             side_effect=is_user_elg_for_role
         )
         p.is_user_eligible_for_request = MagicMock(
@@ -29,7 +29,7 @@ def access_manager():
 def access_manager_main():
     with patch("app.main.AccessManager") as p:
         p.authenticate_user = MagicMock(return_value=True)
-        p.is_user_eligible_for_role = MagicMock(
+        p.is_user_eligible_for_product = MagicMock(
             side_effect=is_user_elg_for_role
         )
         p.is_user_eligible_for_request = MagicMock(

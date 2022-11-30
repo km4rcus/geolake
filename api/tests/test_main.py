@@ -18,10 +18,10 @@ def test_get_only_eligible_datasets(
 ):
     response = client.get("/datasets", headers={"User-Token": "1:1234"}).json()
     data_store.dataset_list.assert_called()
-    access_manager.is_user_eligible_for_role.assert_any_call(
+    access_manager.is_user_eligible_for_product.assert_any_call(
         user_credentials=ANY, product_role_name="public"
     )
-    access_manager.is_user_eligible_for_role.assert_any_call(
+    access_manager.is_user_eligible_for_product.assert_any_call(
         user_credentials=ANY, product_role_name="internal"
     )
     access_manager.authenticate_user.assert_called()
@@ -66,7 +66,7 @@ def test_fail_to_get_details_for_not_authorized_user_for_admin_product(
         "/datasets/e-obs/spread", headers={"User-Token": "1:1234"}
     )
     access_manager.authenticate_user.assert_called_once()
-    access_manager.is_user_eligible_for_role.assert_any_call(
+    access_manager.is_user_eligible_for_product.assert_any_call(
         user_credentials=ANY, product_role_name="admin"
     )
     assert response.status_code == 401
@@ -78,7 +78,7 @@ def test_fail_to_get_details_for_not_authorized_user_for_internal_product(
 ):
     response = client.get("/datasets/e-obs/ensemble")
     access_manager.authenticate_user.assert_called_once()
-    access_manager.is_user_eligible_for_role.assert_any_call(
+    access_manager.is_user_eligible_for_product.assert_any_call(
         user_credentials=ANY, product_role_name="internal"
     )
     assert response.status_code == 401
@@ -92,7 +92,7 @@ def test_get_details_for_authorized_user_for_public_product(
         "/datasets/era5/reanalysis", headers={"User-Token": "1:1234"}
     )
     access_manager.authenticate_user.assert_called_once()
-    access_manager.is_user_eligible_for_role.assert_any_call(
+    access_manager.is_user_eligible_for_product.assert_any_call(
         user_credentials=ANY, product_role_name="public"
     )
     assert response.status_code == 200
@@ -110,7 +110,7 @@ def test_get_details_for_authorized_user_for_internal_product(
         "/datasets/e-obs/ensemble", headers={"User-Token": "1:1234"}
     )
     access_manager.authenticate_user.assert_called_once()
-    access_manager.is_user_eligible_for_role.assert_any_call(
+    access_manager.is_user_eligible_for_product.assert_any_call(
         user_credentials=ANY, product_role_name="internal"
     )
     assert response.status_code == 200
@@ -217,7 +217,7 @@ def test_fail_to_get_details_of_not_existing_product(
         "/datasets/e-obs/not-existing", headers={"User-Token": "1:1234"}
     )
     access_manager.authenticate_user.assert_called_once()
-    access_manager.is_user_eligible_for_role.assert_not_called()
+    access_manager.is_user_eligible_for_product.assert_not_called()
     assert response.status_code == 400
 
 
@@ -233,5 +233,5 @@ def test_fail_to_get_details_of_not_existing_dataset(
         "/datasets/not-existing", headers={"User-Token": "1:1234"}
     )
     access_manager.authenticate_user.assert_called_once()
-    access_manager.is_user_eligible_for_role.assert_not_called()
+    access_manager.is_user_eligible_for_product.assert_not_called()
     assert response.status_code == 400

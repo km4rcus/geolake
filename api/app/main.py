@@ -27,7 +27,7 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    root_path = os.environ.get("ENDPOINT_PREFIX", "/api"),
+    root_path=os.environ.get("ENDPOINT_PREFIX", "/api"),
 )
 
 ORIGINS = ["*"]
@@ -53,20 +53,8 @@ async def get_datasets(
 ):
     """List all products eligible for a user defined by user_token"""
     user_credentials = UserCredentials(user_token)
-    return DatasetManager.get_eligible_products_for_all_datasets(
+    return DatasetManager.get_datasets_and_eligible_products_names(
         user_credentials=user_credentials
-    )
-
-
-@app.get("/datasets/{dataset_id}")
-async def get_products(
-    dataset_id: str,
-    user_token: Optional[str] = Header(None, convert_underscores=True),
-):
-    """Get eligible products for the given dataset"""
-    user_credentials = UserCredentials(user_token)
-    return DatasetManager.get_eligible_products_for_dataset(
-        user_credentials=user_credentials, dataset_id=dataset_id
     )
 
 
@@ -78,7 +66,7 @@ async def get_product_details(
 ):
     """Get details for the requested product if user is authorized"""
     user_credentials = UserCredentials(user_token)
-    return DatasetManager.get_details_if_product_eligible(
+    return DatasetManager.get_details_for_product_if_eligible(
         user_credentials=user_credentials,
         dataset_id=dataset_id,
         product_id=product_id,

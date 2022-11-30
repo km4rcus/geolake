@@ -32,8 +32,8 @@ spec:
         env:
         - name: LOGGING_LEVEL
           value: DEBUG
-        - name: CATALOG_PATH
-          value: /catalog/catalog.yaml
+        - name: API_TIMEOUT
+          value: '20'
         - name: POSTGRES_DB
           value: dds
         - name: POSTGRES_HOST
@@ -50,7 +50,7 @@ spec:
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a0
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a5
         name: web
         ports:
         - containerPort: 80

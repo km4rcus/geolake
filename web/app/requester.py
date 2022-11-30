@@ -89,7 +89,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
             target_url,
             data=data,
             headers=headers,
-            timeout=11,
+            timeout=int(os.environ.get("API_TIMEOUT", 20)),
         )
         if response.status_code != 200:
             raise GeokubeAPIRequestFailed(
@@ -136,7 +136,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
         response = requests.get(
             target_url,
             headers=headers,
-            timeout=11,
+            timeout=int(os.environ.get("API_TIMEOUT", 20)),
         )
         if response.status_code != 200:
             cls._LOG.info(

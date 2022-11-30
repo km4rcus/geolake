@@ -13,12 +13,17 @@ from .access import AccessManager
 from .meta import LoggableMeta
 from ..datastore.datastore import Datastore
 from ..util import UserCredentials, log_execution_time
+from ..exceptions import (
+    NoEligibleProductInDatasetError,
+    MissingKeyInCatalogEntryError,
+)
 
 
 class DatasetManager(metaclass=LoggableMeta):
     """Manager that handles dataset present in the geokube-dds catalog"""
 
     _LOG = logging.getLogger("geokube.DatasetManager")
+    _DATASTORE = Datastore(cache_path="/cache")
 
     @classmethod
     def assert_product_exists(cls, dataset_id, product_id: None | str = None):
@@ -41,8 +46,7 @@ class DatasetManager(metaclass=LoggableMeta):
                 b) product for the given dataset does not exist
                 c) product might exist, but it does not belong to the dataset `dataset_id`
         """
-        dset = Datastore(cache_path="/cache")
-        if dataset_id not in dset.dataset_list():
+        if dataset_id not in cls._DATASTORE.dataset_list():
             cls._LOG.info(
                 "requested dataset: `%s` was not found in the catalog!",
                 dataset_id,
@@ -55,7 +59,7 @@ class DatasetManager(metaclass=LoggableMeta):
                 ),
             )
         if product_id is not None:
-            if product_id not in dset.product_list(dataset_id):
+            if product_id not in cls._DATASTORE.product_list(dataset_id):
                 cls._LOG.info(
                     "requested product: `%s` for dataset: `%s` was not found"
                     " in the catalog!",
@@ -72,151 +76,146 @@ class DatasetManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def get_eligible_products_for_all_datasets(
-        cls,
-        user_credentials: UserCredentials,
-    ) -> dict[str, list[str]]:
-        """Get eligible products for all datasets defined in the catalog.
+    def get_datasets_and_eligible_products_names(
+        cls, user_credentials: UserCredentials
+    ) -> list:
+        """Get datasets names, their metadata and products names (if eligible for a user).
+        If no eligible products are found for a dataset, it is not included.
 
         Parameters
         ----------
         user_credentials : UserCredentials
-            The credentials of the current user
+            Current user credentials
 
         Returns
         -------
-        products : dict
-            The dictionary of datasets and products in the form:
-            ```python
-            {
-                dataset_id_1: [prod_id_1, prod_id_2, ...],
-                dataset_id_2: ...
-            }
-            ```
+        datasets : list
+            A list of datasets information (including metadata and
+            eligible products lists)
 
         Raises
         -------
-        HTTPException
-            400 if user does not exist or the key is not valid
+        MissingKeyInCatalogEntryError
+            If the dataset catalog entry does not contain the required key
         """
-        cls._LOG.debug(
-            "getting eligible products for user_id: `%s`", user_credentials.id
-        )
-        AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore(cache_path="/cache")
-        datasets = {}
-        for dataset_id in data_store.dataset_list():
-            eligible_products_for_dataset = (
-                DatasetManager.get_eligible_products_for_dataset(
-                    user_credentials=user_credentials, dataset_id=dataset_id
+        cls._LOG.debug("getting all eligible products for datasets...")
+        user_role_name = DBManager().get_user_role_name(user_credentials.id)
+        datasets = []
+        for dataset_id in cls._DATASTORE.dataset_list():
+            if dataset_id == "visir":
+                cls._LOG.info(
+                    "skipping `visir` dataset due to the error geokube/#253"
                 )
+                continue
+            cls._LOG.debug(
+                "getting info and eligible products for `%s`", dataset_id
             )
-            if len(eligible_products_for_dataset) > 0:
-                datasets[dataset_id] = eligible_products_for_dataset
+            dataset_info = cls._DATASTORE.dataset_info(dataset_id=dataset_id)
+            try:
+                datasets.append(
+                    cls._get_dataset_information_from_details_dict(
+                        dataset_dict=dataset_info,
+                        user_role_name=user_role_name,
+                        dataset_id=dataset_id,
+                        user_credentials=user_credentials,
+                    )
+                )
+            except NoEligibleProductInDatasetError:
+                cls._LOG.debug(
+                    f"dataset '{dataset_id}' will not be considered. no"
+                    " eligible products for the user role name"
+                    f" '{user_role_name}'"
+                )
+                continue
         return datasets
 
     @classmethod
     @log_execution_time(_LOG)
-    def get_eligible_products_for_dataset(
-        cls, user_credentials: UserCredentials, dataset_id: str
-    ) -> list[str]:
-        """Get eligible products only for the dataset with id in `dataset_id`.
-
-        Parameters
-        ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
-
-        Returns
-        -------
-        products : list
-            The dictionary of datasets and products in the form:
-            ```python
-            [prod_id_1, prod_id_2, ...]
-            ```
-
-        Raises
-        -------
-        HTTPException
-            400 if user does not exist or the key is not valid
-        """
-        cls._LOG.debug(
-            "getting eligible products for user_id: `%s`, dataset_id: `%s`",
-            user_credentials.id,
-            dataset_id,
-        )
-        AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore(cache_path="/cache")
-        eligible_products_for_dataset = []
-        cls.assert_product_exists(dataset_id=dataset_id)
-        for product_id in data_store.product_list(dataset_id=dataset_id):
-            product_metadata = data_store.product_metadata(
-                dataset_id=dataset_id, product_id=product_id
-            )
-            if AccessManager.is_user_eligible_for_role(
-                user_credentials=user_credentials,
-                product_role_name=product_metadata.get("role"),
-            ):
-                eligible_products_for_dataset.append(product_id)
-        return eligible_products_for_dataset
-
-    @classmethod
-    @log_execution_time(_LOG)
-    def get_details_if_product_eligible(
+    def get_details_for_product_if_eligible(
         cls,
-        user_credentials: UserCredentials,
         dataset_id: str,
         product_id: str,
+        user_credentials: UserCredentials,
     ) -> dict:
-        """Get details for the given product, if the user is eligible
+        """Get details for the given product indicated by `dataset_id`
+        and `product_id` arguments.
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
         dataset_id : str
             ID of the dataset
         product_id : str
-            ID of the product
+            ID of the dataset
+        user_credentials : UserCredentials
+            Current user credentials
 
         Returns
         -------
         details : dict
-            The dictionary with details of the product
+            Details for the given product
 
         Raises
         -------
-        HTTPException
-            400 if user does not exist or the key is not valid
-            401 if the user is not authorized for the given product
+        MissingKeyInCatalogEntryError
+            If the dataset catalog entry does not contain the required key
         """
         cls._LOG.debug(
-            "getting details for user_id: `%s`, dataset_id: `%s`, product_id:"
-            " `%s`",
-            user_credentials.id,
-            dataset_id,
-            product_id,
+            "getting details for eligible products of `%s`", dataset_id
         )
-        AccessManager.authenticate_user(user_credentials)
-        data_store = Datastore(cache_path="/cache")
-        cls.assert_product_exists(dataset_id=dataset_id, product_id=product_id)
-        product_details = data_store.product_info(
+        user_role_name = DBManager().get_user_role_name(user_credentials.id)
+        details = cls._DATASTORE.product_details(
             dataset_id=dataset_id, product_id=product_id, use_cache=True
         )
-        if AccessManager.is_user_eligible_for_role(
-            user_credentials=user_credentials,
-            product_role_name=product_details.get("metadata", {}).get("role"),
-        ):
-            return product_details
-        else:
-            raise HTTPException(
-                status_code=401,
-                detail=(
-                    f"The user with id: {user_credentials.id} is not"
-                    f" authorized to use dataset: {dataset_id} product:"
-                    f" {product_id}"
-                ),
+        AccessManager.assert_is_role_eligible(
+            product_role_name=details["metadata"].get("role"),
+            user_role_name=user_role_name,
+        )
+        return details
+
+    @classmethod
+    @log_execution_time(_LOG)
+    def _get_dataset_information_from_details_dict(
+        cls,
+        dataset_dict: dict,
+        user_role_name: str,
+        dataset_id: str,
+        user_credentials: UserCredentials,
+    ) -> dict:
+        cls._LOG.debug(
+            "getting all eligible products for dataset: `%s`", dataset_id
+        )
+        try:
+            eligible_prods = {
+                prod_name: prod_info
+                for prod_name, prod_info in dataset_dict["products"].items()
+                if AccessManager.is_role_eligible_for_product(
+                    product_role_name=prod_info.get("role"),
+                    user_role_name=user_role_name,
+                )
+            }
+        except KeyError as err:
+            cls._LOG.error(
+                "dataset `%s` does not have products defined",
+                dataset_id,
+                exc_info=True,
             )
+            raise MissingKeyInCatalogEntryError(
+                key="products", dataset=dataset_id
+            ) from err
+        else:
+            if len(eligible_prods) == 0:
+                cls._LOG.debug(
+                    "no eligible products for dataset `%s` for the user"
+                    " `%s`. dataset skipped",
+                    dataset_id,
+                    user_credentials.id,
+                )
+                raise NoEligibleProductInDatasetError(
+                    dataset_id=dataset_id, user_role_name=user_role_name
+                )
+            else:
+                dataset_dict["products"] = eligible_prods
+        return dataset_dict
 
     @classmethod
     @log_execution_time(_LOG)
@@ -325,11 +324,9 @@ class DatasetManager(metaclass=LoggableMeta):
             ```
         """
         try:
-            query_bytes_estimation = (
-                Datastore(cache_path="/cache")
-                .query(dataset_id, product_id, query, compute=False)
-                .nbytes
-            )
+            query_bytes_estimation = cls._DATASTORE.query(
+                dataset_id, product_id, query, compute=False
+            ).nbytes
         except KeyError as exception:
             cls._LOG.error(
                 "dataset `%s` or product `%s` does not exist!",

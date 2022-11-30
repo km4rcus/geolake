@@ -9,13 +9,10 @@ from geoquery.geoquery import GeoQuery
 
 from .access import AccessManager
 from .models import ListOfDatasets, ListOfRequests
-from .dataset import DatasetManager
 from .requester import GeokubeAPIRequester
 from .widget import WidgetFactory
 from .exceptions import (
     AuthenticationFailed,
-    AuthorizationFailed,
-    MissingKeyInCatalogEntryError,
     GeokubeAPIRequestFailed,
 )
 
@@ -31,10 +28,8 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    root_path = os.environ.get("ENDPOINT_PREFIX", "/web"),
-    on_startup=[
-        GeokubeAPIRequester.init
-    ],  # NOTE: eventually, load Datastore cache on startup
+    root_path=os.environ.get("ENDPOINT_PREFIX", "/web"),
+    on_startup=[GeokubeAPIRequester.init],
 )
 
 # TODO: origins should be limited!
@@ -64,13 +59,15 @@ async def get_datasets(
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
         )
-        datasets = DatasetManager.get_datasets_and_eligible_products_names(
-            user_credentials=user_credentials
+        datasets = GeokubeAPIRequester.get(
+            url="/datasets", user_credentials=user_credentials
         )
     except AuthenticationFailed as err:
         raise HTTPException(
             status_code=401, detail="User could not be authenticated"
         ) from err
+    except GeokubeAPIRequestFailed as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
     else:
         return ListOfDatasets.from_details(datasets)
 
@@ -86,27 +83,16 @@ async def get_details_product(
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
         )
-        details = DatasetManager.get_details_for_product_if_eligible(
-            dataset_id=dataset_id,
-            product_id=product_id,
+        details = GeokubeAPIRequester.get(
+            url=f"/datasets/{dataset_id}/{product_id}",
             user_credentials=user_credentials,
         )
     except AuthenticationFailed as err:
         raise HTTPException(
             status_code=401, detail="User could not be authenticated"
         ) from err
-    except AuthorizationFailed as err:
-        raise HTTPException(
-            status_code=401, detail="User is not authorized"
-        ) from err
-    except MissingKeyInCatalogEntryError as err:
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"dataset '{err.dataset}' catalog entry does not contain"
-                " '{err.key}' key"
-            ),
-        ) from err
+    except GeokubeAPIRequestFailed as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
     else:
         return WidgetFactory(details).widgets
 

@@ -536,7 +536,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                 ]
                 wid = Widget(
                     wname=f"{coord_name}_range",
-                    wlabel=coord_name.title(),
+                    wlabel=coord_value["label"],
                     wrequired=False,
                     wparameter=coord_value["name"],
                     wtype="NumberRange",
