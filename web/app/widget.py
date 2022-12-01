@@ -211,7 +211,7 @@ class WidgetFactory(metaclass=LoggableMeta):
                 wlabel=label,
                 wrequired=False,
                 wparameter=att_name,
-                wtype="StringList",
+                wtype="StringChoice",
                 wdetails={"values": values},
             )
             self._wid.append(wid.to_dict())
