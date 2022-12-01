@@ -73,6 +73,20 @@ async def get_product_details(
     )
 
 
+@app.get("/datasets/{dataset_id}/{product_id}/metadata")
+async def metadata(
+    dataset_id: str,
+    product_id: str,
+    user_token: Optional[str] = Header(None, convert_underscores=True),
+):
+    user_credentials = UserCredentials(user_token)
+    return DatasetManager.get_product_metadata(
+        dataset_id=dataset_id,
+        product_id=product_id,
+        user_credentials=user_credentials,
+    )
+
+
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
 async def estimate(
     dataset_id: str,

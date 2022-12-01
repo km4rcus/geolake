@@ -15,6 +15,7 @@ from .exceptions import (
     AuthenticationFailed,
     GeokubeAPIRequestFailed,
 )
+from .utils.numeric import prepare_estimate_size_message
 
 app = FastAPI(
     title="geokube-dds API for Webportal",
@@ -142,6 +143,10 @@ async def estimate(
             data=query.json(),
             user_credentials=user_credentials,
         )
+        metadata = GeokubeAPIRequester.get(
+            url=f"/datasets/{dataset_id}/{product_id}/metadata",
+            user_credentials=user_credentials,
+        )
     except AuthenticationFailed as err:
         raise HTTPException(
             status_code=401, detail="User could not be authenticated"
@@ -149,8 +154,9 @@ async def estimate(
     except GeokubeAPIRequestFailed as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
-        return DatasetManager.wrap_estimate_size_message(
-            dataset_id, product_id, response.get("value")
+        return prepare_estimate_size_message(
+            maximum_allowed_size_gb=metadata.get("maximum_query_size_gb", 10),
+            estimated_size_gb=response.get("value"),
         )
 
 

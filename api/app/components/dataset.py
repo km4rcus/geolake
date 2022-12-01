@@ -219,6 +219,17 @@ class DatasetManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
+    def get_product_metadata(
+        cls,
+        user_credentials: UserCredentials,
+        dataset_id: str,
+        product_id: str,
+    ):
+        cls.assert_product_exists(dataset_id=dataset_id, product_id=product_id)
+        return cls._DATASTORE.product_metadata(dataset_id, product_id)
+
+    @classmethod
+    @log_execution_time(_LOG)
     def retrieve_data_and_get_request_id(
         cls,
         user_credentials: UserCredentials,

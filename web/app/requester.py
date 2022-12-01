@@ -107,6 +107,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
         cls,
         url: str,
         user_credentials: UserCredentials | None = None,
+        timeout: int = 10,
     ):
         """
         Send GET request to geokube-dds API
@@ -136,7 +137,7 @@ class GeokubeAPIRequester(metaclass=LoggableMeta):
         response = requests.get(
             target_url,
             headers=headers,
-            timeout=int(os.environ.get("API_TIMEOUT", 20)),
+            timeout=int(os.environ.get("API_TIMEOUT", timeout)),
         )
         if response.status_code != 200:
             cls._LOG.info(
