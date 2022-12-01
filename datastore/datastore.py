@@ -293,7 +293,12 @@ class Datastore(metaclass=Singleton):
                 }
             )
         if query.vertical:
-            kube = kube.sel(vertical=query.vertical, method="nearest")
+            kube = kube.sel(
+                vertical=Datastore._maybe_convert_dict_slice_to_slice(
+                    query.vertical
+                ),
+                method="nearest",
+            )
         if compute:
             # FIXME: TypeError: __init__() got an unexpected keyword argument
             # 'fastpath'

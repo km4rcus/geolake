@@ -1,7 +1,7 @@
 import json
 from typing import Optional, List, Dict, Union, Mapping, Any
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, root_validator, validator
 
 
 class GeoQuery(BaseModel, extra="allow"):
@@ -10,7 +10,7 @@ class GeoQuery(BaseModel, extra="allow"):
     time: Optional[Union[Dict[str, str], Dict[str, List[str]]]]
     area: Optional[Dict[str, float]]
     location: Optional[Dict[str, Union[float, List[float]]]]
-    vertical: Optional[Union[float, List[float]]]
+    vertical: Optional[Union[float, List[float], Dict[str, float]]]
     filters: Optional[Dict]
 
     # TODO: Check if we are going to allow the vertical coordinates inside both
@@ -24,6 +24,13 @@ class GeoQuery(BaseModel, extra="allow"):
                 " one of them"
             )
         return query
+
+    @validator("vertical")
+    def match_vertical_dict(cls, value):
+        if isinstance(value, dict):
+            assert "start" in value, "Missing 'start' key"
+            assert "stop" in value, "Missing 'stop' key"
+        return value
 
     @root_validator(pre=True)
     def build_filters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
