@@ -523,7 +523,7 @@ class WidgetFactory(metaclass=LoggableMeta):
         for coord_name, coord_value in aux_coords.items():
             wid = Widget(
                 wname=coord_name,
-                wlabel=coord_value["label"],
+                wlabel=coord_name.capitalize(),
                 wrequired=True,
                 wparameter=None,
                 wtype="ExclusiveFrame",
@@ -546,9 +546,9 @@ class WidgetFactory(metaclass=LoggableMeta):
 
             wid = Widget(
                 wname=f"{coord_name}_list",
-                wlabel=coord_value["label"],
+                wlabel=coord_name.capitalize(),
                 wrequired=False,
-                wparameter=coord_value["name"],
+                wparameter=coord_name,
                 wtype="StringList",
                 wdetails={"values": values},
             )
@@ -568,9 +568,9 @@ class WidgetFactory(metaclass=LoggableMeta):
                 ]
                 wid = Widget(
                     wname=f"{coord_name}_range",
-                    wlabel=coord_value["label"],
+                    wlabel=coord_name.capitalize(),
                     wrequired=False,
-                    wparameter=coord_value["name"],
+                    wparameter=coord_name,
                     wtype="NumberRange",
                     wdetails={"fields": range_},
                 )

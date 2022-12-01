@@ -264,6 +264,7 @@ class DatasetManager(metaclass=LoggableMeta):
             400 if user does not exist or the key is not valid
             401 if anonymous user attempts to execute a query
         """
+        cls._LOG.debug("geoquery: %s", query)
         AccessManager.authenticate_user(user_credentials)
         if user_credentials.is_public:
             cls._LOG.info("attempt to execute query by an anonymous user!")

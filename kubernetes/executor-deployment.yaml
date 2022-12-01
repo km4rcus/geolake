@@ -47,7 +47,7 @@ spec:
           value: dds
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-executor:v0.1a2
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-executor:v0.1a3
         name: executor
         ports:
         - containerPort: 8787
