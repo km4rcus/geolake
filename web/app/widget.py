@@ -147,7 +147,18 @@ class WidgetFactory(metaclass=LoggableMeta):
     def _compute_variable_widget(self, sort_keys: bool = True) -> None:
         all_fields = {}
         for dr in self._d.data:
-            fields = dr.fields if isinstance(dr, Kube) else dr.datacube.fields
+            if dr is None:
+                # NOTE: it means, datacube is Delayed object
+                # we don't care about variables
+                continue
+            if isinstance(dr, Kube):
+                fields = dr.fields
+            else:
+                if dr.datacube is None:
+                    # NOTE: it means, datacube is Delayed object
+                    # we don't care about variables
+                    continue
+                fields = dr.datacube.fields
             for field in fields:
                 if field.name in all_fields:
                     continue
@@ -209,11 +220,18 @@ class WidgetFactory(metaclass=LoggableMeta):
         min_time_step = np.inf
         time_unit = None
         for dr in self._d.data:
-            coords = (
-                dr.domain.coordinates
-                if isinstance(dr, Kube)
-                else dr.datacube.domain.coordinates
-            )
+            if dr is None:
+                # NOTE: it means, datacube is Delayed object
+                # we don't care about coordinates
+                continue
+            if isinstance(dr, Kube):
+                coords = dr.domain.coordinates
+            else:
+                if dr.datacube is None:
+                    # NOTE: it means, datacube is Delayed object
+                    # we don't care about coordinates
+                    continue
+                coords = dr.datacube.domain.coordinates
             if "time" not in coords:
                 continue
             time_vals = np.array(coords["time"].values, dtype=np.datetime64)
@@ -349,11 +367,18 @@ class WidgetFactory(metaclass=LoggableMeta):
     def _compute_spatial_widgets(self) -> None:
         spatial_coords = defaultdict(min_max_dict)
         for dr in self._d.data:
-            coords = (
-                dr.domain.coordinates
-                if isinstance(dr, Kube)
-                else dr.datacube.domain.coordinates
-            )
+            if dr is None:
+                # NOTE: it means, datacube is Delayed object
+                # we don't care about coordinates
+                continue
+            if isinstance(dr, Kube):
+                coords = dr.domain.coordinates
+            else:
+                if dr.datacube is None:
+                    # NOTE: it means, datacube is Delayed object
+                    # we don't care about coordinates
+                    continue
+                coords = dr.datacube.domain.coordinates
             if "latitude" not in coords or "longitude" not in coords:
                 continue
             for coord_name in ["latitude", "longitude"]:
@@ -429,11 +454,18 @@ class WidgetFactory(metaclass=LoggableMeta):
     def _compute_auxiliary_coords_widgets(self) -> None:
         aux_coords = defaultdict(dict)
         for dr in self._d.data:
-            coords = (
-                dr.domain.coordinates
-                if isinstance(dr, Kube)
-                else dr.datacube.domain.coordinates
-            )
+            if dr is None:
+                # NOTE: it means, datacube is Delayed object
+                # we don't care about coordinates
+                continue
+            if isinstance(dr, Kube):
+                coords = dr.domain.coordinates
+            else:
+                if dr.datacube is None:
+                    # NOTE: it means, datacube is Delayed object
+                    # we don't care about coordinates
+                    continue
+                coords = dr.datacube.domain.coordinates
             if (
                 len(
                     aux_kube_coords_names := self._get_aux_coord_names(
