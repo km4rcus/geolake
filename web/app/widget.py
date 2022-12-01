@@ -170,6 +170,8 @@ class WidgetFactory(metaclass=LoggableMeta):
                         field.name, field.description
                     ),
                 }
+        if not all_fields:
+            return
         if sort_keys:
             all_fields = OrderedDict(all_fields)
         self._wid.append(
