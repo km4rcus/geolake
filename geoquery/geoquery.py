@@ -11,6 +11,7 @@ class GeoQuery(BaseModel, extra="allow"):
     area: Optional[Dict[str, float]]
     location: Optional[Dict[str, Union[float, List[float]]]]
     vertical: Optional[Union[float, List[float], Dict[str, float]]]
+    format: Optional[str] # TODO: to remove when webportal will change generated script
     filters: Optional[Dict]
 
     # TODO: Check if we are going to allow the vertical coordinates inside both
@@ -25,19 +26,21 @@ class GeoQuery(BaseModel, extra="allow"):
             )
         return query
 
+    @root_validator(pre=True)
+    def build_filters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if "filters" in values:
+            return values
+        filters = {k: v for k, v in values.items() if k not in cls.__fields__}
+        values = {k: v for k, v in values.items() if k in cls.__fields__}
+        values["filters"] = filters
+        return values
+
     @validator("vertical")
     def match_vertical_dict(cls, value):
         if isinstance(value, dict):
             assert "start" in value, "Missing 'start' key"
             assert "stop" in value, "Missing 'stop' key"
         return value
-
-    @root_validator(pre=True)
-    def build_filters(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        filters = {k: v for k, v in values.items() if k not in cls.__fields__}
-        values = {k: v for k, v in values.items() if k in cls.__fields__}
-        values["filters"] = filters
-        return values
 
     def original_query_json(self):
         """Return the JSON representation of the original query submitted

@@ -270,14 +270,19 @@ class Datastore(metaclass=Singleton):
         kube : DataCube
             DataCube processed according to `query`
         """
+        self._LOG.debug("query: %s", query)
         if isinstance(query, str):
             query = json.loads(query)
         if isinstance(query, dict):
             query = GeoQuery(**query)
+        self._LOG.debug("processing GeoQuery: %s", query)
         # NOTE: we always use catalog directly and single product cache
         kube = self.catalog[dataset_id][product_id].read_chunked()
+        self._LOG.debug("original kube len: %s", len(kube))
         if isinstance(kube, Dataset):
+            self._LOG.debug("filtering with: %s", query.filters)
             kube = kube.filter(**query.filters)
+            self._LOG.debug("resulting kube len: %s", len(kube))
         if query.variable:
             kube = kube[query.variable]
         if query.area:
