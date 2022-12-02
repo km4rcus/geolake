@@ -11,7 +11,6 @@ class GeoQuery(BaseModel, extra="allow"):
     area: Optional[Dict[str, float]]
     location: Optional[Dict[str, Union[float, List[float]]]]
     vertical: Optional[Union[float, List[float], Dict[str, float]]]
-    format: Optional[str] # TODO: to remove when webportal will change generated script
     filters: Optional[Dict]
 
     # TODO: Check if we are going to allow the vertical coordinates inside both
