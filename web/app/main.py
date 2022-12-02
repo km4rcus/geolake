@@ -107,6 +107,10 @@ async def execute(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieving by using geokube-dds API"""
+    # TODO: remove below code after changing Webportal
+    # In execute endpoint format query param is missing ( ...?format=netcdf)
+    format = query.filters.pop("format", "netcdf")
+    # ##########################################
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
@@ -134,6 +138,10 @@ async def estimate(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Estimate the resulting size of the query by using geokube-dds API"""
+    # TODO: remove below code after changing Webportal
+    # In estimate endpoint format query param is missing ( ...?format=netcdf)
+    query.filters.pop("format", None)
+    # ##########################################
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
