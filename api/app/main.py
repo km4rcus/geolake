@@ -14,6 +14,7 @@ from .components.dataset import DatasetManager
 from .components.file import FileManager
 from .components.request import RequestManager
 from .util import UserCredentials
+from .exceptions import MaximumAllowedSizeExceededError
 
 app = FastAPI(
     title="geokube-dds API",
@@ -109,10 +110,17 @@ async def query(
     format: Optional[str] = "netcdf",
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
-    """Schedule the job of data retrieving"""
-    # TODO: Validation Query Schema
-    # TODO: estimate the size and will not execute if it is above the limit
+    """Schedule the job of data retrieve"""
     user_credentials = UserCredentials(user_token)
+    try:
+        DatasetManager.assert_estimated_size_below_product_limit(
+            dataset_id=dataset_id,
+            product_id=product_id,
+            query=query,
+            user_credentials=user_credentials,
+        )
+    except MaximumAllowedSizeExceededError as err:
+        raise HTTPException(status_code=400, detail=str(err))
     return DatasetManager.retrieve_data_and_get_request_id(
         user_credentials=user_credentials,
         dataset_id=dataset_id,

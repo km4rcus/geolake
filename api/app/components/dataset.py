@@ -16,6 +16,7 @@ from ..util import UserCredentials, log_execution_time
 from ..exceptions import (
     NoEligibleProductInDatasetError,
     MissingKeyInCatalogEntryError,
+    MaximumAllowedSizeExceededError,
 )
 
 
@@ -299,6 +300,47 @@ class DatasetManager(metaclass=LoggableMeta):
         return request_id
 
     @classmethod
+    def assert_estimated_size_below_product_limit(
+        cls,
+        dataset_id: str,
+        product_id: str,
+        query: GeoQuery,
+        user_credentials: UserCredentials,
+    ):
+        """Assert that estimated query size is not greater than
+        the maximum allowed size.
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        query : GeoQuery
+            Query to perform
+        user_credentials : UserCredentials
+            The credentials of the current user
+
+        Raises
+        -------
+        MaximumAllowedSizeExceededError
+            if estimated size is greater than the maximum allowed one
+        """
+        estimated_size = cls.estimate(dataset_id, product_id, query, "GB").get(
+            "value"
+        )
+        allowed_size = cls.get_product_metadata(
+            user_credentials, dataset_id, product_id
+        ).get("maximum_query_size_gb", 10)
+        if estimated_size > allowed_size:
+            raise MaximumAllowedSizeExceededError(
+                dataset_id=dataset_id,
+                product_id=product_id,
+                estimated_size_gb=estimated_size,
+                allowed_size_gb=allowed_size,
+            )
+
+    @classmethod
     @log_execution_time(_LOG)
     def estimate(
         cls,
@@ -312,8 +354,6 @@ class DatasetManager(metaclass=LoggableMeta):
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
         dataset_id : str
             ID of the dataset
         product_id : str
@@ -360,7 +400,7 @@ class DatasetManager(metaclass=LoggableMeta):
         )
 
 
-def _convert_bytes(size_bytes: int, unit: str) -> float:
+def _convert_bytes(size_bytes: int, unit: str) -> dict:
     unit = unit.lower()
     if unit == "kb":
         value = size_bytes / 1024

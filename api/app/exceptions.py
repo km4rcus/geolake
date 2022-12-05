@@ -31,5 +31,17 @@ class NoEligibleProductInDatasetError(ValueError):
         super().__init__(msg)
 
 
-class GeokubeAPIRequestFailed(RuntimeError):
-    """Error while sending request to geokube-dds API"""
+class MaximumAllowedSizeExceededError(ValueError):
+    """Estimated size is too big"""
+
+    def __init__(
+        self, dataset_id, product_id, estimated_size_gb, allowed_size_gb
+    ):
+        super().__init__(
+            "Maximum allowed size for '%s.%s' is %s GB but the estimated size"
+            " is %s GB",
+            dataset_id,
+            product_id,
+            estimated_size_gb,
+            allowed_size_gb,
+        )
