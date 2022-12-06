@@ -27,6 +27,12 @@ class DatasetManager(metaclass=LoggableMeta):
     _DATASTORE = Datastore(cache_path="/cache")
 
     @classmethod
+    @log_execution_time(_LOG)
+    def load_cache(cls):
+        """Load Datastore cache"""
+        cls._DATASTORE._load_cache()
+
+    @classmethod
     def assert_product_exists(cls, dataset_id, product_id: None | str = None):
         """Assert that the dataset or product exist.
         If `product_id` is set, the method verifies if it belongs to the
@@ -103,11 +109,6 @@ class DatasetManager(metaclass=LoggableMeta):
         user_role_name = DBManager().get_user_role_name(user_credentials.id)
         datasets = []
         for dataset_id in cls._DATASTORE.dataset_list():
-            if dataset_id == "visir":
-                cls._LOG.info(
-                    "skipping `visir` dataset due to the error geokube/#253"
-                )
-                continue
             cls._LOG.debug(
                 "getting info and eligible products for `%s`", dataset_id
             )
