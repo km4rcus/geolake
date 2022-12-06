@@ -32,9 +32,10 @@ app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
     root_path=os.environ.get("ENDPOINT_PREFIX", "/api"),
+    on_startup=[DatasetManager.load_cache],
 )
 
-# ======== CORS management ========= #
+# ======== CORS ========= #
 # TODO: origins should be limited!
 ORIGINS = ["*"]
 
@@ -46,7 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ======== Prometheus metrics management ========= #
+# ======== Prometheus metrics ========= #
 app.add_middleware(MetricsMiddleware)
 app.add_route("/metrics", metrics)
 
