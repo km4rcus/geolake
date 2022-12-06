@@ -55,7 +55,6 @@ class Datastore(metaclass=Singleton):
             Data stored in the cache (either `geokube.DataCube` or `geokube.Dataset`)
         """
         if self.cache is None:
-            self.cache = {}
             self._load_cache()
         if (
             dataset_id not in self.cache
@@ -74,6 +73,8 @@ class Datastore(metaclass=Singleton):
 
     @log_execution_time(_LOG)
     def _load_cache(self):
+        if self.cache is None:
+            self.cache = {}
         for i, dataset_id in enumerate(self.dataset_list()):
             self._LOG.info(
                 "loading cache for `%s` (%d/%d)",
