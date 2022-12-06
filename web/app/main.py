@@ -36,7 +36,7 @@ app = FastAPI(
     on_startup=[GeokubeAPIRequester.init],
 )
 
-# ======== CORS management ========= #
+# ======== CORS ========= #
 # TODO: origins should be limited!
 ORIGINS = ["*"]
 
@@ -48,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ======== Prometheus metrics management ========= #
+# ======== Prometheus metrics ========= #
 app.add_middleware(MetricsMiddleware)
 app.add_route("/metrics", metrics)
 

@@ -64,7 +64,6 @@ class DatasetMetadata(BaseModel):
     default: Optional[str] = None
     description: Optional[str] = ""
     label: Optional[str] = ""
-    how_to_cite: Optional[str] = ""
     image: Optional[HttpUrl] = ""
     attribution: Optional[str] = ""
     update_frequency: Optional[str] = ""
