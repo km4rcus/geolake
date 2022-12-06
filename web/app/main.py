@@ -7,6 +7,9 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from geoquery.geoquery import GeoQuery
 
+from aioprometheus import Counter, Summary, timer, MetricsMiddleware
+from aioprometheus.asgi.starlette import metrics
+
 from .access import AccessManager
 from .models import ListOfDatasets, ListOfRequests
 from .requester import GeokubeAPIRequester
@@ -33,6 +36,7 @@ app = FastAPI(
     on_startup=[GeokubeAPIRequester.init],
 )
 
+# ======== CORS management ========= #
 # TODO: origins should be limited!
 ORIGINS = ["*"]
 
@@ -44,7 +48,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ======== Prometheus metrics management ========= #
+app.add_middleware(MetricsMiddleware)
+app.add_route("/metrics", metrics)
 
+app.state.request_time = Summary(
+    "request_processing_seconds", "Time spent processing request"
+)
+app.state.request = Counter("request_total", "Total number of requests")
+
+# ======== Endpoints definitions ========= #
 @app.get("/")
 async def dds_info():
     """Return current version of the DDS API for the Webportal"""
@@ -52,10 +65,12 @@ async def dds_info():
 
 
 @app.get("/datasets")
+@timer(app.state.request_time, labels={"route": "GET /datasets"})
 async def get_datasets(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get list of eligible datasets for the home page of the Webportal"""
+    app.state.request.inc({"route": "GET /datasets"})
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
@@ -74,12 +89,17 @@ async def get_datasets(
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
+@timer(
+    app.state.request_time,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+)
 async def get_details_product(
     dataset_id: str,
     product_id: str,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for Webportal"""
+    app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
@@ -99,6 +119,10 @@ async def get_details_product(
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
+@timer(
+    app.state.request_time,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
+)
 async def execute(
     dataset_id: str,
     product_id: str,
@@ -111,6 +135,9 @@ async def execute(
     # In execute endpoint format query param is missing ( ...?format=netcdf)
     format = query.filters.pop("format", "netcdf")
     # ##########################################
+    app.state.request.inc(
+        {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
+    )
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
@@ -131,6 +158,10 @@ async def execute(
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
+@timer(
+    app.state.request_time,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
+)
 async def estimate(
     dataset_id: str,
     product_id: str,
@@ -142,6 +173,9 @@ async def estimate(
     # In estimate endpoint format query param is missing ( ...?format=netcdf)
     query.filters.pop("format", None)
     # ##########################################
+    app.state.request.inc(
+        {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
+    )
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization
@@ -189,10 +223,12 @@ async def get_api_key(
 
 
 @app.get("/requests")
+@timer(app.state.request_time, labels={"route": "GET /requests"})
 async def get_requests(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get requests for a user the given Authorization token"""
+    app.state.request.inc({"route": "GET /requests"})
     try:
         user_credentials = AccessManager.retrieve_credentials_from_jwt(
             authorization

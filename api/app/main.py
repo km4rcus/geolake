@@ -6,6 +6,9 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from aioprometheus import Counter, Summary, timer, MetricsMiddleware
+from aioprometheus.asgi.starlette import metrics
+
 from db.dbmanager.dbmanager import RequestStatus
 from geoquery.geoquery import GeoQuery
 
@@ -31,6 +34,8 @@ app = FastAPI(
     root_path=os.environ.get("ENDPOINT_PREFIX", "/api"),
 )
 
+# ======== CORS management ========= #
+# TODO: origins should be limited!
 ORIGINS = ["*"]
 
 app.add_middleware(
@@ -41,7 +46,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ======== Prometheus metrics management ========= #
+app.add_middleware(MetricsMiddleware)
+app.add_route("/metrics", metrics)
 
+app.state.request_time = Summary(
+    "request_processing_seconds", "Time spent processing request"
+)
+app.state.request = Counter("request_total", "Total number of requests")
+
+# ======== Endpoints definitions ========= #
 @app.get("/")
 async def dds_info():
     """Return current version of the DDS API"""
@@ -49,10 +63,12 @@ async def dds_info():
 
 
 @app.get("/datasets")
+@timer(app.state.request_time, labels={"route": "GET /datasets"})
 async def get_datasets(
     user_token: Optional[str] = Header(None, convert_underscores=True)
 ):
     """List all products eligible for a user defined by user_token"""
+    app.state.request.inc({"route": "GET /datasets"})
     user_credentials = UserCredentials(user_token)
     return DatasetManager.get_datasets_and_eligible_products_names(
         user_credentials=user_credentials
@@ -60,12 +76,17 @@ async def get_datasets(
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
+@timer(
+    app.state.request_time,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+)
 async def get_product_details(
     dataset_id: str,
     product_id: str,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for the requested product if user is authorized"""
+    app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
     user_credentials = UserCredentials(user_token)
     return DatasetManager.get_details_for_product_if_eligible(
         user_credentials=user_credentials,
@@ -75,11 +96,19 @@ async def get_product_details(
 
 
 @app.get("/datasets/{dataset_id}/{product_id}/metadata")
+@timer(
+    app.state.request_time,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}/metadata"},
+)
 async def metadata(
     dataset_id: str,
     product_id: str,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
+    """Get metadata of the given product"""
+    app.state.request.inc(
+        {"route": "GET /datasets/{dataset_id}/{product_id}/metadata"}
+    )
     user_credentials = UserCredentials(user_token)
     return DatasetManager.get_product_metadata(
         dataset_id=dataset_id,
@@ -89,6 +118,10 @@ async def metadata(
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
+@timer(
+    app.state.request_time,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
+)
 async def estimate(
     dataset_id: str,
     product_id: str,
@@ -97,12 +130,19 @@ async def estimate(
     unit: str = None,
 ):
     """Estimate the resulting size of the query"""
+    app.state.request.inc(
+        {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
+    )
     return DatasetManager.estimate(
         dataset_id=dataset_id, product_id=product_id, query=query, unit=unit
     )
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
+@timer(
+    app.state.request_time,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
+)
 async def query(
     dataset_id: str,
     product_id: str,
@@ -111,6 +151,9 @@ async def query(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieve"""
+    app.state.request.inc(
+        {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
+    )
     user_credentials = UserCredentials(user_token)
     try:
         DatasetManager.assert_estimated_size_below_product_limit(
@@ -131,10 +174,12 @@ async def query(
 
 
 @app.get("/requests")
+@timer(app.state.request_time, labels={"route": "GET /requests"})
 async def get_requests(
     user_token: Optional[str] = Header(None, convert_underscores=True)
 ):
     """Get all requests for the user"""
+    app.state.request.inc({"route": "GET /requests"})
     user_credentials = UserCredentials(user_token)
     AccessManager.assert_not_public(user_credentials)
     AccessManager.authenticate_user(user_credentials)
@@ -144,9 +189,14 @@ async def get_requests(
 
 
 @app.get("/requests/{request_id}/status")
+@timer(
+    app.state.request_time,
+    labels={"route": "GET /requests/{request_id}/status"},
+)
 async def get_request_status(request_id: int):
     """Get status of the request without authentication"""
     # NOTE: no auth required for checking status
+    app.state.request.inc({"route": "GET /requests/{request_id}/status"})
     status, reason = RequestManager.get_request_status_for_request_id(
         request_id=request_id
     )
@@ -156,17 +206,23 @@ async def get_request_status(request_id: int):
 
 
 @app.get("/requests/{request_id}/size")
+@timer(
+    app.state.request_time, labels={"route": "GET /requests/{request_id}/size"}
+)
 async def get_request_resulting_size(request_id: int):
     """Get size of the file being the result of the request"""
+    app.state.request.inc({"route": "GET /requests/{request_id}/size"})
     return RequestManager.get_request_result_size(request_id=request_id)
 
 
 @app.get("/download/{request_id}")
+@timer(app.state.request_time, labels={"route": "GET /download/{request_id}"})
 async def download_request_result(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Download result of the request"""
+    app.state.request.inc({"route": "GET /download/{request_id}"})
     user_credentials = UserCredentials(user_token)
     # TODO: web portal need to pass User-Token header to this endpoint
     # AccessManager.assert_not_public(user_credentials)
@@ -189,21 +245,29 @@ async def download_request_result(
 
 
 @app.get("/requests/{request_id}/uri")
+@timer(
+    app.state.request_time, labels={"route": "GET /requests/{request_id}/uri"}
+)
 async def get_request_uri(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get download URI for the request"""
+    app.state.request.inc({"route": "GET /requests/{request_id}/uri"})
     user_credentials = UserCredentials(user_token)
     AccessManager.authenticate_user(user_credentials)
     return RequestManager.get_request_uri_for_request_id(request_id=request_id)
 
 
-@app.delete("/requests/{request_id}/")
+@app.delete("/requests/{request_id}")
+@timer(
+    app.state.request_time, labels={"route": "DELETE /requests/{request_id}/"}
+)
 async def delete_request_uri(
     request_id: int,
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Delete the request with 'request_id' from the database"""
+    app.state.request.inc({"route": "DELETE /requests/{request_id}"})
     # TODO:
     raise HTTPException(status_code=400, detail="NotImplementedError")

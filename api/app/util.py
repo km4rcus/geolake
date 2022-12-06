@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from functools import wraps
-import datetime
+import time
 import logging
 
 from uuid import UUID
@@ -90,17 +90,16 @@ def log_execution_time(logger: logging.Logger):
     def inner(func):
         @wraps(func)
         def wrapper(*args, **kwds):
-            exec_start_time = datetime.datetime.now()
+            exec_start_time = time.monotonic()
             try:
                 return func(*args, **kwds)
             finally:
-                exec_time = datetime.datetime.now() - exec_start_time
                 # NOTE: maybe logging should be on DEBUG level
                 logger.info(
                     "execution of '%s' function from '%s' package took %s",
                     func.__name__,
                     func.__module__,
-                    exec_time,
+                    time.monotonic() - exec_start_time,
                 )
 
         return wrapper
