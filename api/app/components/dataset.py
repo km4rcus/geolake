@@ -394,30 +394,34 @@ class DatasetManager(metaclass=LoggableMeta):
                     " not exist!"
                 ),
             ) from exception
-        return (
-            _make_bytes_readable_dict(size_bytes=query_bytes_estimation)
-            if unit is None
-            else _convert_bytes(query_bytes_estimation, unit)
+        return _make_bytes_readable_dict(
+            size_bytes=query_bytes_estimation, units=unit
         )
 
 
-def _convert_bytes(size_bytes: int, unit: str) -> dict:
-    unit = unit.lower()
-    if unit == "kb":
+def _convert_bytes(size_bytes: int, units: str) -> float:
+    units = units.lower()
+    if units == "kb":
         value = size_bytes / 1024
-    elif unit == "mb":
+    elif units == "mb":
         value = size_bytes / 1024**2
-    elif unit == "gb":
+    elif units == "gb":
         value = size_bytes / 1024**3
     else:
-        raise ValueError(f"unsupported unit: {unit}")
+        raise ValueError(f"unsupported units: {units}")
     if (value := round(value, 2)) == 0.00:
         value = 0.01
-    return {"value": value, "units": unit}
+    return value
 
 
-def _make_bytes_readable_dict(size_bytes: int) -> dict:
-    units = "bytes"
+def _make_bytes_readable_dict(
+    size_bytes: int, units: str | None = None
+) -> dict:
+    if units is not None:
+        units = "bytes"
+    if units != "bytes":
+        size_bytes = _convert_bytes(size_bytes=size_bytes, units=units)
+        return {"value": val, "units": units}
     val = size_bytes
     if val > 1024:
         units = "kB"
