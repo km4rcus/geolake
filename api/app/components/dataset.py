@@ -414,14 +414,12 @@ def _convert_bytes(size_bytes: int, units: str) -> float:
     return value
 
 
-def _make_bytes_readable_dict(
-    size_bytes: int, units: str | None = None
-) -> dict:
-    if units is not None:
+def _make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
+    if units is None:
         units = "bytes"
     if units != "bytes":
         size_bytes = _convert_bytes(size_bytes=size_bytes, units=units)
-        return {"value": val, "units": units}
+        return {"value": size_bytes, "units": units}
     val = size_bytes
     if val > 1024:
         units = "kB"
