@@ -5,6 +5,7 @@ import logging
 from enum import Enum
 from typing import Any, ClassVar, Optional, Union
 from datetime import date, datetime, timedelta
+import numpy as np
 
 from pydantic import (
     BaseModel,
@@ -125,16 +126,16 @@ class Filter(BaseModel):
             raise TypeError
 
 
-class Coordinate(BaseModel):
+class Coordinate(BaseModel, arbitrary_types_allowed=True):
     """DTO for single coordinate"""
 
     name: str
     axis: str
-    min: Any
-    max: Any
+    min: Union[float, datetime]
+    max: Union[float, datetime]
     values: Optional[Any] = None
     time_unit: Optional[str] = None
-    time_step: Optional[str] = None
+    time_step: Optional[float] = None
     label: Optional[str] = None
     units: Optional[str] = None
 

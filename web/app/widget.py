@@ -242,16 +242,10 @@ class WidgetFactory(metaclass=LoggableMeta):
                     [temporal_coords["min"], time_coord.min]
                 )
             else:
-                temporal_coords["min"] = time_coord.max
+                temporal_coords["min"] = time_coord.min
 
         if not (temporal_coords["min"] and temporal_coords["max"]):
             return
-        temporal_coords["max"] = (
-            temporal_coords["max"].astype("M8[h]").astype("O")
-        )
-        temporal_coords["min"] = (
-            temporal_coords["min"].astype("M8[h]").astype("O")
-        )
         wid = Widget(
             wname="temporal_coverage",
             wlabel="Temporal coverage",
