@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
 from .meta import LoggableMeta
-from ..util import log_execution_time
+from ..util.execution import log_execution_time
 
 
 class FileManager(metaclass=LoggableMeta):

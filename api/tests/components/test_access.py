@@ -1,3 +1,3 @@
 import pytest
 
-from app.util import UserCredentials
+from app.util.auth import UserCredentials

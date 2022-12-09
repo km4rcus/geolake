@@ -16,7 +16,7 @@ from .components.access import AccessManager
 from .components.dataset import DatasetManager
 from .components.file import FileManager
 from .components.request import RequestManager
-from .util import UserCredentials
+from .util.auth import UserCredentials
 from .exceptions import MaximumAllowedSizeExceededError
 
 app = FastAPI(
@@ -89,11 +89,12 @@ async def get_product_details(
     """Get details for the requested product if user is authorized"""
     app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
     user_credentials = UserCredentials(user_token)
-    return DatasetManager.get_details_for_product_if_eligible(
+    details = DatasetManager.get_details_for_product_if_eligible(
         user_credentials=user_credentials,
         dataset_id=dataset_id,
         product_id=product_id,
     )
+    return details
 
 
 @app.get("/datasets/{dataset_id}/{product_id}/metadata")
@@ -164,7 +165,7 @@ async def query(
             user_credentials=user_credentials,
         )
     except MaximumAllowedSizeExceededError as err:
-        raise HTTPException(status_code=400, detail=str(err))
+        raise HTTPException(status_code=400, detail=str(err)) from err
     return DatasetManager.retrieve_data_and_get_request_id(
         user_credentials=user_credentials,
         dataset_id=dataset_id,

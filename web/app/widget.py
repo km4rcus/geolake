@@ -2,21 +2,18 @@
 import logging
 from collections import defaultdict, OrderedDict
 from datetime import datetime, timedelta
-from numbers import Number
 
 import numpy as np
-import pandas as pd
-from pandas.tseries.frequencies import to_offset
 from pydantic import validate_arguments
 
 from .meta import LoggableMeta
 from .utils import log_execution_time, maybe_round_value
-from .models import Filter, Product, WidgetsCollection, Kube
+from .models import Product, WidgetsCollection, Kube
 
 
-def min_max_dict(min_val=np.inf, max_val=-np.inf):
+def min_max_dict(min=np.inf, max=-np.inf):
     """Create a default dictionary with 'min' and 'max' keys"""
-    return {"min": min_val, "max": max_val}
+    return {"min": min, "max": max}
 
 
 class Widget:
@@ -80,18 +77,11 @@ class WidgetFactory(metaclass=LoggableMeta):
     _LOG = logging.getLogger("Widget")
     _MAIN_COORDS = {"time", "latitude", "longitude"}
     _NUMBER_OF_DECIMALS = 2
-    _FREQ_CODES = {
-        "T": "minute",
-        "H": "hour",
-        "D": "day",
-        "M": "month",
-        "Y": "year",
-    }
 
     @log_execution_time(_LOG)
     @validate_arguments
     def __init__(self, product: Product):
-        self._LOG.debug(f"provided filters: %s", product.metadata.filters)
+        self._LOG.debug("provided filters: %s", product.metadata.filters)
         self._d = product
         self._wid = []
         self._wid_order = []
@@ -218,7 +208,7 @@ class WidgetFactory(metaclass=LoggableMeta):
             self._wid_order.append(att_name)
 
     def _compute_temporal_widgets(self) -> None:
-        temporal_coords = min_max_dict(min_val=None, max_val=None)
+        temporal_coords = min_max_dict(min=None, max=None)
         min_time_step = np.inf
         time_unit = None
         for dr in self._d.data:
@@ -236,32 +226,26 @@ class WidgetFactory(metaclass=LoggableMeta):
                 coords = dr.datacube.domain.coordinates
             if "time" not in coords:
                 continue
-            time_vals = np.array(coords["time"].values, dtype=np.datetime64)
-            if len(time_vals) < 2:
-                continue
-            time_offset = to_offset(pd.Series(time_vals).diff().mode().item())
-            current_time_unit = time_offset.name
-            current_time_step = time_offset.n
-            if current_time_step < min_time_step:
-                min_time_step = current_time_step
-                time_unit = current_time_unit
+            time_coord = coords["time"]
+            if time_coord.time_step < min_time_step:
+                min_time_step = time_coord.time_step
+                time_unit = time_coord.time_unit
 
             if temporal_coords["max"]:
                 temporal_coords["max"] = max(
-                    [temporal_coords["max"], max(time_vals)]
+                    [temporal_coords["max"], time_coord.max]
                 )
             else:
-                temporal_coords["max"] = max(time_vals)
+                temporal_coords["max"] = time_coord.max
             if temporal_coords["min"]:
                 temporal_coords["min"] = min(
-                    [temporal_coords["min"], min(time_vals)]
+                    [temporal_coords["min"], time_coord.min]
                 )
             else:
-                temporal_coords["min"] = min(time_vals)
+                temporal_coords["min"] = time_coord.max
 
         if not (temporal_coords["min"] and temporal_coords["max"]):
             return
-        time_unit = self._FREQ_CODES[time_unit]
         temporal_coords["max"] = (
             temporal_coords["max"].astype("M8[h]").astype("O")
         )
@@ -384,12 +368,17 @@ class WidgetFactory(metaclass=LoggableMeta):
             if "latitude" not in coords or "longitude" not in coords:
                 continue
             for coord_name in ["latitude", "longitude"]:
-                values = np.array(coords[coord_name].values).astype(np.float)
                 spatial_coords[coord_name]["max"] = max(
-                    [spatial_coords[coord_name]["max"], np.max(values)]
+                    [
+                        spatial_coords[coord_name]["max"],
+                        coords[coord_name].max,
+                    ]
                 )
                 spatial_coords[coord_name]["min"] = min(
-                    [spatial_coords[coord_name]["min"], np.min(values)]
+                    [
+                        spatial_coords[coord_name]["min"],
+                        coords[coord_name].min,
+                    ]
                 )
         if not spatial_coords:
             return
@@ -500,20 +489,20 @@ class WidgetFactory(metaclass=LoggableMeta):
                     aux_coords[coord_name]["min"] = min(
                         [
                             aux_coords[coord_name]["min"],
-                            min(vals),
+                            coords[coord_name].min,
                         ]
                     )
                 else:
-                    aux_coords[coord_name]["min"] = min(vals)
+                    aux_coords[coord_name]["min"] = coords[coord_name].min
                 if "max" in aux_coords[coord_name]:
                     aux_coords[coord_name]["max"] = max(
                         [
                             aux_coords[coord_name]["max"],
-                            max(vals),
+                            coords[coord_name].max,
                         ]
                     )
                 else:
-                    aux_coords[coord_name]["max"] = max(vals)
+                    aux_coords[coord_name]["max"] = coords[coord_name].max
 
                 aux_coords[coord_name]["values"] = sorted(vals)
                 aux_coords[coord_name]["label"] = self._maybe_get_label(
@@ -539,8 +528,8 @@ class WidgetFactory(metaclass=LoggableMeta):
             values = [
                 {
                     "value": val,
-                    "label": "{:.2f}".format(
-                        maybe_round_value(val, self._NUMBER_OF_DECIMALS)
+                    "label": (
+                        f"{maybe_round_value(val, self._NUMBER_OF_DECIMALS):.2f}"
                     ),
                 }
                 for val in coord_value["values"]

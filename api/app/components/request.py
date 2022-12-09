@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import logging
 from fastapi import HTTPException
-from geoquery.geoquery import GeoQuery
+
 from db.dbmanager.dbmanager import DBManager
 
-from .access import AccessManager
 from .meta import LoggableMeta
-from ..util import UserCredentials, log_execution_time
+from ..util.auth import UserCredentials
+from ..util.execution import log_execution_time
 
 
 class RequestManager(metaclass=LoggableMeta):

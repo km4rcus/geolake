@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import logging
 import pika
+import json
 from fastapi import HTTPException
 
 from geoquery.geoquery import GeoQuery
@@ -12,7 +13,9 @@ from db.dbmanager.dbmanager import DBManager
 from .access import AccessManager
 from .meta import LoggableMeta
 from ..datastore.datastore import Datastore
-from ..util import UserCredentials, log_execution_time
+from ..util.auth import UserCredentials
+from ..util.execution import log_execution_time
+from ..util.numeric import make_bytes_readable_dict
 from ..exceptions import (
     NoEligibleProductInDatasetError,
     MissingKeyInCatalogEntryError,
@@ -394,42 +397,6 @@ class DatasetManager(metaclass=LoggableMeta):
                     " not exist!"
                 ),
             ) from exception
-        return _make_bytes_readable_dict(
+        return make_bytes_readable_dict(
             size_bytes=query_bytes_estimation, units=unit
         )
-
-
-def _convert_bytes(size_bytes: int, units: str) -> float:
-    units = units.lower()
-    if units == "kb":
-        value = size_bytes / 1024
-    elif units == "mb":
-        value = size_bytes / 1024**2
-    elif units == "gb":
-        value = size_bytes / 1024**3
-    else:
-        raise ValueError(f"unsupported units: {units}")
-    if (value := round(value, 2)) == 0.00:
-        value = 0.01
-    return value
-
-
-def _make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
-    if units is None:
-        units = "bytes"
-    if units != "bytes":
-        size_bytes = _convert_bytes(size_bytes=size_bytes, units=units)
-        return {"value": size_bytes, "units": units}
-    val = size_bytes
-    if val > 1024:
-        units = "kB"
-        val /= 1024
-    if val > 1024:
-        units = "MB"
-        val /= 1024
-    if val > 1024:
-        units = "GB"
-        val /= 1024
-    if (val := round(val, 2)) == 0.00:
-        val = 0.01
-    return {"value": val, "units": units}

@@ -130,7 +130,11 @@ class Coordinate(BaseModel):
 
     name: str
     axis: str
-    values: list[Any]
+    min: Any
+    max: Any
+    values: Optional[Any] = None
+    time_unit: Optional[str] = None
+    time_step: Optional[str] = None
     label: Optional[str] = None
     units: Optional[str] = None
 

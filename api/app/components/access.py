@@ -8,7 +8,8 @@ from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager
 
 from .meta import LoggableMeta
-from ..util import UserCredentials, log_execution_time
+from ..util.auth import UserCredentials
+from ..util.execution import log_execution_time
 from ..exceptions import AuthorizationFailed
 
 

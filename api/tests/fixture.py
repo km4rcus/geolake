@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.util import UserCredentials
+from app.util.auth import UserCredentials
 
 
 @pytest.fixture(scope="session")
