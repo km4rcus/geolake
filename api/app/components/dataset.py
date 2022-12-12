@@ -373,15 +373,7 @@ class DatasetManager(metaclass=LoggableMeta):
                 "units": units
             }
             ```
-
-        Raises
-        ------
-        MissingDatasetError
-            If dataset is not defined
-        MissingKeyInCatalogEntryError
-            If product is not defined for the dataset
         """
-        cls.assert_product_exists(dataset_id, product_id)
         query_bytes_estimation = cls._DATASTORE.query(
             dataset_id, product_id, query, compute=False
         ).nbytes

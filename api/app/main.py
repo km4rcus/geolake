@@ -199,9 +199,30 @@ async def estimate(
     app.state.request.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )
-    return DatasetManager.estimate(
-        dataset_id=dataset_id, product_id=product_id, query=query, unit=unit
-    )
+    try:
+        DatasetManager.assert_product_exists(dataset_id, product_id)
+        return DatasetManager.estimate(
+            dataset_id=dataset_id,
+            product_id=product_id,
+            query=query,
+            unit=unit,
+        )
+    except MissingDatasetError as err:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Dataset with id `{dataset_id}` does not exist in the"
+                " catalog!"
+            ),
+        ) from err
+    except MissingKeyInCatalogEntryError as err:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Product with id `{product_id}` does not exist for"
+                f" the dataset with id `{dataset_id}`!"
+            ),
+        ) from err
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
