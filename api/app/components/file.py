@@ -1,6 +1,4 @@
 """Module with tools for files management"""
-from __future__ import annotations
-
 import os
 import logging
 from zipfile import ZipFile
@@ -10,8 +8,10 @@ from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
 from .meta import LoggableMeta
-from ..utils.execution import log_execution_time
+from ..decorators import log_execution_time
 from ..exceptions import RequestNotYetAccomplished
+from ..context import Context
+from ..decorators import authenticate
 
 
 class FileManager(metaclass=LoggableMeta):
@@ -21,8 +21,15 @@ class FileManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def prepare_request_for_download_and_get_path(cls, request_id: int):
-        """Get location path of the file being the result of
+    @authenticate(enable_public=False)
+    def prepare_request_for_download_and_get_path(
+        cls, context: Context, request_id: int
+    ):
+        """Realize the logic for the endpoint:
+
+        `GET /download/{request_id}`
+
+        Get location path of the file being the result of
         the request with `request_id`.
 
         Parameters

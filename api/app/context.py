@@ -1,5 +1,5 @@
 """Module contains Context class definition"""
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from db.dbmanager.dbmanager import DBManager
 

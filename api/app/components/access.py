@@ -1,15 +1,12 @@
 """Module with tools for access management"""
-from __future__ import annotations
-
-
 import logging
+from typing import Optional
 
-from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager
 
 from .meta import LoggableMeta
-from ..utils.execution import log_execution_time
-from ..exceptions import AuthorizationFailed, AuthenticationFailed
+from ..decorators import log_execution_time
+from ..exceptions import AuthorizationFailed
 from ..context import Context
 
 
@@ -38,8 +35,8 @@ class AccessManager(metaclass=LoggableMeta):
     @log_execution_time(_LOG)
     def assert_is_role_eligible(
         cls,
-        product_role_name: str | None = None,
-        user_role_name: str | None = None,
+        product_role_name: Optional[str] = None,
+        user_role_name: Optional[str] = None,
     ):
         """Assert that user role is eligible for the product
 
@@ -65,8 +62,8 @@ class AccessManager(metaclass=LoggableMeta):
     @log_execution_time(_LOG)
     def is_role_eligible_for_product(
         cls,
-        product_role_name: str | None = None,
-        user_role_name: str | None = None,
+        product_role_name: Optional[str] = None,
+        user_role_name: Optional[str] = None,
     ):
         """Check if given role is eligible for the product
 
@@ -107,7 +104,7 @@ class AccessManager(metaclass=LoggableMeta):
     def is_user_eligible_for_product(
         cls,
         context: Context,
-        product_role_name: None | str = "public",
+        product_role_name: Optional[None] = "public",
     ) -> bool:
         """Check if user is eligible for the given product's role.
         If no product role name is defined, it's treated as the 'public'

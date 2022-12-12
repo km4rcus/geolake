@@ -1,23 +1,47 @@
 """Module with definitions of exceptions for 'web' component"""
+from fastapi import HTTPException
 
 
-class AuthorizationFailed(ValueError):
+class DDSException:
+    """Base class for DDS web exceptions"""
+
+    def wrap_around_http_error(self, **values):
+        """Create an instance of fastapi.HTTPException"""
+        raise NotImplementedError
+
+
+class AuthorizationFailed(ValueError, DDSException):
     """User authorization failed"""
 
+    def wrap_around_http_error(self, **values):
+        return HTTPException(
+            status_code=401,
+            detail="User is not authorized!",
+        )
 
-class AuthenticationFailed(ValueError):
+
+class AuthenticationFailed(ValueError, DDSException):
     """User authentication failed"""
 
+    def wrap_around_http_error(self):
+        return HTTPException(status_code=400, detail="Authentication failed!")
 
-class MissingDatasetError(KeyError):
+
+class MissingDatasetError(KeyError, DDSException):
     """Missing dataset error"""
 
     def __init__(self, dataset):
         super().__init__(f"Dataset '{dataset}' is not defined.")
         self.dataset = dataset
 
+    def wrap_around_http_error(self, **values):
+        return HTTPException(
+            status_code=400,
+            detail="Dataset '{dataset_id}' does not exist!".format(**values),
+        )
 
-class MissingKeyInCatalogEntryError(KeyError):
+
+class MissingKeyInCatalogEntryError(KeyError, DDSException):
     """Missing key in the catalog entry"""
 
     def __init__(self, key, dataset):
@@ -27,8 +51,17 @@ class MissingKeyInCatalogEntryError(KeyError):
         self.key = key
         self.dataset = dataset
 
+    def wrap_around_http_error(self, **values):
+        return HTTPException(
+            status_code=400,
+            detail=(
+                "Product '{product_id}' for the dataset '{dataset_id}' does"
+                " not exist!".format(**values)
+            ),
+        )
 
-class NoEligibleProductInDatasetError(ValueError):
+
+class NoEligibleProductInDatasetError(ValueError, DDSException):
     """No eligible products in the dataset Error"""
 
     def __init__(self, dataset_id: str, user_role_name) -> None:
@@ -39,7 +72,7 @@ class NoEligibleProductInDatasetError(ValueError):
         super().__init__(msg)
 
 
-class MaximumAllowedSizeExceededError(ValueError):
+class MaximumAllowedSizeExceededError(ValueError, DDSException):
     """Estimated size is too big"""
 
     def __init__(
@@ -54,10 +87,32 @@ class MaximumAllowedSizeExceededError(ValueError):
             allowed_size_gb,
         )
 
+    def wrap_around_http_error(self, **values):
+        return HTTPException(
+            status_code=400, detail="{details}".format(**values)
+        )
 
-class RequestNotYetAccomplished(RuntimeError):
+
+class RequestNotYetAccomplished(RuntimeError, DDSException):
     """Raised if dds request was not finished yet"""
 
+    def wrap_around_http_error(self, **values):
+        return HTTPException(
+            status_code=404,
+            detail=(
+                "Request with id: {request_id} does not exist or it is"
+                " not finished yet!".format(**values)
+            ),
+        )
 
-class RequestNotFound(KeyError):
+
+class RequestNotFound(KeyError, DDSException):
     """If the given request could not be found"""
+
+    def wrap_around_http_error(self, **values):
+        return HTTPException(
+            status_code=400,
+            detail="Request with ID '{request_id}' was not found!".format(
+                **values
+            ),
+        )

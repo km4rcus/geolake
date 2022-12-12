@@ -1,7 +1,7 @@
 """Module with utils related to authentication and authorization"""
-from __future__ import annotations
-
 from uuid import UUID
+from typing import Optional
+
 from fastapi import HTTPException
 
 
@@ -10,7 +10,7 @@ class UserCredentials:
 
     __slots__ = ("_is_public", "_user_id", "_user_key")
 
-    def __init__(self, user_token: None | str):
+    def __init__(self, user_token: Optional[str]):
         if user_token:
             self._is_public = False
             self._user_id, self._user_key = _get_user_id_and_key_from_token(

@@ -52,7 +52,7 @@ spec:
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a66
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a68
         name: web
         ports:
         - containerPort: 80

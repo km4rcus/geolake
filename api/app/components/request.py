@@ -1,15 +1,17 @@
 """Module with tools for request management"""
-from __future__ import annotations
-
 import logging
+from typing import Optional
+
 from fastapi import HTTPException
 
 from db.dbmanager.dbmanager import DBManager
 
 from .meta import LoggableMeta
-from ..utils.execution import log_execution_time
+from ..decorators import log_execution_time
 from ..exceptions import RequestNotFound
 from ..context import Context
+
+from ..decorators import authenticate
 
 
 class RequestManager(metaclass=LoggableMeta):
@@ -19,11 +21,75 @@ class RequestManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def get_request_result_size(cls, request_id: int) -> float:
-        """Get size of the file being the result of the request with `request_id`
+    @authenticate(enable_public=False)
+    def get_requests_details_for_user(cls, context: Context) -> list:
+        """Realize the logic for the endpoint:
+
+        `GET /requests`
+
+        Get details of all requests for the user.
 
         Parameters
         ----------
+        context : Context
+            Context of the current http request
+
+        Returns
+        -------
+        requests : list
+            List of all requests done by the user
+        """
+        return DBManager().get_requests_for_user_id(user_id=context.user.id)
+
+    @classmethod
+    @log_execution_time(_LOG)
+    @authenticate(enable_public=False)
+    def get_request_status_for_request_id(
+        cls, context: Context, request_id: int
+    ) -> tuple[str, str]:
+        """Realize the logic for the endpoint:
+
+        `GET /requests/{request_id}/status`
+
+        Get request status and the reason of the eventual fail.
+        The second item is `None`, it status is other than failed.
+
+        Parameters
+        ----------
+        context : Context
+            Context of the current http request
+        request_id : int
+            ID of the request
+
+        Returns
+        -------
+        status : tuple
+            Tuple of status and, eventually, fail reason.
+        """
+        try:
+            status, reason = DBManager().get_request_status_and_reason(
+                request_id
+            )
+        except IndexError as err:
+            cls._LOG.error("request with id: '%s' was not found!", request_id)
+            raise RequestNotFound from err
+
+    @classmethod
+    @log_execution_time(_LOG)
+    @authenticate(enable_public=False)
+    def get_request_result_size(
+        cls, context: Context, request_id: int
+    ) -> Optional[float]:
+        """Realize the logic for the endpoint:
+
+        `GET /requests/{request_id}/size`
+
+        Get size of the file being the result of the request with `request_id`
+
+        Parameters
+        ----------
+        context : Context
+            Context of the current http request
         request_id : int
             ID of the request
 
@@ -44,56 +110,16 @@ class RequestManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
-    def get_requests_details_for_user(
-        cls, context: Context
-    ) -> list[DBManager.Request]:
-        """Get details of all requests for the user.
-
-        Parameters
-        ----------
-        context : Context
-            Context of the current http request
-
-        Returns
-        -------
-        requests : list
-            List of all requests done by the user
+    @authenticate(enable_public=False)
+    def get_request_uri_for_request_id(
+        cls, context: Context, request_id
+    ) -> str:
         """
-        if context.user.is_public:
-            cls._LOG.debug("attempt to get requests for anonymous user!")
-        return DBManager().get_requests_for_user_id(user_id=context.user.id)
+        Realize the logic for the endpoint:
 
-    @classmethod
-    @log_execution_time(_LOG)
-    def get_request_status_for_request_id(
-        cls, request_id: int
-    ) -> tuple[str, str]:
-        """Get request status and the reason of the eventual fail.
-        The second item is `None`, it status is other than failed.
+        `GET /requests/{request_id}/uri`
 
-        Parameters
-        ----------
-        request_id : int
-            ID of the request
-
-        Returns
-        -------
-        status : tuple
-            Tuple of status and, eventually, fail reason.
-        """
-        try:
-            status, reason = DBManager().get_request_status_and_reason(
-                request_id
-            )
-        except IndexError as err:
-            cls._LOG.error("request with id: '%s' was not found!", request_id)
-            raise RequestNotFound from err
-        return status, reason
-
-    @classmethod
-    @log_execution_time(_LOG)
-    def get_request_uri_for_request_id(cls, request_id) -> str:
-        """Get URI for the request.
+        Get URI for the request.
 
         Parameters
         ----------
