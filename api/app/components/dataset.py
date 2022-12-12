@@ -168,7 +168,11 @@ class DatasetManager(metaclass=LoggableMeta):
         query: GeoQuery,
         format: str,
     ):
-        """Query the data and return the ID of the request.
+        """Realize the logic for the endpoint:
+
+        `POST /datasets/{dataset_id}/{product_id}/execute`
+
+        Query the data and return the ID of the request.
 
         Parameters
         ----------
@@ -234,6 +238,7 @@ class DatasetManager(metaclass=LoggableMeta):
 
     @classmethod
     @log_execution_time(_LOG)
+    @assert_product_exists
     def get_details_for_product_if_eligible(
         cls,
         dataset_id: str,
