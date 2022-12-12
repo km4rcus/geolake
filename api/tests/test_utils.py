@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 
-from app.util.auth import UserCredentials
+from app.utils.auth import UserCredentials
 
 
 def test_public_user_if_token_none():

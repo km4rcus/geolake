@@ -9,7 +9,7 @@ from db.dbmanager.dbmanager import DBManager
 
 from .utils import UserCredentials, log_execution_time
 from .meta import LoggableMeta
-from .exceptions import AuthenticationFailed, AuthorizationFailed
+from .exceptions import AuthenticationFailed
 
 
 class AccessManager(metaclass=LoggableMeta):
@@ -17,76 +17,6 @@ class AccessManager(metaclass=LoggableMeta):
     authorization of a user"""
 
     _LOG = logging.getLogger("geokube.AccessManager")
-
-    @classmethod
-    @log_execution_time(_LOG)
-    def assert_is_role_eligible(
-        cls,
-        product_role_name: str | None = None,
-        user_role_name: str | None = None,
-    ):
-        """Assert that user role is eligible for the product
-
-        Parameters
-        ----------
-        product_role_name : str, optional, default=None
-            The role which is eligible for the given product.
-            If `None`, product_role_name is claimed to be public
-        user_role_name: str, optional, default=None
-            The role of a user. If `None`, user_role_name is claimed
-            to be public
-
-        Returns
-        -------
-        is_eligible : bool
-            Flag which indicate if the given `user_role_name` is eligible
-             for the product with `product_role_name`
-        """
-        if not cls.is_role_eligible_for_product(
-            product_role_name=product_role_name, user_role_name=user_role_name
-        ):
-            raise AuthorizationFailed
-
-    @classmethod
-    @log_execution_time(_LOG)
-    def is_role_eligible_for_product(
-        cls,
-        product_role_name: str | None = None,
-        user_role_name: str | None = None,
-    ):
-        """Check if given role is eligible for the product
-
-        Parameters
-        ----------
-        product_role_name : str, optional, default=None
-            The role which is eligible for the given product.
-            If `None`, product_role_name is claimed to be public
-        user_role_name: str, optional, default=None
-            The role of a user. If `None`, user_role_name is claimed
-            to be public
-
-        Returns
-        -------
-        is_eligible : bool
-            Flag which indicate if the given `user_role_name` is eligible
-             for the product with `product_role_name`
-        """
-        cls._LOG.debug(
-            "verifying eligibility of the product role: %s against"
-            " role_name %s",
-            product_role_name,
-            user_role_name,
-        )
-        if product_role_name == "public" or product_role_name is None:
-            return True
-        if user_role_name is None:
-            # NOTE: it means, we consider the public profile
-            return False
-        if user_role_name == "admin":
-            return True
-        if user_role_name == product_role_name:
-            return True
-        return False
 
     @classmethod
     @log_execution_time(_LOG)

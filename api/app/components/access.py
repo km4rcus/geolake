@@ -8,9 +8,9 @@ from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager
 
 from .meta import LoggableMeta
-from ..util.auth import UserCredentials
-from ..util.execution import log_execution_time
-from ..exceptions import AuthorizationFailed
+from ..utils.execution import log_execution_time
+from ..exceptions import AuthorizationFailed, AuthenticationFailed
+from ..context import Context
 
 
 class AccessManager(metaclass=LoggableMeta):
@@ -19,90 +19,20 @@ class AccessManager(metaclass=LoggableMeta):
     _LOG = logging.getLogger("geokube.AccessManager")
 
     @classmethod
-    def assert_is_admin(cls, user_credentials: UserCredentials) -> bool:
+    def assert_is_admin(cls, context: Context) -> bool:
         """Assert that user has an 'admin' role
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
+        context : Context
+            Context of the current http request
 
         Raises
         -------
-        HTTPException
-            401 if user is not an admin
+        AuthorizationFailed
         """
-        if DBManager().get_user_role_name(user_credentials.id) != "admin":
-            raise HTTPException(
-                status_code=401,
-                detail=f"User `{user_credentials.id}` is not an admin!",
-            )
-
-    @classmethod
-    def assert_not_public(cls, user_credentials: UserCredentials) -> bool:
-        """Assert that user is authenticated
-
-        Parameters
-        ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
-
-        Raises
-        -------
-        HTTPException
-            401 if user is public
-        """
-        if user_credentials.is_public:
-            raise HTTPException(
-                status_code=401,
-                detail="You need to authenticate!",
-            )
-
-    @classmethod
-    @log_execution_time(_LOG)
-    def authenticate_user(cls, user_credentials: UserCredentials):
-        """Authenticate user given the credentials.
-
-        Parameters
-        ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
-
-        Raises
-        -------
-        HTTPException
-            400 if user does not exist or the key is not valid
-
-        """
-        cls._LOG.debug(
-            "authenticating the user with the user_id: %s", user_credentials.id
-        )
-        if user_credentials.is_public:
-            cls._LOG.debug("user is anonymouse!")
-        user = DBManager().get_user_details(user_credentials.id)
-        if user is None:
-            cls._LOG.info(
-                "user with id '%s' does not exist!", user_credentials.id
-            )
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"The user with id `{user_credentials.id}` does not exist!"
-                ),
-            )
-        if user.api_key != user_credentials.key:
-            cls._LOG.info(
-                "authentication failed! The key provided for the user_id '%s'"
-                " was not valid!",
-                user_credentials.id,
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="The provided key is not valid.",
-            )
-        cls._LOG.debug(
-            "authentication successful. User_id '%s'!", user_credentials.id
-        )
+        if DBManager().get_user_role_name(context.user.id) != "admin":
+            raise AuthorizationFailed
 
     @classmethod
     @log_execution_time(_LOG)
@@ -122,11 +52,9 @@ class AccessManager(metaclass=LoggableMeta):
             The role of a user. If `None`, user_role_name is claimed
             to be public
 
-        Returns
+        Raises
         -------
-        is_eligible : bool
-            Flag which indicate if the given `user_role_name` is eligible
-             for the product with `product_role_name`
+        AuthorizationFailed
         """
         if not cls.is_role_eligible_for_product(
             product_role_name=product_role_name, user_role_name=user_role_name
@@ -178,7 +106,7 @@ class AccessManager(metaclass=LoggableMeta):
     @log_execution_time(_LOG)
     def is_user_eligible_for_product(
         cls,
-        user_credentials: UserCredentials,
+        context: Context,
         product_role_name: None | str = "public",
     ) -> bool:
         """Check if user is eligible for the given product's role.
@@ -187,8 +115,8 @@ class AccessManager(metaclass=LoggableMeta):
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
+        context : Context
+            Context of the current http request
         product_role_name : str, optional, default="public"
             The name of the product's role
 
@@ -200,48 +128,48 @@ class AccessManager(metaclass=LoggableMeta):
         cls._LOG.debug(
             "verifying eligibility of the user_id '%s' against role_name:"
             " '%s'",
-            user_credentials.id,
+            context.user.id,
             product_role_name,
         )
         if product_role_name is None or product_role_name == "public":
             return True
-        if user_credentials.is_public:
+        if context.user.is_public:
             return False
-        user_role_name = DBManager().get_user_role_name(user_credentials.id)
+        user_role_name = DBManager().get_user_role_name(context.user.id)
         return cls.is_role_eligible_for_product(
             product_role_name, user_role_name
         )
 
     @classmethod
     @log_execution_time(_LOG)
-    def is_user_eligible_for_request(
-        cls, user_credentials: UserCredentials, request_id: int
+    def assert_user_eligible_for_request(
+        cls, context: Context, request_id: int
     ) -> bool:
         """Check if user is eligible to see request's details
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
+        context : Context
+            Context of the current http request
         request_id : int, optional, default="public"
             ID of the request to check
 
-        Returns
-        -------
-        is_eligible : bool
-            `True` if user is eligible, `False` otherwise
+        Raises
+        ------
+        AuthorizationFailed
+            If user is not authorized for the given dds request
         """
         cls._LOG.debug(
             "verifying eligibility of the user_id: '%s' against request_id:"
             " '%s'",
-            user_credentials.id,
+            context.user.id,
             request_id,
         )
         request_details = DBManager().get_request_details(
             request_id=request_id
         )
         if (request_details is not None) and (
-            str(request_details.user_id) == str(user_credentials.id)
+            str(request_details.user_id) == str(context.user.id)
         ):
-            return True
-        return False
+            return
+        raise AuthorizationFailed

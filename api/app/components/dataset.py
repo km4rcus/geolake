@@ -13,14 +13,17 @@ from db.dbmanager.dbmanager import DBManager
 from .access import AccessManager
 from .meta import LoggableMeta
 from ..datastore.datastore import Datastore
-from ..util.auth import UserCredentials
-from ..util.execution import log_execution_time
-from ..util.numeric import make_bytes_readable_dict
+from ..utils.auth import UserCredentials
+from ..utils.execution import log_execution_time
+from ..utils.numeric import make_bytes_readable_dict
 from ..exceptions import (
+    AuthorizationFailed,
     NoEligibleProductInDatasetError,
     MissingKeyInCatalogEntryError,
     MaximumAllowedSizeExceededError,
+    MissingDatasetError,
 )
+from ..context import Context
 
 
 class DatasetManager(metaclass=LoggableMeta):
@@ -50,24 +53,17 @@ class DatasetManager(metaclass=LoggableMeta):
 
         Raises
         -------
-        HTTPException
-            400 if:
-                a) dataset with `dataset_id` does not exist,
-                b) product for the given dataset does not exist
-                c) product might exist, but it does not belong to the dataset `dataset_id`
+        MissingDatasetError
+            If dataset is not defined
+        MissingKeyInCatalogEntryError
+            If product is not defined for the dataset
         """
         if dataset_id not in cls._DATASTORE.dataset_list():
             cls._LOG.info(
                 "requested dataset: `%s` was not found in the catalog!",
                 dataset_id,
             )
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Dataset with id `{dataset_id}` does not exist in the"
-                    " catalog!"
-                ),
-            )
+            raise MissingDatasetError(dataset_id)
         if product_id is not None:
             if product_id not in cls._DATASTORE.product_list(dataset_id):
                 cls._LOG.info(
@@ -76,26 +72,20 @@ class DatasetManager(metaclass=LoggableMeta):
                     product_id,
                     dataset_id,
                 )
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"Product with id `{product_id}` does not exist for"
-                        f" the dataset with id `{dataset_id}`!"
-                    ),
-                )
+                raise MissingKeyInCatalogEntryError(product_id, dataset_id)
 
     @classmethod
     @log_execution_time(_LOG)
     def get_datasets_and_eligible_products_names(
-        cls, user_credentials: UserCredentials
+        cls, context: Context
     ) -> list:
         """Get datasets names, their metadata and products names (if eligible for a user).
         If no eligible products are found for a dataset, it is not included.
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            Current user credentials
+        context : Context
+            Context of the current http request
 
         Returns
         -------
@@ -109,7 +99,7 @@ class DatasetManager(metaclass=LoggableMeta):
             If the dataset catalog entry does not contain the required key
         """
         cls._LOG.debug("getting all eligible products for datasets...")
-        user_role_name = DBManager().get_user_role_name(user_credentials.id)
+        user_role_name = DBManager().get_user_role_name(context.user.id)
         datasets = []
         for dataset_id in cls._DATASTORE.dataset_list():
             cls._LOG.debug(
@@ -122,14 +112,16 @@ class DatasetManager(metaclass=LoggableMeta):
                         dataset_dict=dataset_info,
                         user_role_name=user_role_name,
                         dataset_id=dataset_id,
-                        user_credentials=user_credentials,
+                        context=context.user,
                     )
                 )
             except NoEligibleProductInDatasetError:
                 cls._LOG.debug(
-                    f"dataset '{dataset_id}' will not be considered. no"
+                    "dataset '%s' will not be considered. no"
                     " eligible products for the user role name"
-                    f" '{user_role_name}'"
+                    " '%s'",
+                    dataset_id,
+                    user_role_name,
                 )
                 continue
         return datasets
@@ -140,7 +132,7 @@ class DatasetManager(metaclass=LoggableMeta):
         cls,
         dataset_id: str,
         product_id: str,
-        user_credentials: UserCredentials,
+        context: Context,
     ) -> dict:
         """Get details for the given product indicated by `dataset_id`
         and `product_id` arguments.
@@ -151,8 +143,8 @@ class DatasetManager(metaclass=LoggableMeta):
             ID of the dataset
         product_id : str
             ID of the dataset
-        user_credentials : UserCredentials
-            Current user credentials
+        context : Context
+            Context of the current http request
 
         Returns
         -------
@@ -161,13 +153,13 @@ class DatasetManager(metaclass=LoggableMeta):
 
         Raises
         -------
-        MissingKeyInCatalogEntryError
-            If the dataset catalog entry does not contain the required key
+        AuthorizationFailed
+            If user is not authorized for the resources
         """
         cls._LOG.debug(
             "getting details for eligible products of `%s`", dataset_id
         )
-        user_role_name = DBManager().get_user_role_name(user_credentials.id)
+        user_role_name = DBManager().get_user_role_name(context.user.id)
         details = cls._DATASTORE.product_details(
             dataset_id=dataset_id, product_id=product_id, use_cache=True
         )
@@ -184,7 +176,7 @@ class DatasetManager(metaclass=LoggableMeta):
         dataset_dict: dict,
         user_role_name: str,
         dataset_id: str,
-        user_credentials: UserCredentials,
+        context: Context,
     ) -> dict:
         cls._LOG.debug(
             "getting all eligible products for dataset: `%s`", dataset_id
@@ -213,31 +205,40 @@ class DatasetManager(metaclass=LoggableMeta):
                     "no eligible products for dataset `%s` for the user"
                     " `%s`. dataset skipped",
                     dataset_id,
-                    user_credentials.id,
+                    context.user.id,
                 )
                 raise NoEligibleProductInDatasetError(
                     dataset_id=dataset_id, user_role_name=user_role_name
                 )
-            else:
-                dataset_dict["products"] = eligible_prods
+            dataset_dict["products"] = eligible_prods
         return dataset_dict
 
     @classmethod
     @log_execution_time(_LOG)
     def get_product_metadata(
         cls,
-        user_credentials: UserCredentials,
+        context: Context,
         dataset_id: str,
         product_id: str,
     ):
-        cls.assert_product_exists(dataset_id=dataset_id, product_id=product_id)
+        """Get metadata for the product.
+
+        Parameters
+        ----------
+        context : Context
+            Context of the current http request
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        """
         return cls._DATASTORE.product_metadata(dataset_id, product_id)
 
     @classmethod
     @log_execution_time(_LOG)
     def retrieve_data_and_get_request_id(
         cls,
-        user_credentials: UserCredentials,
+        context: Context,
         dataset_id: str,
         product_id: str,
         query: GeoQuery,
@@ -247,8 +248,8 @@ class DatasetManager(metaclass=LoggableMeta):
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
+        context : Context
+            Context of the current http request
         dataset_id : str
             ID of the dataset
         product_id : str
@@ -265,25 +266,19 @@ class DatasetManager(metaclass=LoggableMeta):
 
         Raises
         -------
+        AuthorizationFailed
         HTTPException
             400 if user does not exist or the key is not valid
             401 if anonymous user attempts to execute a query
         """
         cls._LOG.debug("geoquery: %s", query)
-        AccessManager.authenticate_user(user_credentials)
-        if user_credentials.is_public:
-            cls._LOG.info("attempt to execute query by an anonymous user!")
-            raise HTTPException(
-                status_code=401,
-                detail="Anonymouse user cannot execute queries!",
-            )
         broker_conn = pika.BlockingConnection(
             pika.ConnectionParameters(host="broker")
         )
         broker_channel = broker_conn.channel()
 
         request_id = DBManager().create_request(
-            user_id=user_credentials.id,
+            user_id=context.user.id,
             dataset=dataset_id,
             product=product_id,
             query=query.original_query_json(),
@@ -309,7 +304,7 @@ class DatasetManager(metaclass=LoggableMeta):
         dataset_id: str,
         product_id: str,
         query: GeoQuery,
-        user_credentials: UserCredentials,
+        context: Context,
     ):
         """Assert that estimated query size is not greater than
         the maximum allowed size.
@@ -322,8 +317,8 @@ class DatasetManager(metaclass=LoggableMeta):
             ID of the product
         query : GeoQuery
             Query to perform
-        user_credentials : UserCredentials
-            The credentials of the current user
+        context : Context
+            Context of the current http request
 
         Raises
         -------
@@ -334,7 +329,7 @@ class DatasetManager(metaclass=LoggableMeta):
             "value"
         )
         allowed_size = cls.get_product_metadata(
-            user_credentials, dataset_id, product_id
+            context.user, dataset_id, product_id
         ).get("maximum_query_size_gb", 10)
         if estimated_size > allowed_size:
             raise MaximumAllowedSizeExceededError(
@@ -378,25 +373,18 @@ class DatasetManager(metaclass=LoggableMeta):
                 "units": units
             }
             ```
+
+        Raises
+        ------
+        MissingDatasetError
+            If dataset is not defined
+        MissingKeyInCatalogEntryError
+            If product is not defined for the dataset
         """
-        try:
-            query_bytes_estimation = cls._DATASTORE.query(
-                dataset_id, product_id, query, compute=False
-            ).nbytes
-        except KeyError as exception:
-            cls._LOG.error(
-                "dataset `%s` or product `%s` does not exist!",
-                dataset_id,
-                product_id,
-                exc_info=True,
-            )
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Dataset `{dataset_id}` or product `{product_id}` does"
-                    " not exist!"
-                ),
-            ) from exception
+        cls.assert_product_exists(dataset_id, product_id)
+        query_bytes_estimation = cls._DATASTORE.query(
+            dataset_id, product_id, query, compute=False
+        ).nbytes
         return make_bytes_readable_dict(
             size_bytes=query_bytes_estimation, units=unit
         )

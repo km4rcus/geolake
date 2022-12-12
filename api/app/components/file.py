@@ -10,7 +10,8 @@ from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
 from .meta import LoggableMeta
-from ..util.execution import log_execution_time
+from ..utils.execution import log_execution_time
+from ..exceptions import RequestNotYetAccomplished
 
 
 class FileManager(metaclass=LoggableMeta):
@@ -36,13 +37,12 @@ class FileManager(metaclass=LoggableMeta):
 
         Raises
         -------
-        HTTPException
-            404 if:
-                a) the request does not exist or is not finished yet,
-                b) the request was finished, but file was not found
+        RequestNotYetAccomplished
+            If dds request was not finished
+        FileNotFoundError
+            If file was not found
         """
         cls._LOG.debug("preparing downloads for request id: %s", request_id)
-        db = DBManager()
         (
             request_status,
             _,
@@ -53,19 +53,13 @@ class FileManager(metaclass=LoggableMeta):
                 " yet!",
                 request_id,
             )
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    f"Request with id: {request_id} does not exist or it is"
-                    " not finished yet!"
-                ),
-            )
-        download_details = db.get_download_details_for_request(
+            raise RequestNotYetAccomplished
+        download_details = DBManager().get_download_details_for_request(
             request_id=request_id
         )
         if not os.path.exists(download_details.location_path):
             cls._LOG.error(
                 "file '%s' does not exists!", download_details.location_path
             )
-            raise HTTPException(status_code=404, detail="File was not found!")
+            raise FileNotFoundError
         return download_details.location_path

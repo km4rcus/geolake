@@ -7,8 +7,9 @@ from fastapi import HTTPException
 from db.dbmanager.dbmanager import DBManager
 
 from .meta import LoggableMeta
-from ..util.auth import UserCredentials
-from ..util.execution import log_execution_time
+from ..utils.execution import log_execution_time
+from ..exceptions import RequestNotFound
+from ..context import Context
 
 
 class RequestManager(metaclass=LoggableMeta):
@@ -33,46 +34,34 @@ class RequestManager(metaclass=LoggableMeta):
 
         Raises
         -------
-        HTTPException
-            400 if the request was not found
+        RequestNotFound
+            If the request was not found
         """
         if request := DBManager().get_request_details(request_id):
             return request.download.size_bytes
-        raise HTTPException(
-            status_code=400,
-            detail=f"Request with ID '{request_id}' was not found!",
-        )
+        cls._LOG.info("request with id '%s' could not be found", request_id)
+        raise RequestNotFound
 
     @classmethod
     @log_execution_time(_LOG)
     def get_requests_details_for_user(
-        cls, user_credentials: UserCredentials
+        cls, context: Context
     ) -> list[DBManager.Request]:
         """Get details of all requests for the user.
 
         Parameters
         ----------
-        user_credentials : UserCredentials
-            The credentials of the current user
+        context : Context
+            Context of the current http request
 
         Returns
         -------
         requests : list
             List of all requests done by the user
-
-        Raises
-        -------
-        HTTPException
-            401 if method is executed for anonymous user
         """
-        if user_credentials.is_public:
+        if context.user.is_public:
             cls._LOG.debug("attempt to get requests for anonymous user!")
-            raise HTTPException(
-                status_code=401, detail="Anonymous user doesn't have requests!"
-            )
-        return DBManager().get_requests_for_user_id(
-            user_id=user_credentials.id
-        )
+        return DBManager().get_requests_for_user_id(user_id=context.user.id)
 
     @classmethod
     @log_execution_time(_LOG)
@@ -98,10 +87,7 @@ class RequestManager(metaclass=LoggableMeta):
             )
         except IndexError as err:
             cls._LOG.error("request with id: '%s' was not found!", request_id)
-            raise HTTPException(
-                status_code=400,
-                detail=f"Request with id: {request_id} does not exist!",
-            ) from err
+            raise RequestNotFound from err
         return status, reason
 
     @classmethod

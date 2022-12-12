@@ -100,6 +100,25 @@ class ListOfDatasets(BaseModel):
 
     @classmethod
     def from_details(cls, details):
+        """Create a list of datasets based on details dict
+
+        Parameters
+        ----------
+        details : dict
+            A dictionary representing the details. It should
+            be in the form:
+            {
+                version: "...",
+                status: "...",
+                data: [
+                    {
+                        id: "...",
+                        default: "...",
+                        ...
+                    }
+                ]
+            }
+        """
         return cls(data=details)
 
 

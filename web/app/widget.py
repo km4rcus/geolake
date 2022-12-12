@@ -227,6 +227,9 @@ class WidgetFactory(metaclass=LoggableMeta):
             if "time" not in coords:
                 continue
             time_coord = coords["time"]
+            if time_coord.time_step is None:
+                # NOTE: it means, time axis has just one item
+                continue
             if time_coord.time_step < min_time_step:
                 min_time_step = time_coord.time_step
                 time_unit = time_coord.time_unit

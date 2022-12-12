@@ -9,6 +9,14 @@ class AuthenticationFailed(ValueError):
     """User authentication failed"""
 
 
+class MissingDatasetError(KeyError):
+    """Missing dataset error"""
+
+    def __init__(self, dataset):
+        super().__init__(f"Dataset '{dataset}' is not defined.")
+        self.dataset = dataset
+
+
 class MissingKeyInCatalogEntryError(KeyError):
     """Missing key in the catalog entry"""
 
@@ -45,3 +53,11 @@ class MaximumAllowedSizeExceededError(ValueError):
             estimated_size_gb,
             allowed_size_gb,
         )
+
+
+class RequestNotYetAccomplished(RuntimeError):
+    """Raised if dds request was not finished yet"""
+
+
+class RequestNotFound(KeyError):
+    """If the given request could not be found"""

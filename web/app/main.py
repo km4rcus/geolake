@@ -3,7 +3,7 @@ __version__ = "2.0"
 import os
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from geoquery.geoquery import GeoQuery
 
@@ -18,6 +18,7 @@ from .exceptions import (
     AuthenticationFailed,
     GeokubeAPIRequestFailed,
 )
+from .context import Context
 from .utils.numeric import prepare_estimate_size_message
 
 app = FastAPI(
@@ -67,21 +68,14 @@ async def dds_info():
 @app.get("/datasets")
 @timer(app.state.request_time, labels={"route": "GET /datasets"})
 async def get_datasets(
+    request: Request,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get list of eligible datasets for the home page of the Webportal"""
     app.state.request.inc({"route": "GET /datasets"})
     try:
-        user_credentials = AccessManager.retrieve_credentials_from_jwt(
-            authorization
-        )
-        datasets = GeokubeAPIRequester.get(
-            url="/datasets", user_credentials=user_credentials
-        )
-    except AuthenticationFailed as err:
-        raise HTTPException(
-            status_code=401, detail="User could not be authenticated"
-        ) from err
+        context = Context(request, authorization, enable_public=True)
+        datasets = GeokubeAPIRequester.get(url="/datasets", context=context)
     except GeokubeAPIRequestFailed as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
@@ -94,6 +88,7 @@ async def get_datasets(
     labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
 )
 async def get_details_product(
+    request: Request,
     dataset_id: str,
     product_id: str,
     authorization: Optional[str] = Header(None, convert_underscores=True),
@@ -101,17 +96,10 @@ async def get_details_product(
     """Get details for Webportal"""
     app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
     try:
-        user_credentials = AccessManager.retrieve_credentials_from_jwt(
-            authorization
-        )
+        context = Context(request, authorization, enable_public=True)
         details = GeokubeAPIRequester.get(
-            url=f"/datasets/{dataset_id}/{product_id}",
-            user_credentials=user_credentials,
+            url=f"/datasets/{dataset_id}/{product_id}", context=context
         )
-    except AuthenticationFailed as err:
-        raise HTTPException(
-            status_code=401, detail="User could not be authenticated"
-        ) from err
     except GeokubeAPIRequestFailed as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
@@ -124,6 +112,7 @@ async def get_details_product(
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
 )
 async def execute(
+    request: Request,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
@@ -139,13 +128,11 @@ async def execute(
         {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
     )
     try:
-        user_credentials = AccessManager.retrieve_credentials_from_jwt(
-            authorization
-        )
+        context = Context(request, authorization, enable_public=False)
         response = GeokubeAPIRequester.post(
             url=f"/datasets/{dataset_id}/{product_id}/execute?format={format}",
             data=query.json(),
-            user_credentials=user_credentials,
+            context=context,
         )
     except AuthenticationFailed as err:
         raise HTTPException(
@@ -163,6 +150,7 @@ async def execute(
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
 )
 async def estimate(
+    request: Request,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
@@ -177,22 +165,16 @@ async def estimate(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )
     try:
-        user_credentials = AccessManager.retrieve_credentials_from_jwt(
-            authorization
-        )
+        context = Context(request, authorization, enable_public=True)
         response = GeokubeAPIRequester.post(
             url=f"/datasets/{dataset_id}/{product_id}/estimate?unit=GB",
             data=query.json(),
-            user_credentials=user_credentials,
+            context=context,
         )
         metadata = GeokubeAPIRequester.get(
             url=f"/datasets/{dataset_id}/{product_id}/metadata",
-            user_credentials=user_credentials,
+            context=context,
         )
-    except AuthenticationFailed as err:
-        raise HTTPException(
-            status_code=401, detail="User could not be authenticated"
-        ) from err
     except GeokubeAPIRequestFailed as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
@@ -205,13 +187,12 @@ async def estimate(
 # TODO: !!!access should be restricted!!!
 @app.get("/get_api_key")
 async def get_api_key(
+    request: Request,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get API key for a user the given Authorization token"""
     try:
-        user_credentials = AccessManager.retrieve_credentials_from_jwt(
-            authorization
-        )
+        context = Context(request, authorization, enable_public=False)
     except AuthenticationFailed as err:
         raise HTTPException(
             status_code=401, detail="User could not be authenticated"
@@ -219,22 +200,21 @@ async def get_api_key(
     except GeokubeAPIRequestFailed as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     else:
-        return {"key": f"{user_credentials.id}:{user_credentials.key}"}
+        return {"key": f"{context.user.id}:{context.user.key}"}
 
 
 @app.get("/requests")
 @timer(app.state.request_time, labels={"route": "GET /requests"})
 async def get_requests(
+    request: Request,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get requests for a user the given Authorization token"""
     app.state.request.inc({"route": "GET /requests"})
     try:
-        user_credentials = AccessManager.retrieve_credentials_from_jwt(
-            authorization
-        )
+        context = Context(request, authorization, enable_public=False)
         response_json = GeokubeAPIRequester.get(
-            url="/requests", user_credentials=user_credentials
+            url="/requests", context=context
         )
     except AuthenticationFailed as err:
         raise HTTPException(
