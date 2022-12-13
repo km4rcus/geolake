@@ -79,12 +79,9 @@ class MaximumAllowedSizeExceededError(ValueError, DDSException):
         self, dataset_id, product_id, estimated_size_gb, allowed_size_gb
     ):
         super().__init__(
-            "Maximum allowed size for '%s.%s' is %s GB but the estimated size"
-            " is %s GB",
-            dataset_id,
-            product_id,
-            estimated_size_gb,
-            allowed_size_gb,
+            f"Maximum allowed size for '{dataset_id}.{product_id}' is"
+            f" {estimated_size_gb} GB but the estimated size is"
+            f" {allowed_size_gb} GB"
         )
 
     def wrap_around_http_error(self, **values):
