@@ -73,10 +73,11 @@ class RequestManager(metaclass=LoggableMeta):
         except IndexError as err:
             cls._LOG.error("request with id: '%s' was not found!", request_id)
             raise RequestNotFound from err
+        return status, reason
 
     @classmethod
     @log_execution_time(_LOG)
-    @authenticate(enable_public=False)
+    @authenticate(enable_public=True)
     def get_request_result_size(
         cls, context: Context, request_id: int
     ) -> Optional[float]:
