@@ -231,11 +231,6 @@ class ProductMetadata(BaseModel):
             return {item["name"]: item for item in filters}
         raise TypeError
 
-    @validator("role")
-    def match_role(cls, role):
-        assert role in ["public", "admin", "internal"]
-        return role
-
 
 class Product(BaseModel):
     """Product DTO"""
