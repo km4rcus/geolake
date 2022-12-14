@@ -74,6 +74,7 @@ class Executor(metaclass=LoggableMeta):
             n_workers=dask_cluster_opts["n_workers"],
             scheduler_port=dask_cluster_opts["scheduler_port"],
             dashboard_address=dask_cluster_opts["dashboard_address"],
+            processes=True,
         )
         self._LOG.info(
             "creating Dask Client...", extra={"track_id": self._worker_id}
