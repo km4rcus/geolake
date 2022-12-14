@@ -4,6 +4,7 @@ import os
 import yaml
 import logging
 import uuid
+import secrets
 from datetime import datetime
 from enum import auto, Enum as Enum_, unique
 
@@ -18,10 +19,9 @@ from sqlalchemy import (
     Sequence,
     String,
     Table,
-    BigInteger,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Mapped
 
 from .singleton import Singleton
 
@@ -31,6 +31,11 @@ def is_true(item) -> bool:
     if isinstance(item, str):
         return item.lower() in ["y", "yes", "true", "t"]
     return bool(item)
+
+
+def generate_key() -> str:
+    """Generate as new api key for a user"""
+    return secrets.token_urlsafe(nbytes=32)
 
 
 @unique
@@ -57,6 +62,14 @@ class _Repr:
 Base = declarative_base(cls=_Repr, name="Base")
 
 
+association_table = Table(
+    "users_roles",
+    Base.metadata,
+    Column("user_id", ForeignKey("users.user_id")),
+    Column("role_id", ForeignKey("roles.role_id")),
+)
+
+
 class Role(Base):
     __tablename__ = "roles"
     role_id = Column(Integer, Sequence("role_id_seq"), primary_key=True)
@@ -68,11 +81,13 @@ class User(Base):
     user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # keycloak_id = Column(UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4)
     api_key = Column(
-        UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4
+        String(255), nullable=False, unique=True, default=generate_key
     )
     contact_name = Column(String(255))
-    role_id = Column(Integer, ForeignKey("roles.role_id"))
-    requests = relationship("Request")
+    requests: Mapped[list[Request]] = relationship("Request")
+    roles: Mapped[list[Role]] = relationship(
+        "Role", secondary=association_table
+    )
 
 
 class Worker(Base):
@@ -160,7 +175,6 @@ class DBManager(metaclass=Singleton):
             url, echo=is_true(os.environ.get("ECHO_DB", False))
         )
         self.__session_maker = sessionmaker(bind=self.__engine)
-        Base.metadata.create_all(self.__engine)
 
     def _create_database(self):
         try:
@@ -175,12 +189,11 @@ class DBManager(metaclass=Singleton):
         with self.__session_maker() as session:
             return session.query(User).get(user_id)
 
-    def get_user_role_name(self, user_id: int | None = None):
+    def get_user_roles_names(self, user_id: int | None = None) -> list[str]:
         if user_id is None:
-            return "public"
+            return ["public"]
         with self.__session_maker() as session:
-            user = session.query(User).get(user_id)
-            return session.query(Role).get(user.role_id).role_name
+            return session.query(User).roles
 
     def get_request_details(self, request_id: int):
         with self.__session_maker() as session:

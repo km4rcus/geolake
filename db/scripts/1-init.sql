@@ -5,19 +5,27 @@
 -- extension for using UUID column type
 CREATE EXTENSION "uuid-ossp";
 
-CREATE TABLE IF NOT EXISTS roles (
-   role_id SERIAL PRIMARY KEY,
-   role_name VARCHAR (255) UNIQUE NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS users (
     user_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     api_key VARCHAR(255) UNIQUE NOT NULL,
-    contact_name VARCHAR(255),
-    role_id INT,
+    contact_name VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS roles (
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR (255) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS users_roles (
+    ur_id SERIAL PRIMARY KEY,
+    user_id uuid NOT NULL,
+    role_id SERIAL NOT NULL,
+    CONSTRAINT fk_user
+        FOREIGN KEY(user_id) 
+            REFERENCES users(user_id),
     CONSTRAINT fk_role
         FOREIGN KEY(role_id) 
-	        REFERENCES roles(role_id)
+            REFERENCES roles(role_id)              
 );
 
 CREATE TABLE IF NOT EXISTS workers (
