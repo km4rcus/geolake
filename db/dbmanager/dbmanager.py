@@ -191,7 +191,12 @@ class DBManager(metaclass=Singleton):
         if user_id is None:
             return ["public"]
         with self.__session_maker() as session:
-            return session.query(User).get(user_id).roles
+            return list(
+                map(
+                    lambda role: role.role_name,
+                    session.query(User).get(user_id).roles,
+                )
+            )
 
     def get_request_details(self, request_id: int):
         with self.__session_maker() as session:
