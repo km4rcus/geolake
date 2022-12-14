@@ -21,7 +21,7 @@ from sqlalchemy import (
     Table,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Mapped
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 from .singleton import Singleton
 
@@ -84,10 +84,8 @@ class User(Base):
         String(255), nullable=False, unique=True, default=generate_key
     )
     contact_name = Column(String(255))
-    requests: Mapped[list[Request]] = relationship("Request")
-    roles: Mapped[list[Role]] = relationship(
-        "Role", secondary=association_table
-    )
+    requests = relationship("Request")
+    roles = relationship("Role", secondary=association_table)
 
 
 class Worker(Base):
@@ -193,7 +191,7 @@ class DBManager(metaclass=Singleton):
         if user_id is None:
             return ["public"]
         with self.__session_maker() as session:
-            return session.query(User).roles
+            return session.query(User).get(user_id).roles
 
     def get_request_details(self, request_id: int):
         with self.__session_maker() as session:

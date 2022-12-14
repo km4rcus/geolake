@@ -64,10 +64,10 @@ class MissingKeyInCatalogEntryError(KeyError, DDSException):
 class NoEligibleProductInDatasetError(ValueError, DDSException):
     """No eligible products in the dataset Error"""
 
-    def __init__(self, dataset_id: str, user_role_name) -> None:
+    def __init__(self, dataset_id: str, user_roles_names: list[str]) -> None:
         msg = (
             f"No eligible products for the dataset '{dataset_id}' for the user"
-            f" role '{user_role_name}'"
+            f" with roles '{user_roles_names}'"
         )
         super().__init__(msg)
 

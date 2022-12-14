@@ -28,7 +28,7 @@ class AccessManager(metaclass=LoggableMeta):
         -------
         AuthorizationFailed
         """
-        if DBManager().get_user_role_name(context.user.id) != "admin":
+        if "admin" not in DBManager().get_user_roles_names(context.user.id):
             raise AuthorizationFailed
 
     @classmethod
@@ -36,7 +36,7 @@ class AccessManager(metaclass=LoggableMeta):
     def assert_is_role_eligible(
         cls,
         product_role_name: Optional[str] = None,
-        user_role_name: Optional[str] = None,
+        user_roles_names: Optional[list[str]] = None,
     ):
         """Assert that user role is eligible for the product
 
@@ -45,8 +45,8 @@ class AccessManager(metaclass=LoggableMeta):
         product_role_name : str, optional, default=None
             The role which is eligible for the given product.
             If `None`, product_role_name is claimed to be public
-        user_role_name: str, optional, default=None
-            The role of a user. If `None`, user_role_name is claimed
+        user_roles_names: list of str, optional, default=None
+            A list of user roles names. If `None`, user_roles_names is claimed
             to be public
 
         Raises
@@ -54,7 +54,8 @@ class AccessManager(metaclass=LoggableMeta):
         AuthorizationFailed
         """
         if not cls.is_role_eligible_for_product(
-            product_role_name=product_role_name, user_role_name=user_role_name
+            product_role_name=product_role_name,
+            user_roles_names=user_roles_names,
         ):
             raise AuthorizationFailed
 
@@ -63,7 +64,7 @@ class AccessManager(metaclass=LoggableMeta):
     def is_role_eligible_for_product(
         cls,
         product_role_name: Optional[str] = None,
-        user_role_name: Optional[str] = None,
+        user_roles_names: Optional[list[str]] = None,
     ):
         """Check if given role is eligible for the product
 
@@ -72,30 +73,30 @@ class AccessManager(metaclass=LoggableMeta):
         product_role_name : str, optional, default=None
             The role which is eligible for the given product.
             If `None`, product_role_name is claimed to be public
-        user_role_name: str, optional, default=None
-            The role of a user. If `None`, user_role_name is claimed
+        user_roles_names: list of str, optional, default=None
+            A list of user roles names. If `None`, user_roles_names is claimed
             to be public
 
         Returns
         -------
         is_eligible : bool
-            Flag which indicate if the given `user_role_name` is eligible
-             for the product with `product_role_name`
+            Flag which indicate if any role within the given `user_roles_names`
+            is eligible for the product with `product_role_name`
         """
         cls._LOG.debug(
-            "verifying eligibility of the product role: %s against"
-            " role_name %s",
+            "verifying eligibility of the product role '%s' against"
+            " roles '%s'",
             product_role_name,
-            user_role_name,
+            user_roles_names,
         )
         if product_role_name == "public" or product_role_name is None:
             return True
-        if user_role_name is None:
+        if user_roles_names is None:
             # NOTE: it means, we consider the public profile
             return False
-        if user_role_name == "admin":
+        if "admin" in user_roles_names:
             return True
-        if user_role_name == product_role_name:
+        if product_role_name in user_roles_names:
             return True
         return False
 
@@ -132,9 +133,9 @@ class AccessManager(metaclass=LoggableMeta):
             return True
         if context.user.is_public:
             return False
-        user_role_name = DBManager().get_user_role_name(context.user.id)
+        user_roles_names = DBManager().get_user_roles_names(context.user.id)
         return cls.is_role_eligible_for_product(
-            product_role_name, user_role_name
+            product_role_name, user_roles_names
         )
 
     @classmethod

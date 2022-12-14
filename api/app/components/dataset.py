@@ -56,7 +56,7 @@ class DatasetManager(metaclass=LoggableMeta):
             If the dataset catalog entry does not contain the required key
         """
         cls._LOG.debug("getting all eligible products for datasets...")
-        user_role_name = DBManager().get_user_role_name(context.user.id)
+        user_roles_names = DBManager().get_user_roles_names(context.user.id)
         datasets = []
         for dataset_id in cls._DATASTORE.dataset_list():
             cls._LOG.debug(
@@ -67,18 +67,18 @@ class DatasetManager(metaclass=LoggableMeta):
                 datasets.append(
                     cls._get_dataset_information_from_details_dict(
                         dataset_dict=dataset_info,
-                        user_role_name=user_role_name,
+                        user_roles_names=user_roles_names,
                         dataset_id=dataset_id,
-                        context=context.user,
+                        context=context,
                     )
                 )
             except NoEligibleProductInDatasetError:
                 cls._LOG.debug(
                     "dataset '%s' will not be considered. no"
-                    " eligible products for the user role name"
+                    " eligible products for the user with roles"
                     " '%s'",
                     dataset_id,
-                    user_role_name,
+                    user_roles_names,
                 )
                 continue
         return datasets
@@ -274,13 +274,13 @@ class DatasetManager(metaclass=LoggableMeta):
         cls._LOG.debug(
             "getting details for eligible products of `%s`", dataset_id
         )
-        user_role_name = DBManager().get_user_role_name(context.user.id)
+        user_roles_names = DBManager().get_user_roles_names(context.user.id)
         details = cls._DATASTORE.product_details(
             dataset_id=dataset_id, product_id=product_id, use_cache=True
         )
         AccessManager.assert_is_role_eligible(
             product_role_name=details["metadata"].get("role"),
-            user_role_name=user_role_name,
+            user_roles_names=user_roles_names,
         )
         return details
 
@@ -288,7 +288,7 @@ class DatasetManager(metaclass=LoggableMeta):
     def _get_dataset_information_from_details_dict(
         cls,
         dataset_dict: dict,
-        user_role_name: str,
+        user_roles_names: list[str],
         dataset_id: str,
         context: Context,
     ) -> dict:
@@ -301,7 +301,7 @@ class DatasetManager(metaclass=LoggableMeta):
                 for prod_name, prod_info in dataset_dict["products"].items()
                 if AccessManager.is_role_eligible_for_product(
                     product_role_name=prod_info.get("role"),
-                    user_role_name=user_role_name,
+                    user_roles_names=user_roles_names,
                 )
             }
         except KeyError as err:
@@ -322,7 +322,7 @@ class DatasetManager(metaclass=LoggableMeta):
                     context.user.id,
                 )
                 raise NoEligibleProductInDatasetError(
-                    dataset_id=dataset_id, user_role_name=user_role_name
+                    dataset_id=dataset_id, user_roles_names=user_roles_names
                 )
             dataset_dict["products"] = eligible_prods
         return dataset_dict
