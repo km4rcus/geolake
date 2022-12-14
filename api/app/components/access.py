@@ -2,12 +2,20 @@
 import logging
 from typing import Optional
 
+from pydantic import BaseModel
 from db.dbmanager.dbmanager import DBManager
 
 from .meta import LoggableMeta
 from ..decorators import log_execution_time
 from ..exceptions import AuthorizationFailed
 from ..context import Context
+
+
+class User(BaseModel):
+    contact_name: str
+    user_id: Optional[str] = None
+    api_key: Optional[str] = None
+    user_roles_names: Optional[list[str]] = None
 
 
 class AccessManager(metaclass=LoggableMeta):
@@ -171,3 +179,34 @@ class AccessManager(metaclass=LoggableMeta):
         ):
             return
         raise AuthorizationFailed
+
+    @classmethod
+    @log_execution_time(_LOG)
+    def add_user(cls, context: Context, user: User):
+        """Add a user to the database
+
+        Parameters
+        ----------
+        context : Context
+            Context of the current http request
+        contact_name : str
+            Conact name of a user
+        user_id : str, optional, default=None
+            ID of the user (if know). If not provided, it'll be generated
+        api_key : str, optional, default=None
+            API key of the user (if known). If not provided, it'll be generated
+        user_roles_names: list of str, optional, default=None
+            A list of user roles names. If `None`, the default `public` role will be assigned
+
+
+        Returns
+        -------
+        user_id : UUID
+            ID of the newly created user in the database
+        """
+        return DBManager().add_user(
+            contact_name=user.contact_name,
+            user_id=user.user_id,
+            api_key=user.api_key,
+            roles_names=user.user_roles_names,
+        )

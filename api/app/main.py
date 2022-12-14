@@ -19,6 +19,7 @@ from geoquery.geoquery import GeoQuery
 from .components.dataset import DatasetManager
 from .components.file import FileManager
 from .components.request import RequestManager
+from .components.access import User, AccessManager
 from .exceptions import (
     MissingDatasetError,
     RequestNotFound,
@@ -344,3 +345,21 @@ async def delete_request_uri(
     app.state.request.inc({"route": "DELETE /requests/{request_id}"})
     # TODO:
     raise HTTPException(status_code=400, detail="NotImplementedError")
+
+
+@app.post("/users/add")
+@timer(app.state.request_time, labels={"route": "POST /users/add/"})
+async def add_user(
+    user: User,
+    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
+):
+    """Add user to the database"""
+    app.state.request.inc({"route": "POST /users/add/"})
+    try:
+        context = Context(dds_request_id, user_token)
+        return AccessManager.add_user(context, user)
+    except (AuthorizationFailed, AuthenticationFailed) as err:
+        raise err.wrap_around_http_error() from err
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=str(err))

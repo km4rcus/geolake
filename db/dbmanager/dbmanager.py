@@ -183,6 +183,30 @@ class DBManager(metaclass=Singleton):
             )
             raise exception
 
+    def add_user(
+        self,
+        contact_name: str,
+        user_id: UUID | None = None,
+        api_key: str | None = None,
+        roles_names: list[str] | None = None,
+    ):
+        with self.__session_maker() as session:
+            user = User(
+                user_id=user_id, api_key=api_key, contact_name=contact_name
+            )
+            if roles_names:
+                user.roles.extend(
+                    [
+                        session.query(Role)
+                        .where(Role.role_name == role_name)
+                        .all()[0]  # NOTE: role_name is unique in the database
+                        for role_name in roles_names
+                    ]
+                )
+            session.add(user)
+            session.commit()
+            return str(user.user_id)
+
     def get_user_details(self, user_id: int):
         with self.__session_maker() as session:
             return session.query(User).get(user_id)
