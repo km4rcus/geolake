@@ -189,15 +189,8 @@ class AccessManager(metaclass=LoggableMeta):
         ----------
         context : Context
             Context of the current http request
-        contact_name : str
-            Conact name of a user
-        user_id : str, optional, default=None
-            ID of the user (if know). If not provided, it'll be generated
-        api_key : str, optional, default=None
-            API key of the user (if known). If not provided, it'll be generated
-        user_roles_names: list of str, optional, default=None
-            A list of user roles names. If `None`, the default `public` role will be assigned
-
+        user: User
+            User to be added
 
         Returns
         -------
