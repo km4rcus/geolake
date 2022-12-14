@@ -362,4 +362,4 @@ async def add_user(
     except (AuthorizationFailed, AuthenticationFailed) as err:
         raise err.wrap_around_http_error() from err
     except Exception as err:
-        raise HTTPException(status_code=400, detail=str(err))
+        raise HTTPException(status_code=400, detail=str(err)) from err

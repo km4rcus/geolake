@@ -15,7 +15,7 @@ class User(BaseModel):
     contact_name: str
     user_id: Optional[str] = None
     api_key: Optional[str] = None
-    user_roles_names: Optional[list[str]] = None
+    roles: Optional[list[str]] = None
 
 
 class AccessManager(metaclass=LoggableMeta):
@@ -208,5 +208,5 @@ class AccessManager(metaclass=LoggableMeta):
             contact_name=user.contact_name,
             user_id=user.user_id,
             api_key=user.api_key,
-            roles_names=user.user_roles_names,
+            roles_names=user.roles,
         )
