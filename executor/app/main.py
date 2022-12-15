@@ -19,8 +19,8 @@ import json
 import time
 import pika
 import logging
-import traceback
-from dask.distributed import Client, LocalCluster
+import asyncio
+from dask.distributed import Client, LocalCluster, Nanny
 
 import threading, functools
 
@@ -74,12 +74,12 @@ class Executor(metaclass=LoggableMeta):
             n_workers=dask_cluster_opts["n_workers"],
             scheduler_port=dask_cluster_opts["scheduler_port"],
             dashboard_address=dask_cluster_opts["dashboard_address"],
-            processes=True,
         )
         self._LOG.info(
             "creating Dask Client...", extra={"track_id": self._worker_id}
         )
         self._dask_client = Client(dask_cluster)
+        self._nanny = Nanny(self._dask_client.cluster.scheduler.address)
 
     def ack_message(self, channel, delivery_tag):
         """Note that `channel` must be the same pika channel instance via which
@@ -145,7 +145,7 @@ class Executor(metaclass=LoggableMeta):
                     extra={"track_id": request_id},
                 )
                 # cancel processing restarting the cluster
-                self._dask_client.restart()
+                asyncio.run(self._nanny.restart())
                 status = RequestStatus.FAILED
                 fail_reason = "Processing timeout"
         except Exception as e:
@@ -164,7 +164,7 @@ class Executor(metaclass=LoggableMeta):
                     extra={"track_id": request_id},
                 )
                 status = RequestStatus.DONE
-            else:
+            elif status is not RequestStatus.FAILED:
                 self._LOG.warning(
                     "location path is `None` - resulting dataset was empty!",
                     extra={"track_id": request_id},
