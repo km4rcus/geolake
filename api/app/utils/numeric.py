@@ -52,6 +52,6 @@ def make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
     if val > 1024:
         units = "GB"
         val /= 1024
-    if (val := round(val, 2)) == 0.00:
+    if val != 0.0 and (val := round(val, 2)) == 0.00:
         val = 0.01
     return {"value": val, "units": units}
