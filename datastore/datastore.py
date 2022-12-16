@@ -119,7 +119,6 @@ class Datastore(metaclass=Singleton):
         datasets = set(self.catalog)
         datasets -= {
             "medsea-rea-e3r1",
-            "medsea-cmip5-projections-biogeochemistry",
         }
         # NOTE: medsae cmip uses cftime.DatetimeNoLeap as time
         # need to think how to handle it
