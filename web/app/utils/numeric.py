@@ -41,7 +41,10 @@ def prepare_estimate_size_message(
     if estimated_size_gb is None:
         status = "Error"
         msg = "Could not estimate the size for that dataset"
-    if estimated_size_gb > maximum_allowed_size_gb:
+    if estimated_size_gb == 0.0:
+        status = "Error"
+        msg = "Resulting dataset is empty"
+    elif estimated_size_gb > maximum_allowed_size_gb:
         status = "Error"
         msg = (
             f"Estimated request size ({estimated_size_gb} GB) is more than"

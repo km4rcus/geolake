@@ -205,7 +205,7 @@ class DBManager(metaclass=Singleton):
                 )
             session.add(user)
             session.commit()
-            return str(user.user_id)
+            return user
 
     def get_user_details(self, user_id: int):
         with self.__session_maker() as session:

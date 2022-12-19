@@ -358,7 +358,7 @@ async def add_user(
     app.state.request.inc({"route": "POST /users/add/"})
     try:
         context = Context(dds_request_id, user_token)
-        return AccessManager.add_user(context, user)
+        return AccessManager.add_user(context, user).user_id
     except (AuthorizationFailed, AuthenticationFailed) as err:
         raise err.wrap_around_http_error() from err
     except Exception as err:

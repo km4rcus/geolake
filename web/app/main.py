@@ -190,15 +190,13 @@ async def get_api_key(
     request: Request,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
-    """Get API key for a user the given Authorization token"""
+    """Get API key for a user with the given `Authorization` token.
+    Adds user to DB and generates api key, if user is not found."""
     try:
         context = Context(request, authorization, enable_public=False)
-    except AuthenticationFailed as err:
-        raise HTTPException(
-            status_code=401, detail="User could not be authenticated"
-        ) from err
-    except GeokubeAPIRequestFailed as err:
-        raise HTTPException(status_code=400, detail=str(err)) from err
+    except AuthenticationFailed:
+        AccessManager.add_user(authorization=authorization)
+        context = Context(request, authorization, enable_public=False)
     else:
         return {"key": f"{context.user.id}:{context.user.key}"}
 
