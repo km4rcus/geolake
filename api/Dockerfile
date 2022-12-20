@@ -2,7 +2,6 @@ FROM rg.nl-ams.scw.cloud/dds-production/geokube:v0.2a2
 WORKDIR /code
 COPY ./api/requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-RUN conda install esmf -c conda-forge && conda clean -afy
 COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
 COPY ./datastore /code/app/datastore
 COPY ./db/dbmanager /code/db/dbmanager
