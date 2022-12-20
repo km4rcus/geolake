@@ -26,8 +26,6 @@ def get_dds_logger(
         Logger with the handlers set
     """
     log = default_logging.getLogger(name)
-    if log.hasHandlers():
-        return log
     format_ = os.environ.get(
         "LOGGING_FORMAT",
         "%(asctime)s %(name)s %(levelname)s %(rid)d %(message)s",

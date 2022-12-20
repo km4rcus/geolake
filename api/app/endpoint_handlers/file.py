@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from db.dbmanager.dbmanager import DBManager, RequestStatus
 
 from ..auth import Context
-from ..logging import get_dds_logger
+from ..api_logging import get_dds_logger
 from ..metrics import log_execution_time
 from .. import exceptions as exc
 

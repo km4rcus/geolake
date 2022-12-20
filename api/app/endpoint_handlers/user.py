@@ -1,16 +1,18 @@
 """Modules realizing logic for user-related endpoints"""
 
-from db.dbmanager.dbmanager import DBManager
 from pydantic import BaseModel
+from db.dbmanager.dbmanager import DBManager
 
 from ..auth import Context, assert_not_anonymous
-from ..logging import get_dds_logger
+from ..api_logging import get_dds_logger
 from ..metrics import log_execution_time
 
 log = get_dds_logger(__name__)
 
 
 class UserDTO(BaseModel):
+    """DTO class containing information about a user to store in the DB"""
+
     contact_name: str
     user_id: str | None = None
     api_key: str | None = None

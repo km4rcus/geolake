@@ -20,7 +20,7 @@ class EmptyUserTokenError(BaseDDSException):
 
     def wrap_around_http_exception(self) -> HTTPException:
         raise HTTPException(
-            status_code=400, details="User-Token cannot be empty!"
+            status_code=400, detail="User-Token cannot be empty!"
         )
 
 
@@ -30,7 +30,7 @@ class ImproperUserTokenError(BaseDDSException):
     def wrap_around_http_exception(self) -> HTTPException:
         raise HTTPException(
             status_code=400,
-            details=(
+            detail=(
                 "The format of the User-Token is wrong. It should be be in the"
                 " format <user_id (UUID v4)>:<api_key (string)>!"
             ),

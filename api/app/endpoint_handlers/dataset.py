@@ -3,10 +3,13 @@ import pika
 from db.dbmanager.dbmanager import DBManager
 from geoquery.geoquery import GeoQuery
 
-from .auth import Context
-from .auth.manager import is_role_eligible_for_product, assert_is_role_eligible
-from .auth import assert_not_anonymous
-from ..logging import get_dds_logger
+from ..auth import Context
+from ..auth.manager import (
+    is_role_eligible_for_product,
+    assert_is_role_eligible,
+)
+from ..auth import assert_not_anonymous
+from ..api_logging import get_dds_logger
 from .. import exceptions as exc
 from ..utils import make_bytes_readable_dict
 from ..metrics import log_execution_time

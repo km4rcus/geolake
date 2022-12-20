@@ -2,7 +2,6 @@
 __version__ = "2.0"
 import os
 from uuid import uuid4
-from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,9 +12,15 @@ from aioprometheus.asgi.starlette import metrics
 from geoquery.geoquery import GeoQuery
 
 from .auth.context import ContextCreator
-from .logging import get_dds_logger
+from .api_logging import get_dds_logger
 from . import exceptions as exc
-from . import endpoint_handlers as handlers
+from .endpoint_handlers import (
+    dataset_handler,
+    file_handler,
+    request_handler,
+    user_handler,
+)
+from .endpoint_handlers.user import UserDTO
 from .callbacks import all_onstartup_callbacks
 
 logger = get_dds_logger(__name__)
@@ -69,7 +74,7 @@ async def dds_info():
 async def get_datasets(
     request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """List all products eligible for a user defined by user_token"""
     app.state.request.inc({"route": "GET /datasets"})
@@ -77,7 +82,7 @@ async def get_datasets(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.dataset.get_datasets(context)
+        return dataset_handler.get_datasets(context)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
@@ -92,7 +97,7 @@ async def get_product_details(
     dataset_id: str,
     product_id: str,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Get details for the requested product if user is authorized"""
     app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
@@ -100,7 +105,7 @@ async def get_product_details(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.dataset.get_product_details(
+        return dataset_handler.get_product_details(
             context,
             dataset_id=dataset_id,
             product_id=product_id,
@@ -119,7 +124,7 @@ async def get_metadata(
     dataset_id: str,
     product_id: str,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Get metadata of the given product"""
     app.state.request.inc(
@@ -129,7 +134,7 @@ async def get_metadata(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.dataset.get_metadata(
+        return dataset_handler.get_metadata(
             context, dataset_id=dataset_id, product_id=product_id
         )
     except exc.BaseDDSException as err:
@@ -147,7 +152,7 @@ async def estimate(
     product_id: str,
     query: GeoQuery,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
     unit: str = None,
 ):
     """Estimate the resulting size of the query"""
@@ -158,7 +163,7 @@ async def estimate(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.dataset.estimate(
+        return dataset_handler.estimate(
             context,
             dataset_id=dataset_id,
             product_id=product_id,
@@ -179,9 +184,9 @@ async def query(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    format: Optional[str] = "netcdf",
+    format: str | None = "netcdf",
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieve"""
     app.state.request.inc(
@@ -191,7 +196,7 @@ async def query(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.dataset.query(
+        return dataset_handler.query(
             context,
             dataset_id=dataset_id,
             product_id=product_id,
@@ -207,7 +212,7 @@ async def query(
 async def get_requests(
     request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Get all requests for the user"""
     app.state.request.inc({"route": "GET /requests"})
@@ -215,7 +220,7 @@ async def get_requests(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.request.get_requests(context)
+        return request_handler.get_requests(context)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
@@ -229,7 +234,7 @@ async def get_request_status(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Get status of the request without authentication"""
     # NOTE: no auth required for checking status
@@ -238,7 +243,7 @@ async def get_request_status(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.request.get_request_status(
+        return request_handler.get_request_status(
             context, request_id=request_id
         )
     except exc.BaseDDSException as err:
@@ -253,7 +258,7 @@ async def get_request_resulting_size(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Get size of the file being the result of the request"""
     app.state.request.inc({"route": "GET /requests/{request_id}/size"})
@@ -261,7 +266,7 @@ async def get_request_resulting_size(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.request.get_request_resulting_size(
+        return request_handler.get_request_resulting_size(
             context, request_id=request_id
         )
     except exc.BaseDDSException as err:
@@ -276,7 +281,7 @@ async def get_request_uri(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Get download URI for the request"""
     app.state.request.inc({"route": "GET /requests/{request_id}/uri"})
@@ -284,7 +289,7 @@ async def get_request_uri(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.request.get_request_uri(context, request_id=request_id)
+        return request_handler.get_request_uri(context, request_id=request_id)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
@@ -295,7 +300,7 @@ async def download_request_result(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Download result of the request"""
     app.state.request.inc({"route": "GET /download/{request_id}"})
@@ -303,7 +308,7 @@ async def download_request_result(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.file.download_request_result(
+        return file_handler.download_request_result(
             context, request_id=request_id
         )
     except exc.BaseDDSException as err:
@@ -318,9 +323,9 @@ async def download_request_result(
 @timer(app.state.request_time, labels={"route": "POST /users/add/"})
 async def add_user(
     request: Request,
-    user: handlers.user.UserDTO,
+    user: UserDTO,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
+    user_token: str | None = Header(None, convert_underscores=True),
 ):
     """Add user to the database"""
     app.state.request.inc({"route": "POST /users/add/"})
@@ -328,7 +333,7 @@ async def add_user(
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
         )
-        return handlers.user.add_user(context, user)
+        return user_handler.add_user(context, user)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
     except Exception as err:

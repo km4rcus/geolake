@@ -2,7 +2,7 @@
 from inspect import signature
 from functools import wraps
 
-from ..logging import get_dds_logger
+from ..api_logging import get_dds_logger
 from ..auth import Context
 from ..decorators_factory import assert_parameters_are_defined, bind_arguments
 from .. import exceptions as exc

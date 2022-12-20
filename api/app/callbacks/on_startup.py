@@ -1,4 +1,6 @@
-from ..logging import get_dds_logger
+"""Module with functions call during API server startup"""
+from ..api_logging import get_dds_logger
+
 from ..datastore.datastore import Datastore
 
 log = get_dds_logger(__name__)

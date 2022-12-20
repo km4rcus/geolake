@@ -2,7 +2,7 @@
 from db.dbmanager.dbmanager import DBManager
 
 from ..auth import Context, assert_not_anonymous
-from ..logging import get_dds_logger
+from ..api_logging import get_dds_logger
 from .. import exceptions as exc
 from ..metrics import log_execution_time
 

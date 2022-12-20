@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import Request
 from db.dbmanager.dbmanager import DBManager
 
-from ..logging import get_dds_logger
+from ..api_logging import get_dds_logger
 from .. import exceptions as exc
 
 log = get_dds_logger(__name__)
@@ -15,7 +15,9 @@ class UserCredentials:
 
     __slots__ = ("_user_id", "_user_key")
 
-    def __init__(self, user_id: str | None, user_key: str | None):
+    def __init__(
+        self, user_id: str | None = None, user_key: str | None = None
+    ):
         self._user_id = user_id
         if self._user_id is None:
             self._user_key = None
@@ -121,15 +123,19 @@ class ContextCreator:
 
         Raises
         ------
-        EmptyUserTokenError
-            If user token is empty
         ImproperUserTokenError
             If user token is not in the right format
+        AuthenticationFailed
+            If provided api key does not agree with the one stored in the DB
         """
         assert rid is not None, "DDS Request ID cannot be `None`!"
-        user_credentials = UserCredentials(
-            *ContextCreator._get_user_id_and_key_from_token(user_token)
-        )
+        try:
+            user_credentials = UserCredentials(
+                *ContextCreator._get_user_id_and_key_from_token(user_token)
+            )
+        except exc.EmptyUserTokenError:
+            # NOTE: we then consider a user as anonymous
+            user_credentials = UserCredentials()
         if not user_credentials.is_public:
             log.debug("context authentication", extra={"rid": rid})
             ContextCreator.authenticate(user_credentials)

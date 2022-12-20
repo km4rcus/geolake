@@ -1,4 +1,4 @@
-from .logging import get_dds_logger
+from .api_logging import get_dds_logger
 from .decorators_factory import assert_parameters_are_defined, bind_arguments
 from functools import wraps
 from inspect import signature
