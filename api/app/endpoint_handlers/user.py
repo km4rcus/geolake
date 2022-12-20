@@ -1,0 +1,43 @@
+"""Modules realizing logic for user-related endpoints"""
+
+from db.dbmanager.dbmanager import DBManager
+from pydantic import BaseModel
+
+from ..auth import Context, assert_not_anonymous
+from ..logging import get_dds_logger
+from ..metrics import log_execution_time
+
+log = get_dds_logger(__name__)
+
+
+class UserDTO(BaseModel):
+    contact_name: str
+    user_id: str | None = None
+    api_key: str | None = None
+    roles: list[str] | None = None
+
+
+@log_execution_time(log)
+@assert_not_anonymous
+def add_user(context: Context, user: UserDTO):
+    """Add a user to the database
+
+    Parameters
+    ----------
+    context : Context
+        Context of the current http request
+    user: UserDTO
+        User to be added
+
+    Returns
+    -------
+    user_id : UUID
+        ID of the newly created user in the database
+    """
+    # TODO: some admin priviliges check
+    return DBManager().add_user(
+        contact_name=user.contact_name,
+        user_id=user.user_id,
+        api_key=user.api_key,
+        roles_names=user.roles,
+    )

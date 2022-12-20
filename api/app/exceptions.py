@@ -1,115 +1,141 @@
-"""Module with definitions of exceptions for 'web' component"""
+"""Module with DDS exceptions definitions"""
 from fastapi import HTTPException
 
 
-class DDSException:
-    """Base class for DDS web exceptions"""
+class BaseDDSException(BaseException):
+    """Base class for DDS.api exceptions"""
 
-    def wrap_around_http_error(self, **values):
-        """Create an instance of fastapi.HTTPException"""
-        raise NotImplementedError
+    msg: str
 
-
-class AuthorizationFailed(ValueError, DDSException):
-    """User authorization failed"""
-
-    def wrap_around_http_error(self, **values):
+    def wrap_around_http_exception(self) -> HTTPException:
+        """Wrap an exception around `fastapi.HTTPExcetion`"""
         return HTTPException(
-            status_code=401,
-            detail="User is not authorized!",
+            status_code=404,
+            detail=self.msg,
         )
 
 
-class AuthenticationFailed(ValueError, DDSException):
-    """User authentication failed"""
+class EmptyUserTokenError(BaseDDSException):
+    """Raised if `User-Token` is empty"""
 
-    def wrap_around_http_error(self):
-        return HTTPException(status_code=400, detail="Authentication failed!")
+    def wrap_around_http_exception(self) -> HTTPException:
+        raise HTTPException(
+            status_code=400, details="User-Token cannot be empty!"
+        )
 
 
-class MissingDatasetError(KeyError, DDSException):
-    """Missing dataset error"""
+class ImproperUserTokenError(BaseDDSException):
+    """Raised if `User-Token` format is wrong"""
 
-    def __init__(self, dataset):
-        super().__init__(f"Dataset '{dataset}' is not defined.")
-        self.dataset = dataset
-
-    def wrap_around_http_error(self, **values):
-        return HTTPException(
+    def wrap_around_http_exception(self) -> HTTPException:
+        raise HTTPException(
             status_code=400,
-            detail="Dataset '{dataset_id}' does not exist!".format(**values),
-        )
-
-
-class MissingKeyInCatalogEntryError(KeyError, DDSException):
-    """Missing key in the catalog entry"""
-
-    def __init__(self, key, dataset):
-        super().__init__(
-            f"There is missing '{key}' in the catalog for '{dataset}' dataset."
-        )
-        self.key = key
-        self.dataset = dataset
-
-    def wrap_around_http_error(self, **values):
-        return HTTPException(
-            status_code=400,
-            detail=(
-                "Product '{product_id}' for the dataset '{dataset_id}' does"
-                " not exist!".format(**values)
+            details=(
+                "The format of the User-Token is wrong. It should be be in the"
+                " format <user_id (UUID v4)>:<api_key (string)>!"
             ),
         )
 
 
-class NoEligibleProductInDatasetError(ValueError, DDSException):
+class NoEligibleProductInDatasetError(BaseDDSException):
     """No eligible products in the dataset Error"""
 
     def __init__(self, dataset_id: str, user_roles_names: list[str]) -> None:
-        msg = (
+        self.msg = (
             f"No eligible products for the dataset '{dataset_id}' for the user"
             f" with roles '{user_roles_names}'"
         )
-        super().__init__(msg)
+        super().__init__(self.msg)
 
 
-class MaximumAllowedSizeExceededError(ValueError, DDSException):
+class MissingKeyInCatalogEntryError(BaseDDSException):
+    """Missing key in the catalog entry"""
+
+    def __init__(self, key, dataset):
+        self.msg = (
+            f"There is missing '{key}' in the catalog for '{dataset}' dataset."
+        )
+        super().__init__(self.msg)
+
+
+class MaximumAllowedSizeExceededError(BaseDDSException):
     """Estimated size is too big"""
 
     def __init__(
         self, dataset_id, product_id, estimated_size_gb, allowed_size_gb
     ):
-        super().__init__(
+        self.msg = (
             f"Maximum allowed size for '{dataset_id}.{product_id}' is"
-            f" {estimated_size_gb} GB but the estimated size is"
-            f" {allowed_size_gb} GB"
+            f" {allowed_size_gb} GB but the estimated size is"
+            f" {estimated_size_gb} GB"
         )
-
-    def wrap_around_http_error(self, **values):
-        return HTTPException(
-            status_code=400, detail="{details}".format(**values)
-        )
+        super().__init__(self.msg)
 
 
-class RequestNotYetAccomplished(RuntimeError, DDSException):
+class RequestNotYetAccomplished(BaseDDSException):
     """Raised if dds request was not finished yet"""
 
-    def wrap_around_http_error(self, **values):
-        return HTTPException(
-            status_code=404,
-            detail=(
-                "Request with id: {request_id} does not exist or it is"
-                " not finished yet!".format(**values)
-            ),
+    def __init__(self, request_id):
+        self.msg = (
+            f"Request with id: {request_id} does not exist or it is not"
+            " finished yet!"
         )
+        super().__init__(self.msg)
 
 
-class RequestNotFound(KeyError, DDSException):
+class RequestNotFound(BaseDDSException):
     """If the given request could not be found"""
 
-    def wrap_around_http_error(self, **values):
-        return HTTPException(
-            status_code=400,
-            detail="Request with ID '{request_id}' was not found!".format(
-                **values
-            ),
+    def __init__(self, request_id: int) -> None:
+        self.msg = f"Request with ID '{request_id}' was not found"
+        super().__init__(self.msg)
+
+
+class RequestStatusNotDone(BaseDDSException):
+    """Raised when the submitted request failed"""
+
+    def __init__(self, request_id, request_status) -> None:
+        self.msg = (
+            f"Request with id: `{request_id}` does not have download. URI. Its"
+            f" status is: `{request_status}`!"
         )
+        super().__init__(self.msg)
+
+
+class AuthorizationFailed(BaseDDSException):
+    """Raised when the user is not authorized for the given resource"""
+
+    def __init__(self, user_id: str | None):
+        if user_id is None:
+            self.msg = "Anonymous user is not authorized for the resource!"
+        else:
+            self.msg = f"User 's{user_id}' is not authorized for the resource!"
+        super().__init__(self.msg)
+
+
+class AuthenticationFailed(BaseDDSException):
+    """Raised when the key of the provided user differs from the one s
+    tored in the DB"""
+
+    def __init__(self, user_id: str):
+        self.msg = "Authentication of the user '{user_id}' failed!"
+        super().__init__(self.msg)
+
+
+class MissingDatasetError(BaseDDSException):
+    """Raied if the queried dataset is not present in the catalog"""
+
+    def __init__(self, dataset_id: str):
+        self.msg = f"Dataset '{dataset_id}' does not exist in the catalog!"
+        super().__init__(self.msg)
+
+
+class MissingProductError(BaseDDSException):
+    """Raised if the requested product is not defined for the dataset"""
+
+    def __init__(self, dataset_id: str, product_id: str):
+        self.msg = (
+            f"Product '{dataset_id}.{product_id}' does not exist in the"
+            " catalog!"
+        )
+        super().__init__(self.msg)

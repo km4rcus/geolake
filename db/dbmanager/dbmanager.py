@@ -140,7 +140,6 @@ class Storage(Base):
 
 
 class DBManager(metaclass=Singleton):
-
     _LOG = logging.getLogger("geokube.DBManager")
 
     def __init__(self) -> None:

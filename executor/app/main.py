@@ -46,7 +46,6 @@ def ds_query(ds_id, prod_id, query, compute, request_id):
 
 
 class Executor(metaclass=LoggableMeta):
-
     _LOG = logging.getLogger("geokube.Executor")
 
     def __init__(self, broker, store_path, cache_path):
@@ -226,7 +225,6 @@ class Executor(metaclass=LoggableMeta):
 
 
 if __name__ == "__main__":
-
     broker = os.getenv("BROKER", "broker")
     executor_types = os.getenv("EXECUTOR_TYPES", "query").split(",")
     store_path = os.getenv("STORE_PATH", ".")

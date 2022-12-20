@@ -1,38 +1,24 @@
 """Main module with dekube-dds API endpoints defined"""
 __version__ = "2.0"
 import os
-import time
-import logging
 from uuid import uuid4
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from aioprometheus import Counter, Summary, timer, MetricsMiddleware
 from aioprometheus.asgi.starlette import metrics
 
-from db.dbmanager.dbmanager import RequestStatus
 from geoquery.geoquery import GeoQuery
 
-from .components.dataset import DatasetManager
-from .components.file import FileManager
-from .components.request import RequestManager
-from .components.access import User, AccessManager
-from .exceptions import (
-    MissingDatasetError,
-    RequestNotFound,
-    RequestNotYetAccomplished,
-    MissingKeyInCatalogEntryError,
-    MaximumAllowedSizeExceededError,
-    AuthenticationFailed,
-    AuthorizationFailed,
-)
-from .context import Context
-from .utils.dataset import load_cache
+from .auth.context import ContextCreator
+from .logging import get_dds_logger
+from . import exceptions as exc
+from . import endpoint_handlers as handlers
+from .callbacks import all_onstartup_callbacks
 
-logger = logging.getLogger("geokube.web")
+logger = get_dds_logger(__name__)
 
 app = FastAPI(
     title="geokube-dds API",
@@ -47,7 +33,7 @@ app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
     root_path=os.environ.get("ENDPOINT_PREFIX", "/api"),
-    on_startup=[load_cache],
+    on_startup=all_onstartup_callbacks,
 )
 
 # ======== CORS ========= #
@@ -81,15 +67,19 @@ async def dds_info():
 @app.get("/datasets")
 @timer(app.state.request_time, labels={"route": "GET /datasets"})
 async def get_datasets(
+    request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """List all products eligible for a user defined by user_token"""
     app.state.request.inc({"route": "GET /datasets"})
-    context = Context(dds_request_id, user_token)
-    return DatasetManager.get_datasets_and_eligible_products_names(
-        context=context
-    )
+    try:
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
+        )
+        return handlers.dataset.get_datasets(context)
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/datasets/{dataset_id}/{product_id}")
@@ -98,6 +88,7 @@ async def get_datasets(
     labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
 )
 async def get_product_details(
+    request: Request,
     dataset_id: str,
     product_id: str,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
@@ -106,20 +97,16 @@ async def get_product_details(
     """Get details for the requested product if user is authorized"""
     app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
     try:
-        context = Context(dds_request_id, user_token)
-        return DatasetManager.get_details_for_product_if_eligible(
-            context=context,
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
+        )
+        return handlers.dataset.get_product_details(
+            context,
             dataset_id=dataset_id,
             product_id=product_id,
         )
-    except (AuthenticationFailed, AuthorizationFailed) as err:
-        raise err.wrap_around_http_error() from err
-    except MissingDatasetError as err:
-        raise err.wrap_around_http_error(dataset_id=dataset_id) from err
-    except MissingKeyInCatalogEntryError as err:
-        raise err.wrap_around_http_error(
-            dataset_id=dataset_id, product_id=product_id
-        ) from err
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/datasets/{dataset_id}/{product_id}/metadata")
@@ -127,7 +114,8 @@ async def get_product_details(
     app.state.request_time,
     labels={"route": "GET /datasets/{dataset_id}/{product_id}/metadata"},
 )
-async def metadata(
+async def get_metadata(
+    request: Request,
     dataset_id: str,
     product_id: str,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
@@ -138,18 +126,14 @@ async def metadata(
         {"route": "GET /datasets/{dataset_id}/{product_id}/metadata"}
     )
     try:
-        context = Context(dds_request_id, user_token)
-        return DatasetManager.get_product_metadata(
-            dataset_id=dataset_id,
-            product_id=product_id,
-            context=context,
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
         )
-    except MissingDatasetError as err:
-        raise err.wrap_around_http_error(dataset_id=dataset_id) from err
-    except MissingKeyInCatalogEntryError as err:
-        raise err.wrap_around_http_error(
-            dataset_id=dataset_id, product_id=product_id
-        ) from err
+        return handlers.dataset.get_metadata(
+            context, dataset_id=dataset_id, product_id=product_id
+        )
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
@@ -158,6 +142,7 @@ async def metadata(
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
 )
 async def estimate(
+    request: Request,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
@@ -170,18 +155,18 @@ async def estimate(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )
     try:
-        return DatasetManager.estimate(
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
+        )
+        return handlers.dataset.estimate(
+            context,
             dataset_id=dataset_id,
             product_id=product_id,
             query=query,
             unit=unit,
         )
-    except MissingDatasetError as err:
-        raise err.wrap_around_http_error(dataset_id=dataset_id) from err
-    except MissingKeyInCatalogEntryError as err:
-        raise err.wrap_around_http_error(
-            dataset_id=dataset_id, product_id=product_id
-        ) from err
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
@@ -190,6 +175,7 @@ async def estimate(
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
 )
 async def query(
+    request: Request,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
@@ -202,39 +188,36 @@ async def query(
         {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
     )
     try:
-        context = Context(dds_request_id, user_token)
-        return DatasetManager.retrieve_data_and_get_request_id(
-            context=context,
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
+        )
+        return handlers.dataset.query(
+            context,
             dataset_id=dataset_id,
             product_id=product_id,
             query=query,
             format=format,
         )
-    except (AuthorizationFailed, AuthenticationFailed) as err:
-        raise err.wrap_around_http_error() from err
-    except MaximumAllowedSizeExceededError as err:
-        raise err.wrap_around_http_error(details=str(err)) from err
-    except MissingDatasetError as err:
-        raise err.wrap_around_http_error(dataset_id=dataset_id) from err
-    except MissingKeyInCatalogEntryError as err:
-        raise err.wrap_around_http_error(
-            dataset_id=dataset_id, product_id=product_id
-        ) from err
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/requests")
 @timer(app.state.request_time, labels={"route": "GET /requests"})
 async def get_requests(
+    request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get all requests for the user"""
     app.state.request.inc({"route": "GET /requests"})
     try:
-        context = Context(dds_request_id, user_token)
-        return RequestManager.get_requests_details_for_user(context=context)
-    except (AuthorizationFailed, AuthenticationFailed) as err:
-        raise err.wrap_around_http_error() from err
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
+        )
+        return handlers.request.get_requests(context)
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/requests/{request_id}/status")
@@ -243,6 +226,7 @@ async def get_requests(
     labels={"route": "GET /requests/{request_id}/status"},
 )
 async def get_request_status(
+    request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
@@ -251,16 +235,14 @@ async def get_request_status(
     # NOTE: no auth required for checking status
     app.state.request.inc({"route": "GET /requests/{request_id}/status"})
     try:
-        context = Context(dds_request_id, user_token)
-        status, reason = RequestManager.get_request_status_for_request_id(
-            context=context, request_id=request_id
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
         )
-        if status is RequestStatus.FAILED:
-            return {"status": status.name, "fail_reason": reason}
-    except RequestNotFound as err:
-        raise err.wrap_around_http_error(request_id=request_id) from err
-    else:
-        return {"status": status.name}
+        return handlers.request.get_request_status(
+            context, request_id=request_id
+        )
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/requests/{request_id}/size")
@@ -268,6 +250,7 @@ async def get_request_status(
     app.state.request_time, labels={"route": "GET /requests/{request_id}/size"}
 )
 async def get_request_resulting_size(
+    request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
@@ -275,12 +258,14 @@ async def get_request_resulting_size(
     """Get size of the file being the result of the request"""
     app.state.request.inc({"route": "GET /requests/{request_id}/size"})
     try:
-        context = Context(dds_request_id, user_token)
-        return RequestManager.get_request_result_size(
-            request_id=request_id, context=context
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
         )
-    except RequestNotFound as err:
-        raise err.wrap_around_http_error(request_id=request_id) from err
+        return handlers.request.get_request_resulting_size(
+            context, request_id=request_id
+        )
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/requests/{request_id}/uri")
@@ -288,6 +273,7 @@ async def get_request_resulting_size(
     app.state.request_time, labels={"route": "GET /requests/{request_id}/uri"}
 )
 async def get_request_uri(
+    request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
@@ -295,17 +281,18 @@ async def get_request_uri(
     """Get download URI for the request"""
     app.state.request.inc({"route": "GET /requests/{request_id}/uri"})
     try:
-        context = Context(dds_request_id, user_token)
-        return RequestManager.get_request_uri_for_request_id(
-            request_id=request_id, context=context
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
         )
-    except AuthenticationFailed as err:
-        raise err.wrap_around_http_error() from err
+        return handlers.request.get_request_uri(context, request_id=request_id)
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
 
 
 @app.get("/download/{request_id}")
 @timer(app.state.request_time, labels={"route": "GET /download/{request_id}"})
 async def download_request_result(
+    request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
@@ -313,53 +300,36 @@ async def download_request_result(
     """Download result of the request"""
     app.state.request.inc({"route": "GET /download/{request_id}"})
     try:
-        context = Context(dds_request_id, user_token)
-        # TODO: web portal need to pass User-Token header to this endpoint
-        # if AccessManager.is_user_eligible_for_request(
-        #     user_credentials=user_credentials, request_id=request_id
-        # ):
-        path = FileManager.prepare_request_for_download_and_get_path(
-            request_id=request_id, context=context
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
         )
-        return FileResponse(path=path, filename=path)
-    except AuthenticationFailed as err:
-        raise err.wrap_around_http_error() from err
-    except RequestNotYetAccomplished as err:
-        raise err.wrap_around_http_error(request_id=request_id) from err
+        return handlers.file.download_request_result(
+            context, request_id=request_id
+        )
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
     except FileNotFoundError as err:
         raise HTTPException(
             status_code=404, detail="File was not found!"
         ) from err
 
 
-@app.delete("/requests/{request_id}")
-@timer(
-    app.state.request_time, labels={"route": "DELETE /requests/{request_id}/"}
-)
-async def delete_request_uri(
-    request_id: int,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
-):
-    """Delete the request with 'request_id' from the database"""
-    app.state.request.inc({"route": "DELETE /requests/{request_id}"})
-    # TODO:
-    raise HTTPException(status_code=400, detail="NotImplementedError")
-
-
 @app.post("/users/add")
 @timer(app.state.request_time, labels={"route": "POST /users/add/"})
 async def add_user(
-    user: User,
+    request: Request,
+    user: handlers.user.UserDTO,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Add user to the database"""
     app.state.request.inc({"route": "POST /users/add/"})
     try:
-        context = Context(dds_request_id, user_token)
-        return AccessManager.add_user(context, user).user_id
-    except (AuthorizationFailed, AuthenticationFailed) as err:
-        raise err.wrap_around_http_error() from err
+        context = ContextCreator.new_context(
+            request, rid=dds_request_id, user_token=user_token
+        )
+        return handlers.user.add_user(context, user)
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err)) from err

@@ -8,7 +8,7 @@ COPY ./db/dbmanager /code/db/dbmanager
 COPY ./geoquery/ /code/geoquery
 COPY ./resources /code/app/resources
 COPY ./api/app /code/app
-COPY ./api/tests /code/tests
+# COPY ./api/tests /code/tests
 # RUN pytest /code/tests
 EXPOSE 80
 # VOLUME /code

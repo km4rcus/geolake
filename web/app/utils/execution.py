@@ -6,7 +6,8 @@ import logging
 
 
 def log_execution_time(logger: logging.Logger):
-    """Decorator logging execution time of the method or function (both sync and async)"""
+    """Decorator logging execution time of the method or function (both sync and async)
+    """
 
     def inner(func):
         @wraps(func)
