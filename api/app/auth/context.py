@@ -164,7 +164,7 @@ class ContextCreator:
 
     @staticmethod
     def _get_user_id_and_key_from_token(user_token: str):
-        if user_token is None or user_token.trim() == "":
+        if user_token is None or user_token.strip() == "":
             raise exc.EmptyUserTokenError
         if ":" not in user_token:
             raise exc.ImproperUserTokenError
