@@ -158,8 +158,8 @@ class ContextCreator:
             If user with the given ID is found in the database but stored api key
             is different than the provided one.
         """
-        user = DBManager().get_user_details(user.id)
-        if user.api_key != user.key:
+        user_db = DBManager().get_user_details(user.id)
+        if user_db.api_key != user.key:
             raise exc.AuthenticationFailed(user.id)
 
     @staticmethod
