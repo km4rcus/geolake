@@ -1,4 +1,6 @@
 """Module with DDS exceptions definitions"""
+from typing import Optional
+
 from fastapi import HTTPException
 
 
@@ -6,11 +8,12 @@ class BaseDDSException(BaseException):
     """Base class for DDS.api exceptions"""
 
     msg: str
+    code: int = 400
 
     def wrap_around_http_exception(self) -> HTTPException:
         """Wrap an exception around `fastapi.HTTPExcetion`"""
         return HTTPException(
-            status_code=404,
+            status_code=self.code,
             detail=self.msg,
         )
 
@@ -18,32 +21,29 @@ class BaseDDSException(BaseException):
 class EmptyUserTokenError(BaseDDSException):
     """Raised if `User-Token` is empty"""
 
-    def wrap_around_http_exception(self) -> HTTPException:
-        raise HTTPException(
-            status_code=400, detail="User-Token cannot be empty!"
-        )
+    msg: str = "User-Token cannot be empty!"
 
 
 class ImproperUserTokenError(BaseDDSException):
     """Raised if `User-Token` format is wrong"""
 
-    def wrap_around_http_exception(self) -> HTTPException:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "The format of the User-Token is wrong. It should be be in the"
-                " format <user_id (UUID v4)>:<api_key (string)>!"
-            ),
-        )
+    msg: str = (
+        "The format of the User-Token is wrong. It should be be in the format"
+        " <user_id (UUID v4)>:<api_key (string)>!"
+    )
 
 
 class NoEligibleProductInDatasetError(BaseDDSException):
     """No eligible products in the dataset Error"""
 
+    msg: str = (
+        "No eligible products for the dataset '{dataset_id}' for the user"
+        " with roles '{user_roles_names}'"
+    )
+
     def __init__(self, dataset_id: str, user_roles_names: list[str]) -> None:
-        self.msg = (
-            f"No eligible products for the dataset '{dataset_id}' for the user"
-            f" with roles '{user_roles_names}'"
+        self.msg = self.msg.format(
+            dataset_id=dataset_id, user_roles_names=user_roles_names
         )
         super().__init__(self.msg)
 
@@ -51,23 +51,32 @@ class NoEligibleProductInDatasetError(BaseDDSException):
 class MissingKeyInCatalogEntryError(BaseDDSException):
     """Missing key in the catalog entry"""
 
+    msg: str = (
+        "There is missing '{key}' in the catalog for '{dataset}' dataset."
+    )
+
     def __init__(self, key, dataset):
-        self.msg = (
-            f"There is missing '{key}' in the catalog for '{dataset}' dataset."
-        )
+        self.msg = self.msg.format(key=key, dataset=dataset)
         super().__init__(self.msg)
 
 
 class MaximumAllowedSizeExceededError(BaseDDSException):
     """Estimated size is too big"""
 
+    msg: str = (
+        "Maximum allowed size for '{dataset_id}.{product_id}' is"
+        " {allowed_size_gb} GB but the estimated size is"
+        " {estimated_size_gb} GB"
+    )
+
     def __init__(
         self, dataset_id, product_id, estimated_size_gb, allowed_size_gb
     ):
-        self.msg = (
-            f"Maximum allowed size for '{dataset_id}.{product_id}' is"
-            f" {allowed_size_gb} GB but the estimated size is"
-            f" {estimated_size_gb} GB"
+        self.msg = self.msg.format(
+            dataset_id=dataset_id,
+            product_id=product_id,
+            allowed_size_gb=allowed_size_gb,
+            estimated_size_gb=estimated_size_gb,
         )
         super().__init__(self.msg)
 
@@ -75,29 +84,37 @@ class MaximumAllowedSizeExceededError(BaseDDSException):
 class RequestNotYetAccomplished(BaseDDSException):
     """Raised if dds request was not finished yet"""
 
+    msg: str = (
+        "Request with id: {request_id} does not exist or it is not"
+        " finished yet!"
+    )
+
     def __init__(self, request_id):
-        self.msg = (
-            f"Request with id: {request_id} does not exist or it is not"
-            " finished yet!"
-        )
+        self.msg = self.msg.format(request_id=request_id)
         super().__init__(self.msg)
 
 
 class RequestNotFound(BaseDDSException):
     """If the given request could not be found"""
 
+    msg: str = "Request with ID '{request_id}' was not found"
+
     def __init__(self, request_id: int) -> None:
-        self.msg = f"Request with ID '{request_id}' was not found"
+        self.msg = self.msg.format(request_id=request_id)
         super().__init__(self.msg)
 
 
 class RequestStatusNotDone(BaseDDSException):
     """Raised when the submitted request failed"""
 
+    msg: str = (
+        "Request with id: `{request_id}` does not have download. URI. Its"
+        " status is: `{request_status}`!"
+    )
+
     def __init__(self, request_id, request_status) -> None:
-        self.msg = (
-            f"Request with id: `{request_id}` does not have download. URI. Its"
-            f" status is: `{request_status}`!"
+        self.msg = self.msg.format(
+            request_id=request_id, request_status=request_status
         )
         super().__init__(self.msg)
 
@@ -105,11 +122,14 @@ class RequestStatusNotDone(BaseDDSException):
 class AuthorizationFailed(BaseDDSException):
     """Raised when the user is not authorized for the given resource"""
 
-    def __init__(self, user_id: str | None):
+    msg: str = "{user} is not authorized for the resource!"
+    code: int = 403
+
+    def __init__(self, user_id: Optional[str]):
         if user_id is None:
-            self.msg = "Anonymous user is not authorized for the resource!"
+            self.msg = self.msg.format(user="Anonymous user")
         else:
-            self.msg = f"User 's{user_id}' is not authorized for the resource!"
+            self.msg = self.msg.format(user=f"User '{user_id}'")
         super().__init__(self.msg)
 
 
@@ -117,25 +137,33 @@ class AuthenticationFailed(BaseDDSException):
     """Raised when the key of the provided user differs from the one s
     tored in the DB"""
 
+    msg: str = "Authentication of the user '{user_id}' failed!"
+    code: int = 401
+
     def __init__(self, user_id: str):
-        self.msg = "Authentication of the user '{user_id}' failed!"
+        self.msg = self.msg.format(user_id=user_id)
         super().__init__(self.msg)
 
 
 class MissingDatasetError(BaseDDSException):
     """Raied if the queried dataset is not present in the catalog"""
 
+    msg: str = "Dataset '{dataset_id}' does not exist in the catalog!"
+
     def __init__(self, dataset_id: str):
-        self.msg = f"Dataset '{dataset_id}' does not exist in the catalog!"
+        self.msg = self.msg.format(dataset_id=dataset_id)
         super().__init__(self.msg)
 
 
 class MissingProductError(BaseDDSException):
     """Raised if the requested product is not defined for the dataset"""
 
+    msg: str = (
+        "Product '{dataset_id}.{product_id}' does not exist in the catalog!"
+    )
+
     def __init__(self, dataset_id: str, product_id: str):
-        self.msg = (
-            f"Product '{dataset_id}.{product_id}' does not exist in the"
-            " catalog!"
+        self.msg = self.msg.format(
+            dataset_id=dataset_id, product_id=product_id
         )
         super().__init__(self.msg)

@@ -3,6 +3,17 @@ from typing import Literal
 import logging as default_logging
 
 
+class UnknownRIDFilter(default_logging.Filter):
+    """Logging filter which passes default value `rid`.
+    It can be replaced by `defaults` paramter of `logging.Formatter`
+    in Python 3.10."""
+
+    def filter(self, record):
+        if not hasattr(record, "rid"):
+            record.rid = "N/A"
+        return True
+
+
 def get_dds_logger(
     name: str,
     level: Literal["debug", "info", "warning", "error", "critical"] = "info",
@@ -28,13 +39,14 @@ def get_dds_logger(
     log = default_logging.getLogger(name)
     format_ = os.environ.get(
         "LOGGING_FORMAT",
-        "%(asctime)s %(name)s %(levelname)s %(rid)d %(message)s",
+        "%(asctime)s %(name)s %(levelname)s %(rid)s %(message)s",
     )
-    formatter = default_logging.Formatter(format_, defaults={"rid": "N/A"})
+    formatter = default_logging.Formatter(format_)
     logging_level = os.environ.get("LOGGING_LEVEL", level.upper())
     log.setLevel(logging_level)
     stream_handler = default_logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     stream_handler.setLevel(logging_level)
     log.addHandler(stream_handler)
+    log.addFilter(UnknownRIDFilter())
     return log

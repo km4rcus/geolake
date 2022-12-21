@@ -1,6 +1,6 @@
-FROM condaforge/miniforge3:22.9.0-2
+FROM continuumio/miniconda3
 RUN conda install -c conda-forge --yes --freeze-installed \
-    cartopy xesmf psycopg2 \
+    cartopy xesmf=0.6.3 psycopg2 \
     'bokeh>=2.4.2,<3' pandas=1.4.3 netCDF4 scipy xarray=2022.6.0 \
     && conda clean -afy
 COPY geokube-0.2a0-py3-none-any.whl /

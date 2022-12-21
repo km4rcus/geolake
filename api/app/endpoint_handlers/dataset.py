@@ -1,4 +1,6 @@
+"""Modules realizing logic for dataset-related endpoints"""
 import pika
+from typing import Optional
 
 from db.dbmanager.dbmanager import DBManager
 from geoquery.geoquery import GeoQuery
@@ -135,6 +137,7 @@ def get_product_details(
         dataset_id=dataset_id, product_id=product_id, use_cache=True
     )
     assert_is_role_eligible(
+        context=context,
         product_role_name=details["metadata"].get("role"),
         user_roles_names=user_roles_names,
     )
@@ -173,7 +176,7 @@ def estimate(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    unit: str | None = None,
+    unit: Optional[str] = None,
 ):
     """Realize the logic for the nedpoint:
 

@@ -2,6 +2,7 @@
 __version__ = "2.0"
 import os
 from uuid import uuid4
+from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -74,7 +75,7 @@ async def dds_info():
 async def get_datasets(
     request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """List all products eligible for a user defined by user_token"""
     app.state.request.inc({"route": "GET /datasets"})
@@ -97,7 +98,7 @@ async def get_product_details(
     dataset_id: str,
     product_id: str,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for the requested product if user is authorized"""
     app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
@@ -124,7 +125,7 @@ async def get_metadata(
     dataset_id: str,
     product_id: str,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get metadata of the given product"""
     app.state.request.inc(
@@ -152,7 +153,7 @@ async def estimate(
     product_id: str,
     query: GeoQuery,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
     unit: str = None,
 ):
     """Estimate the resulting size of the query"""
@@ -184,9 +185,9 @@ async def query(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    format: str | None = "netcdf",
+    format: Optional[str] = "netcdf",
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieve"""
     app.state.request.inc(
@@ -212,7 +213,7 @@ async def query(
 async def get_requests(
     request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get all requests for the user"""
     app.state.request.inc({"route": "GET /requests"})
@@ -234,7 +235,7 @@ async def get_request_status(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get status of the request without authentication"""
     # NOTE: no auth required for checking status
@@ -258,7 +259,7 @@ async def get_request_resulting_size(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get size of the file being the result of the request"""
     app.state.request.inc({"route": "GET /requests/{request_id}/size"})
@@ -281,7 +282,7 @@ async def get_request_uri(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get download URI for the request"""
     app.state.request.inc({"route": "GET /requests/{request_id}/uri"})
@@ -300,7 +301,7 @@ async def download_request_result(
     request: Request,
     request_id: int,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Download result of the request"""
     app.state.request.inc({"route": "GET /download/{request_id}"})
@@ -325,7 +326,7 @@ async def add_user(
     request: Request,
     user: UserDTO,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: str | None = Header(None, convert_underscores=True),
+    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Add user to the database"""
     app.state.request.inc({"route": "POST /users/add/"})

@@ -66,4 +66,4 @@ def make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
         val /= 1024
     if val > 0.0 and (val := round(val, 2)) == 0.00:
         val = 0.01
-    return {"value": val, "units": units}
+    return {"value": round(val, 2), "units": units}

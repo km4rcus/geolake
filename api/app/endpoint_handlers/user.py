@@ -1,4 +1,5 @@
 """Modules realizing logic for user-related endpoints"""
+from typing import Optional
 
 from pydantic import BaseModel
 from db.dbmanager.dbmanager import DBManager
@@ -14,9 +15,9 @@ class UserDTO(BaseModel):
     """DTO class containing information about a user to store in the DB"""
 
     contact_name: str
-    user_id: str | None = None
-    api_key: str | None = None
-    roles: list[str] | None = None
+    user_id: Optional[str] = None
+    api_key: Optional[str] = None
+    roles: Optional[list[str]] = None
 
 
 @log_execution_time(log)

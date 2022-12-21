@@ -1,6 +1,7 @@
 """Module with access/authentication functions"""
 from inspect import signature
 from functools import wraps
+from typing import Optional
 
 from ..api_logging import get_dds_logger
 from ..auth import Context
@@ -12,8 +13,8 @@ log = get_dds_logger(__name__)
 
 def is_role_eligible_for_product(
     context: Context,
-    product_role_name: str | None = None,
-    user_roles_names: list[str] | None = None,
+    product_role_name: Optional[str] = None,
+    user_roles_names: Optional[list[str]] = None,
 ):
     """Check if given role is eligible for the product with the provided
     `product_role_name`.
@@ -53,8 +54,8 @@ def is_role_eligible_for_product(
 
 def assert_is_role_eligible(
     context: Context,
-    product_role_name: str | None = None,
-    user_roles_names: list[str] | None = None,
+    product_role_name: Optional[str] = None,
+    user_roles_names: Optional[list[str]] = None,
 ):
     """Assert that user role is eligible for the product
 

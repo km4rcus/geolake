@@ -1,4 +1,4 @@
-FROM rg.nl-ams.scw.cloud/dds-production/geokube:v0.2a2
+FROM rg.nl-ams.scw.cloud/dds-production/geokube:v0.2a3
 WORKDIR /code
 COPY ./executor/requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

@@ -1,5 +1,6 @@
 """Module with auth utils"""
 from uuid import UUID
+from typing import Optional
 
 from fastapi import Request
 from db.dbmanager.dbmanager import DBManager
@@ -16,7 +17,7 @@ class UserCredentials:
     __slots__ = ("_user_id", "_user_key")
 
     def __init__(
-        self, user_id: str | None = None, user_key: str | None = None
+        self, user_id: Optional[str] = None, user_key: Optional[str] = None
     ):
         self._user_id = user_id
         if self._user_id is None:
@@ -102,7 +103,7 @@ class ContextCreator:
 
     @staticmethod
     def new_context(
-        request: Request, *, rid: str, user_token: str | None = None
+        request: Request, *, rid: str, user_token: Optional[str] = None
     ) -> Context:
         """Create a brand new `Context` object based on the provided
         `request`, `rid`, and `user_token` arguments.
