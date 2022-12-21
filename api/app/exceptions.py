@@ -7,7 +7,7 @@ from fastapi import HTTPException
 class BaseDDSException(BaseException):
     """Base class for DDS.api exceptions"""
 
-    msg: str
+    msg: str = "Bad request"
     code: int = 400
 
     def wrap_around_http_exception(self) -> HTTPException:
