@@ -65,8 +65,8 @@ class MaximumAllowedSizeExceededError(BaseDDSException):
 
     msg: str = (
         "Maximum allowed size for '{dataset_id}.{product_id}' is"
-        " {allowed_size_gb} GB but the estimated size is"
-        " {estimated_size_gb} GB"
+        " {allowed_size_gb:.2f} GB but the estimated size is"
+        " {estimated_size_gb:.2f} GB"
     )
 
     def __init__(
