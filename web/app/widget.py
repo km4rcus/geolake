@@ -260,7 +260,7 @@ class WidgetFactory(metaclass=LoggableMeta):
         self._wid.append(wid.to_dict())
         step = (
             timedelta(**{f"{time_unit}s": min_time_step})
-            if time_unit in {"day", "hour"}
+            if time_unit in {"day", "hour", "minute"}
             else timedelta(
                 days=min_time_step * (365 if time_unit == "year" else 30)
             )
