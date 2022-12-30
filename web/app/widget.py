@@ -468,20 +468,21 @@ class WidgetFactory(metaclass=LoggableMeta):
                     continue
 
                 # TODO: `vals` might be 2d. what to do? compute uniqe?
-                vals = np.unique(np.array(coords[coord_name].values))
-                try:
-                    vals = vals.astype(np.float)
-                except ValueError:
-                    self._LOG.info(
-                        "skipping coordinate '%s' - non-castable to float"
-                        " (%s)",
-                        coord_name,
-                        vals,
-                    )
-                    continue
-                # elif (cast_vals := WidgetFactory._maybe_cast_to_datetime64(vals)) is not None:
-                #     vals = cast_vals
-
+                vals = None
+                if coords[coord_name].values is not None:
+                    vals = np.unique(np.array(coords[coord_name].values))
+                    try:
+                        vals = vals.astype(np.float)
+                    except ValueError:
+                        self._LOG.info(
+                            "skipping coordinate '%s' - non-castable to float"
+                            " (%s)",
+                            coord_name,
+                            vals,
+                        )
+                        continue
+                    else:
+                        aux_coords[coord_name]["values"] = sorted(vals)
                 if "min" in aux_coords[coord_name]:
                     aux_coords[coord_name]["min"] = min(
                         [
@@ -501,7 +502,6 @@ class WidgetFactory(metaclass=LoggableMeta):
                 else:
                     aux_coords[coord_name]["max"] = coords[coord_name].max
 
-                aux_coords[coord_name]["values"] = sorted(vals)
                 aux_coords[coord_name]["label"] = self._maybe_get_label(
                     coord_name, coords[coord_name].label
                 )
@@ -522,25 +522,26 @@ class WidgetFactory(metaclass=LoggableMeta):
             self._wid.append(wid.to_dict())
             self._wid_order.append(coord_name)
 
-            values = [
-                {
-                    "value": val,
-                    "label": (
-                        f"{maybe_round_value(val, self._NUMBER_OF_DECIMALS):.2f}"
-                    ),
-                }
-                for val in coord_value["values"]
-            ]
+            if "values" in coord_value:
+                values = [
+                    {
+                        "value": val,
+                        "label": (
+                            f"{maybe_round_value(val, self._NUMBER_OF_DECIMALS):.2f}"
+                        ),
+                    }
+                    for val in coord_value["values"]
+                ]
 
-            wid = Widget(
-                wname=f"{coord_name}_list",
-                wlabel=coord_name.capitalize(),
-                wrequired=False,
-                wparameter=coord_name,
-                wtype="StringList",
-                wdetails={"values": values},
-            )
-            self._wid.append(wid.to_dict())
+                wid = Widget(
+                    wname=f"{coord_name}_list",
+                    wlabel=coord_name.capitalize(),
+                    wrequired=False,
+                    wparameter=coord_name,
+                    wtype="StringList",
+                    wdetails={"values": values},
+                )
+                self._wid.append(wid.to_dict())
             if "max" in coord_value and "min" in coord_value:
                 range_ = [
                     {
