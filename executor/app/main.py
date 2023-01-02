@@ -80,6 +80,10 @@ class Executor(metaclass=LoggableMeta):
         self._dask_client = Client(dask_cluster)
         self._nanny = Nanny(self._dask_client.cluster.scheduler.address)
 
+    def restart_cluster(self):
+        self._dask_client.restart(wait_for_workers=False)
+        asyncio.run(self._nanny.restart())
+
     def ack_message(self, channel, delivery_tag):
         """Note that `channel` must be the same pika channel instance via which
         the message being ACKed was retrieved (AMQP protocol constraint).
@@ -143,12 +147,13 @@ class Executor(metaclass=LoggableMeta):
                     extra={"track_id": request_id},
                 )
                 # cancel processing restarting the cluster
-                asyncio.run(self._nanny.restart())
+                self.restart_cluster()
                 status = RequestStatus.FAILED
                 fail_reason = "Processing timeout"
         except Exception as e:
             self._LOG.error(
-                "failed to get result",
+                "failed to get result due to an error: %s",
+                e,
                 exc_info=True,
                 stack_info=True,
                 extra={"track_id": request_id},

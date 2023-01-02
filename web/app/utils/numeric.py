@@ -47,10 +47,10 @@ def prepare_estimate_size_message(
     elif estimated_size_gb > maximum_allowed_size_gb:
         status = "Error"
         msg = (
-            f"Estimated request size ({estimated_size_gb} GB) is more than"
-            f" maximum allowed size ({maximum_allowed_size_gb} GB). Please"
+            f"Estimated request size ({estimated_size_gb:.2f} GB) is more than"
+            f" maximum allowed size ({maximum_allowed_size_gb:.2f} GB). Please"
             " review your query"
         )
     else:
-        msg = f"Estimated request size: {estimated_size_gb} GB"
+        msg = f"Estimated request size: {estimated_size_gb:.2f} GB"
     return {"status": status, "message": msg}
