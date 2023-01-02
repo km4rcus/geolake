@@ -116,21 +116,16 @@ async def execute(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    format: Optional[str] = "netcdf",
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieving by using geokube-dds API"""
-    # TODO: remove below code after changing Webportal
-    # In execute endpoint format query param is missing ( ...?format=netcdf)
-    format = query.filters.pop("format", "netcdf")
-    # ##########################################
     app.state.request.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
     )
     try:
         context = Context(request, authorization, enable_public=False)
         response = GeokubeAPIRequester.post(
-            url=f"/datasets/{dataset_id}/{product_id}/execute?format={format}",
+            url=f"/datasets/{dataset_id}/{product_id}/execute",
             data=query.json(),
             context=context,
         )
@@ -157,10 +152,6 @@ async def estimate(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Estimate the resulting size of the query by using geokube-dds API"""
-    # TODO: remove below code after changing Webportal
-    # In estimate endpoint format query param is missing ( ...?format=netcdf)
-    query.filters.pop("format", None)
-    # ##########################################
     app.state.request.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )

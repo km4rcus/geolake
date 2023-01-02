@@ -97,7 +97,6 @@ class Executor(metaclass=LoggableMeta):
         dataset_id = m[1]
         product_id = m[2]
         query = m[3]
-        format = m[4]
         self._LOG.debug(
             "executing query: `%s`", body, extra={"track_id": request_id}
         )

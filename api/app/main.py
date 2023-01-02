@@ -23,8 +23,12 @@ from .endpoint_handlers import (
 )
 from .endpoint_handlers.user import UserDTO
 from .callbacks import all_onstartup_callbacks
+from .encoders import extend_json_encoders
 
 logger = get_dds_logger(__name__)
+
+# ======== JSON encoders extension ========= #
+extend_json_encoders()
 
 app = FastAPI(
     title="geokube-dds API",
@@ -185,7 +189,6 @@ async def query(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    format: Optional[str] = "netcdf",
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
@@ -202,7 +205,6 @@ async def query(
             dataset_id=dataset_id,
             product_id=product_id,
             query=query,
-            format=format,
         )
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err

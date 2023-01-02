@@ -224,7 +224,6 @@ def query(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    format: str,
 ):
     """Realize the logic for the endpoint:
 
@@ -242,8 +241,6 @@ def query(
         ID of the product
     query : GeoQuery
         Query to perform
-    format : str
-        Format of the data
 
     Returns
     -------
@@ -281,9 +278,7 @@ def query(
     )
 
     # TODO: find a separator; for the moment use "\"
-    message = (
-        f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}\\{format}"
-    )
+    message = f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}"
 
     broker_channel.basic_publish(
         exchange="",
