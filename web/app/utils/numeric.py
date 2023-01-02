@@ -26,6 +26,7 @@ def prepare_estimate_size_message(
 ):
     """Prepare estimate size and maximum allowed size into the message
         expected by the Webportal
+
     Parameters
     ----------
     maximum_allowed_size_gb : float
@@ -44,13 +45,18 @@ def prepare_estimate_size_message(
     if estimated_size_gb == 0.0:
         status = "Error"
         msg = "Resulting dataset is empty"
-    elif estimated_size_gb > maximum_allowed_size_gb:
-        status = "Error"
-        msg = (
-            f"Estimated request size ({estimated_size_gb:.2f} GB) is more than"
-            f" maximum allowed size ({maximum_allowed_size_gb:.2f} GB). Please"
-            " review your query"
-        )
     else:
-        msg = f"Estimated request size: {estimated_size_gb:.2f} GB"
+        estimated_size_gb = maybe_round_value(estimated_size_gb)
+        maximum_allowed_size_gb = maybe_round_value(maximum_allowed_size_gb)
+        if estimated_size_gb > maximum_allowed_size_gb:
+            status = "Error"
+            msg = (
+                f"Estimated request size ({estimated_size_gb} GB) is more than"
+                f" maximum allowed size ({maximum_allowed_size_gb} GB). Please"
+                " review your query"
+            )
+        elif estimated_size_gb < 0.01:
+            msg = "Estimated request size: <0.01 GB"
+        else:
+            msg = f"Estimated request size: {estimated_size_gb} GB"
     return {"status": status, "message": msg}
