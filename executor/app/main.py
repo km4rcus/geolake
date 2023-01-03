@@ -20,7 +20,7 @@ import time
 import pika
 import logging
 import asyncio
-from dask.distributed import Client, LocalCluster, Nanny
+from dask.distributed import Client, LocalCluster, Nanny, Status
 
 import threading, functools
 
@@ -58,7 +58,17 @@ class Executor(metaclass=LoggableMeta):
         self._channel = broker_conn.channel()
         self._db = DBManager()
 
-    def create_dask_cluster(self, dask_cluster_opts):
+    def create_dask_cluster(self, dask_cluster_opts: dict = None):
+        if dask_cluster_opts is None:
+            dask_cluster_opts = {}
+            dask_cluster_opts["scheduler_port"] = int(
+                os.getenv("DASK_SCHEDULER_PORT", 8188)
+            )
+            port = int(os.getenv("DASK_DASHBOARD_PORT", 8787))
+            dask_cluster_opts["dashboard_address"] = f":{port}"
+            dask_cluster_opts["n_workers"] = int(
+                os.getenv("DASK_N_WORKERS", 1)
+            )
         self._worker_id = self._db.create_worker(
             status="enabled",
             dask_scheduler_port=dask_cluster_opts["scheduler_port"],
@@ -80,9 +90,21 @@ class Executor(metaclass=LoggableMeta):
         self._dask_client = Client(dask_cluster)
         self._nanny = Nanny(self._dask_client.cluster.scheduler.address)
 
-    def restart_cluster(self):
-        self._dask_client.restart(wait_for_workers=False)
-        asyncio.run(self._nanny.restart())
+    def maybe_restart_cluster(self):
+        if self._dask_client.cluster.status is Status.failed:
+            self._LOG.info("attempt to restart the cluster...")
+            try:
+                self._dask_client.restart(wait_for_workers=False)
+                asyncio.run(self._nanny.restart())
+            except Exception as err:
+                self._LOG.error(
+                    "couldn't restart the cluster due to an error: %s", err
+                )
+                self._LOG.info("closing the cluster")
+                self._dask_client.cluster.close()
+        if self._dask_client.cluster.status is Status.closed:
+            self._LOG.info("recreating the cluster")
+            self.create_dask_cluster()
 
     def ack_message(self, channel, delivery_tag):
         """Note that `channel` must be the same pika channel instance via which
@@ -91,8 +113,9 @@ class Executor(metaclass=LoggableMeta):
         if channel.is_open:
             channel.basic_ack(delivery_tag)
         else:
-            # Channel is already closed, so we can't ACK this message;
-            # log and/or do something that makes sense for your app in this case.
+            self._LOG.info(
+                "cannot acknowledge the message. channel is closed!"
+            )
             pass
 
     def query(self, connection, channel, delivery_tag, body):
@@ -146,8 +169,7 @@ class Executor(metaclass=LoggableMeta):
                     "processing timout",
                     extra={"track_id": request_id},
                 )
-                # cancel processing restarting the cluster
-                self.restart_cluster()
+                future.cancel()
                 status = RequestStatus.FAILED
                 fail_reason = "Processing timeout"
         except Exception as e:
@@ -190,7 +212,9 @@ class Executor(metaclass=LoggableMeta):
         )
         cb = functools.partial(self.ack_message, channel, delivery_tag)
         connection.add_callback_threadsafe(cb)
-        #        channel.basic_ack(delivery_tag)
+
+        if status is RequestStatus.FAILED:
+            self.maybe_restart_cluster()
         self._LOG.debug("request acknowledged", extra={"track_id": request_id})
 
     def on_message(self, channel, method_frame, header_frame, body, args):
@@ -240,16 +264,7 @@ if __name__ == "__main__":
     print("channel subscribe")
     for etype in executor_types:
         if etype == "query":
-            dask_cluster_opts = {}
-            dask_cluster_opts["scheduler_port"] = int(
-                os.getenv("DASK_SCHEDULER_PORT", 8188)
-            )
-            port = int(os.getenv("DASK_DASHBOARD_PORT", 8787))
-            dask_cluster_opts["dashboard_address"] = f":{port}"
-            dask_cluster_opts["n_workers"] = int(
-                os.getenv("DASK_N_WORKERS", 1)
-            )
-            executor.create_dask_cluster(dask_cluster_opts)
+            executor.create_dask_cluster()
 
         executor.subscribe(etype)
 
