@@ -105,7 +105,7 @@ class WidgetFactory(metaclass=LoggableMeta):
     def _maybe_get_label(self, name, default=None):
         self._LOG.debug("checking label for '%s'", name)
         if (flt := self._d.metadata.filters.get(name)) is not None:
-            self._LOG.debug("found label for '%s' - ", not flt.label)
+            self._LOG.debug("found label %s for '%s' - ", flt.label, flt.name)
             return flt.label
         self._LOG.debug("filter for '%s' was not found", name)
         return default if default is not None else name
