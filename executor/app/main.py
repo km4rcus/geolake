@@ -50,6 +50,7 @@ class Executor(metaclass=LoggableMeta):
 
     def __init__(self, broker, store_path, cache_path):
         self._datastore = Datastore(cache_path=cache_path)
+        self._datastore._load_cache()
         self._store = store_path
         broker_conn = pika.BlockingConnection(
             pika.ConnectionParameters(host=broker, heartbeat=10),
