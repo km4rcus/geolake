@@ -248,7 +248,7 @@ class Datastore(metaclass=Singleton):
         dataset_id: str,
         product_id: str,
         query: GeoQuery | dict | str,
-        compute: bool = False,
+        compute: None | bool = False,
     ) -> DataCube:
         """Query dataset
 
@@ -264,7 +264,6 @@ class Datastore(metaclass=Singleton):
             If True, resulting data of DataCube will be computed, otherwise
             DataCube with `dask.Delayed` object will be returned
 
-
         Returns
         -------
         kube : DataCube
@@ -272,24 +271,31 @@ class Datastore(metaclass=Singleton):
         """
         self._LOG.debug("query: %s", query)
         if isinstance(query, str):
+            self._LOG.debug("converting query: str -> dict...")
             query = json.loads(query)
         if isinstance(query, dict):
+            self._LOG.debug("converting query: dict -> GeoQuery...")
             query = GeoQuery(**query)
         self._LOG.debug("processing GeoQuery: %s", query)
         # NOTE: we always use catalog directly and single product cache
-        kube = self.catalog[dataset_id][product_id].read_chunked()
+        self._LOG.debug("loading product...")
+        kube = self.get_cached_product(dataset_id, product_id)
         self._LOG.debug("original kube len: %s", len(kube))
         if isinstance(kube, Dataset):
             self._LOG.debug("filtering with: %s", query.filters)
             kube = kube.filter(**query.filters)
             self._LOG.debug("resulting kube len: %s", len(kube))
         if query.variable:
+            self._LOG.debug("selecting fields...")
             kube = kube[query.variable]
         if query.area:
+            self._LOG.debug("subsetting by geobbox...")
             kube = kube.geobbox(**query.area)
         if query.location:
+            self._LOG.debug("subsetting by locations...")
             kube = kube.locations(**query.location)
         if query.time:
+            self._LOG.debug("subsetting by time...")
             kube = kube.sel(
                 **{
                     "time": Datastore._maybe_convert_dict_slice_to_slice(
@@ -298,6 +304,7 @@ class Datastore(metaclass=Singleton):
                 }
             )
         if query.vertical:
+            self._LOG.debug("subsetting by vertical...")
             if isinstance(
                 vertical := Datastore._maybe_convert_dict_slice_to_slice(
                     query.vertical
@@ -309,6 +316,7 @@ class Datastore(metaclass=Singleton):
                 method = "nearest"
             kube = kube.sel(vertical=vertical, method=method)
         if compute:
+            self._LOG.debug("computing...")
             # FIXME: TypeError: __init__() got an unexpected keyword argument
             # 'fastpath'
             kube.compute()
