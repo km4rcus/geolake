@@ -46,4 +46,8 @@ class GeoQuery(BaseModel, extra="allow"):
         """Return the JSON representation of the original query submitted
         to the geokube-dds"""
         res = super().dict()
-        return json.dumps(dict(**res.pop("filters", {}), **res))
+        res = dict(**res.pop("filters", {}), **res)
+        # NOTE: skip empty values to make query representation
+        # shorter and more elegant
+        res = dict(filter(lambda item: item[1] is not None, res.items()))
+        return json.dumps(res)
