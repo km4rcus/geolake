@@ -68,5 +68,5 @@ def download_request_result(context: Context, request_id: int):
         raise FileNotFoundError
     return FileResponse(
         path=download_details.location_path,
-        filename=download_details.location_path,
+        filename=download_details.location_path.split(os.sep)[-1],
     )
