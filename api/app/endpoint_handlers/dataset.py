@@ -208,9 +208,7 @@ def estimate(
         }
         ```
     """
-    query_bytes_estimation = data_store.query(
-        dataset_id, product_id, query, compute=False
-    ).nbytes
+    query_bytes_estimation = data_store.estimate(dataset_id, product_id, query)
     return make_bytes_readable_dict(
         size_bytes=query_bytes_estimation, units=unit
     )

@@ -34,11 +34,10 @@ from meta import LoggableMeta
 _BASE_DOWNLOAD_PATH = "/downloads"
 
 
-def ds_query(ds_id, prod_id, query, compute, request_id):
+def ds_query(ds_id: str, prod_id: str, query, compute, request_id):
     res_path = os.path.join(_BASE_DOWNLOAD_PATH, request_id)
     os.makedirs(res_path, exist_ok=True)
-    ds = Datastore()
-    kube = ds.query(ds_id, prod_id, query, compute)
+    kube = Datastore().query(ds_id, prod_id, query, compute)
     if isinstance(kube, DataCube):
         return kube.persist(res_path)
     else:
@@ -91,11 +90,13 @@ class Executor(metaclass=LoggableMeta):
         self._dask_client = Client(dask_cluster)
         self._nanny = Nanny(self._dask_client.cluster.scheduler.address)
 
-    def maybe_restart_cluster(self):
+    def maybe_restart_cluster(self, status: RequestStatus):
+        if status is RequestStatus.TIMEOUT:
+            self._dask_client.cluster.close()
+            self.create_dask_cluster()
         if self._dask_client.cluster.status is Status.failed:
             self._LOG.info("attempt to restart the cluster...")
             try:
-                self._dask_client.restart(wait_for_workers=False)
                 asyncio.run(self._nanny.restart())
             except Exception as err:
                 self._LOG.error(
@@ -171,7 +172,7 @@ class Executor(metaclass=LoggableMeta):
                     extra={"track_id": request_id},
                 )
                 future.cancel()
-                status = RequestStatus.FAILED
+                status = RequestStatus.TIMEOUT
                 fail_reason = "Processing timeout"
         except Exception as e:
             self._LOG.error(
@@ -181,6 +182,7 @@ class Executor(metaclass=LoggableMeta):
                 stack_info=True,
                 extra={"track_id": request_id},
             )
+            future.cancel()
             status = RequestStatus.FAILED
             fail_reason = f"{type(e)}: {str(e)}"
         else:
@@ -195,6 +197,7 @@ class Executor(metaclass=LoggableMeta):
                     "location path is `None` - resulting dataset was empty!",
                     extra={"track_id": request_id},
                 )
+                future.cancel()
                 status = RequestStatus.FAILED
                 fail_reason = (
                     "the query resulted in an empty Dataset. Check your"
@@ -214,8 +217,7 @@ class Executor(metaclass=LoggableMeta):
         cb = functools.partial(self.ack_message, channel, delivery_tag)
         connection.add_callback_threadsafe(cb)
 
-        if status is RequestStatus.FAILED:
-            self.maybe_restart_cluster()
+        self.maybe_restart_cluster(status)
         self._LOG.debug("request acknowledged", extra={"track_id": request_id})
 
     def on_message(self, channel, method_frame, header_frame, body, args):

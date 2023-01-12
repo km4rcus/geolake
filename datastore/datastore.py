@@ -32,7 +32,6 @@ class Datastore(metaclass=Singleton):
         cat = intake.open_catalog(os.environ["CATALOG_PATH"])
         #        self.catalog = cat(CACHE_DIR=cache_path)
         self.catalog = cat
-        # NOTE: for executor we cannot preload cache as it exceeds memory!
         self.cache = None
 
     @log_execution_time(_LOG)
@@ -95,16 +94,6 @@ class Datastore(metaclass=Singleton):
                         product_id,
                         exc_info=True,
                     )
-
-    @staticmethod
-    def _maybe_convert_dict_slice_to_slice(dict_vals):
-        if "start" in dict_vals or "stop" in dict_vals:
-            return slice(
-                dict_vals.get("start"),
-                dict_vals.get("stop"),
-                dict_vals.get("step"),
-            )
-        return dict_vals
 
     @log_execution_time(_LOG)
     def dataset_list(self) -> list:
@@ -270,32 +259,74 @@ class Datastore(metaclass=Singleton):
             DataCube processed according to `query`
         """
         self._LOG.debug("query: %s", query)
-        if isinstance(query, str):
-            self._LOG.debug("converting query: str -> dict...")
-            query = json.loads(query)
-        if isinstance(query, dict):
-            self._LOG.debug("converting query: dict -> GeoQuery...")
-            query = GeoQuery(**query)
+        query = Datastore._maybe_convert_to_geoquery(query)
         self._LOG.debug("processing GeoQuery: %s", query)
         # NOTE: we always use catalog directly and single product cache
         self._LOG.debug("loading product...")
+        kube = self.catalog[dataset_id][product_id].read_chunked()
+        self._LOG.debug("original kube len: %s", len(kube))
+        return Datastore._process_query(kube, query, compute)
+
+    @log_execution_time(_LOG)
+    def estimate(
+        self,
+        dataset_id: str,
+        product_id: str,
+        query: GeoQuery | dict | str,
+    ) -> int:
+        """Estimate dataset size
+
+        Parameters
+        ----------
+        dataset_id : str
+            ID of the dataset
+        product_id : str
+            ID of the product
+        query : GeoQuery or dict or str
+            Query to be executed for the given product
+
+        Returns
+        -------
+        size : int
+            Number of bytes of the estimated kube
+        """
+        self._LOG.debug("query: %s", query)
+        query = Datastore._maybe_convert_to_geoquery(query)
+        self._LOG.debug("processing GeoQuery: %s", query)
+        # NOTE: we always use catalog directly and single product cache
+        self._LOG.debug("loading product...")
+        # NOTE: for estimation we use cached products
         kube = self.get_cached_product(dataset_id, product_id)
         self._LOG.debug("original kube len: %s", len(kube))
+        return Datastore._process_query(kube, query, False).nbytes
+
+    @staticmethod
+    def _maybe_convert_to_geoquery(query: GeoQuery | dict | str):
+        if isinstance(query, str):
+            Datastore._LOG.debug("converting query: str -> dict...")
+            query = json.loads(query)
+        if isinstance(query, dict):
+            Datastore._LOG.debug("converting query: dict -> GeoQuery...")
+            query = GeoQuery(**query)
+        return query
+
+    @staticmethod
+    def _process_query(kube, query: GeoQuery, compute: None | bool = False):
         if isinstance(kube, Dataset):
-            self._LOG.debug("filtering with: %s", query.filters)
+            Datastore._LOG.debug("filtering with: %s", query.filters)
             kube = kube.filter(**query.filters)
-            self._LOG.debug("resulting kube len: %s", len(kube))
+            Datastore._LOG.debug("resulting kube len: %s", len(kube))
         if query.variable:
-            self._LOG.debug("selecting fields...")
+            Datastore._LOG.debug("selecting fields...")
             kube = kube[query.variable]
         if query.area:
-            self._LOG.debug("subsetting by geobbox...")
+            Datastore._LOG.debug("subsetting by geobbox...")
             kube = kube.geobbox(**query.area)
         if query.location:
-            self._LOG.debug("subsetting by locations...")
+            Datastore._LOG.debug("subsetting by locations...")
             kube = kube.locations(**query.location)
         if query.time:
-            self._LOG.debug("subsetting by time...")
+            Datastore._LOG.debug("subsetting by time...")
             kube = kube.sel(
                 **{
                     "time": Datastore._maybe_convert_dict_slice_to_slice(
@@ -304,7 +335,7 @@ class Datastore(metaclass=Singleton):
                 }
             )
         if query.vertical:
-            self._LOG.debug("subsetting by vertical...")
+            Datastore._LOG.debug("subsetting by vertical...")
             if isinstance(
                 vertical := Datastore._maybe_convert_dict_slice_to_slice(
                     query.vertical
@@ -316,8 +347,16 @@ class Datastore(metaclass=Singleton):
                 method = "nearest"
             kube = kube.sel(vertical=vertical, method=method)
         if compute:
-            self._LOG.debug("computing...")
-            # FIXME: TypeError: __init__() got an unexpected keyword argument
-            # 'fastpath'
+            Datastore._LOG.debug("computing...")
             kube.compute()
         return kube
+
+    @staticmethod
+    def _maybe_convert_dict_slice_to_slice(dict_vals):
+        if "start" in dict_vals or "stop" in dict_vals:
+            return slice(
+                dict_vals.get("start"),
+                dict_vals.get("stop"),
+                dict_vals.get("step"),
+            )
+        return dict_vals

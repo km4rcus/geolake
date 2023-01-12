@@ -46,6 +46,7 @@ class RequestStatus(Enum_):
     RUNNING = auto()
     DONE = auto()
     FAILED = auto()
+    TIMEOUT = auto()
 
     @classmethod
     def _missing_(cls, value):
