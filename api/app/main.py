@@ -47,15 +47,19 @@ app = FastAPI(
 )
 
 # ======== CORS ========= #
-# TODO: origins should be limited!
-ORIGINS = ["*"]
+if "ALLOWED_CORS_ORIGINS_REGEX" in os.environ:
+    cors_kwargs = {
+        "allow_origin_regex": os.environ["ALLOWED_CORS_ORIGINS_REGEX"]
+    }
+else:
+    cors_kwargs = {"allow_origins": ["*"]}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    **cors_kwargs,
 )
 
 # ======== Prometheus metrics ========= #

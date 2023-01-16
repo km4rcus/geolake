@@ -52,7 +52,9 @@ spec:
           value: /web
         - name: ECHO_DB
           value: 'false'
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a113
+        - name: ALLOWED_CORS_ORIGINS_REGEX
+          value: https://dds(-dev|)+\.cmcc\.it.*
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a118
         name: web
         ports:
         - containerPort: 80
