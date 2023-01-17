@@ -7,7 +7,15 @@ from typing import Optional
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from aioprometheus import Counter, Summary, timer, MetricsMiddleware
+from aioprometheus import (
+    Counter,
+    Summary,
+    Gauge,
+    timer,
+    inprogress,
+    count_exceptions,
+    MetricsMiddleware,
+)
 from aioprometheus.asgi.starlette import metrics
 
 from geoquery.geoquery import GeoQuery
@@ -66,10 +74,18 @@ app.add_middleware(
 app.add_middleware(MetricsMiddleware)
 app.add_route("/metrics", metrics)
 
-app.state.request_time = Summary(
-    "request_processing_seconds", "Time spent processing request"
+app.state.api_request_duration_seconds = Summary(
+    "api_request_duration_seconds", "Requests duration"
 )
-app.state.request = Counter("request_total", "Total number of requests")
+app.state.api_http_requests_total = Counter(
+    "api_http_requests_total", "Total number of requests"
+)
+app.state.api_exceptions_total = Counter(
+    "api_exceptions_total", "Total number of exception raised"
+)
+app.state.api_requests_inprogress_total = Gauge(
+    "api_requests_inprogress_total", "Endpoints being currently in progress"
+)
 
 # ======== Endpoints definitions ========= #
 @app.get("/")
@@ -79,14 +95,22 @@ async def dds_info():
 
 
 @app.get("/datasets")
-@timer(app.state.request_time, labels={"route": "GET /datasets"})
+@timer(
+    app.state.api_request_duration_seconds, labels={"route": "GET /datasets"}
+)
+@inprogress(
+    app.state.api_requests_inprogress_total, labels={"route": "GET /datasets"}
+)
+@count_exceptions(
+    app.state.api_exceptions_total, labels={"route": "GET /datasets"}
+)
 async def get_datasets(
     request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """List all products eligible for a user defined by user_token"""
-    app.state.request.inc({"route": "GET /datasets"})
+    app.state.api_http_requests_total.inc({"route": "GET /datasets"})
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -98,7 +122,15 @@ async def get_datasets(
 
 @app.get("/datasets/{dataset_id}/{product_id}")
 @timer(
-    app.state.request_time,
+    app.state.api_request_duration_seconds,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+)
+@inprogress(
+    app.state.api_requests_inprogress_total,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+)
+@count_exceptions(
+    app.state.api_exceptions_total,
     labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
 )
 async def get_product_details(
@@ -109,7 +141,9 @@ async def get_product_details(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for the requested product if user is authorized"""
-    app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
+    app.state.api_http_requests_total.inc(
+        {"route": "GET /datasets/{dataset_id}/{product_id}"}
+    )
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -125,7 +159,7 @@ async def get_product_details(
 
 @app.get("/datasets/{dataset_id}/{product_id}/metadata")
 @timer(
-    app.state.request_time,
+    app.state.api_request_duration_seconds,
     labels={"route": "GET /datasets/{dataset_id}/{product_id}/metadata"},
 )
 async def get_metadata(
@@ -136,7 +170,7 @@ async def get_metadata(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get metadata of the given product"""
-    app.state.request.inc(
+    app.state.api_http_requests_total.inc(
         {"route": "GET /datasets/{dataset_id}/{product_id}/metadata"}
     )
     try:
@@ -152,7 +186,15 @@ async def get_metadata(
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
 @timer(
-    app.state.request_time,
+    app.state.api_request_duration_seconds,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
+)
+@inprogress(
+    app.state.api_requests_inprogress_total,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
+)
+@count_exceptions(
+    app.state.api_exceptions_total,
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
 )
 async def estimate(
@@ -165,7 +207,7 @@ async def estimate(
     unit: str = None,
 ):
     """Estimate the resulting size of the query"""
-    app.state.request.inc(
+    app.state.api_http_requests_total.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )
     try:
@@ -185,7 +227,15 @@ async def estimate(
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
 @timer(
-    app.state.request_time,
+    app.state.api_request_duration_seconds,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
+)
+@inprogress(
+    app.state.api_requests_inprogress_total,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
+)
+@count_exceptions(
+    app.state.api_exceptions_total,
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
 )
 async def query(
@@ -197,7 +247,7 @@ async def query(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieve"""
-    app.state.request.inc(
+    app.state.api_http_requests_total.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
     )
     try:
@@ -215,14 +265,16 @@ async def query(
 
 
 @app.get("/requests")
-@timer(app.state.request_time, labels={"route": "GET /requests"})
+@timer(
+    app.state.api_request_duration_seconds, labels={"route": "GET /requests"}
+)
 async def get_requests(
     request: Request,
     dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get all requests for the user"""
-    app.state.request.inc({"route": "GET /requests"})
+    app.state.api_http_requests_total.inc({"route": "GET /requests"})
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -234,7 +286,7 @@ async def get_requests(
 
 @app.get("/requests/{request_id}/status")
 @timer(
-    app.state.request_time,
+    app.state.api_request_duration_seconds,
     labels={"route": "GET /requests/{request_id}/status"},
 )
 async def get_request_status(
@@ -245,7 +297,9 @@ async def get_request_status(
 ):
     """Get status of the request without authentication"""
     # NOTE: no auth required for checking status
-    app.state.request.inc({"route": "GET /requests/{request_id}/status"})
+    app.state.api_http_requests_total.inc(
+        {"route": "GET /requests/{request_id}/status"}
+    )
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -259,7 +313,8 @@ async def get_request_status(
 
 @app.get("/requests/{request_id}/size")
 @timer(
-    app.state.request_time, labels={"route": "GET /requests/{request_id}/size"}
+    app.state.api_request_duration_seconds,
+    labels={"route": "GET /requests/{request_id}/size"},
 )
 async def get_request_resulting_size(
     request: Request,
@@ -268,7 +323,9 @@ async def get_request_resulting_size(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get size of the file being the result of the request"""
-    app.state.request.inc({"route": "GET /requests/{request_id}/size"})
+    app.state.api_http_requests_total.inc(
+        {"route": "GET /requests/{request_id}/size"}
+    )
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -282,7 +339,8 @@ async def get_request_resulting_size(
 
 @app.get("/requests/{request_id}/uri")
 @timer(
-    app.state.request_time, labels={"route": "GET /requests/{request_id}/uri"}
+    app.state.api_request_duration_seconds,
+    labels={"route": "GET /requests/{request_id}/uri"},
 )
 async def get_request_uri(
     request: Request,
@@ -291,7 +349,9 @@ async def get_request_uri(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get download URI for the request"""
-    app.state.request.inc({"route": "GET /requests/{request_id}/uri"})
+    app.state.api_http_requests_total.inc(
+        {"route": "GET /requests/{request_id}/uri"}
+    )
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -302,7 +362,10 @@ async def get_request_uri(
 
 
 @app.get("/download/{request_id}")
-@timer(app.state.request_time, labels={"route": "GET /download/{request_id}"})
+@timer(
+    app.state.api_request_duration_seconds,
+    labels={"route": "GET /download/{request_id}"},
+)
 async def download_request_result(
     request: Request,
     request_id: int,
@@ -310,7 +373,9 @@ async def download_request_result(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Download result of the request"""
-    app.state.request.inc({"route": "GET /download/{request_id}"})
+    app.state.api_http_requests_total.inc(
+        {"route": "GET /download/{request_id}"}
+    )
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token
@@ -327,7 +392,10 @@ async def download_request_result(
 
 
 @app.post("/users/add")
-@timer(app.state.request_time, labels={"route": "POST /users/add/"})
+@timer(
+    app.state.api_request_duration_seconds,
+    labels={"route": "POST /users/add/"},
+)
 async def add_user(
     request: Request,
     user: UserDTO,
@@ -335,7 +403,7 @@ async def add_user(
     user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Add user to the database"""
-    app.state.request.inc({"route": "POST /users/add/"})
+    app.state.api_http_requests_total.inc({"route": "POST /users/add/"})
     try:
         context = ContextCreator.new_context(
             request, rid=dds_request_id, user_token=user_token

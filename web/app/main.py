@@ -7,7 +7,15 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from geoquery.geoquery import GeoQuery
 
-from aioprometheus import Counter, Summary, timer, MetricsMiddleware
+from aioprometheus import (
+    Counter,
+    Summary,
+    Gauge,
+    timer,
+    inprogress,
+    count_exceptions,
+    MetricsMiddleware,
+)
 from aioprometheus.asgi.starlette import metrics
 
 from .access import AccessManager
@@ -57,10 +65,18 @@ app.add_middleware(
 app.add_middleware(MetricsMiddleware)
 app.add_route("/metrics", metrics)
 
-app.state.request_time = Summary(
-    "request_processing_seconds", "Time spent processing request"
+app.state.web_request_duration_seconds = Summary(
+    "web_request_duration_seconds", "Request duration"
 )
-app.state.request = Counter("request_total", "Total number of requests")
+app.state.web_http_requests_total = Counter(
+    "web_http_requests_total", "Total number of requests"
+)
+app.state.web_exceptions_total = Counter(
+    "web_exceptions_total", "Total number of exception raised"
+)
+app.state.web_requests_inprogress_total = Gauge(
+    "web_requests_inprogress_total", "Endpoints being currently in progress"
+)
 
 # ======== Endpoints definitions ========= #
 @app.get("/")
@@ -70,13 +86,21 @@ async def dds_info():
 
 
 @app.get("/datasets")
-@timer(app.state.request_time, labels={"route": "GET /datasets"})
+@timer(
+    app.state.web_request_duration_seconds, labels={"route": "GET /datasets"}
+)
+@count_exceptions(
+    app.state.web_exceptions_total, labels={"route": "GET /datasets"}
+)
+@inprogress(
+    app.state.web_requests_inprogress_total, labels={"route": "GET /datasets"}
+)
 async def get_datasets(
     request: Request,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get list of eligible datasets for the home page of the Webportal"""
-    app.state.request.inc({"route": "GET /datasets"})
+    app.state.web_http_requests_total.inc({"type": "GET /datasets"})
     try:
         context = Context(request, authorization, enable_public=True)
         datasets = GeokubeAPIRequester.get(url="/datasets", context=context)
@@ -88,7 +112,15 @@ async def get_datasets(
 
 @app.get("/datasets/{dataset_id}/{product_id}")
 @timer(
-    app.state.request_time,
+    app.state.web_request_duration_seconds,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+)
+@count_exceptions(
+    app.state.web_exceptions_total,
+    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+)
+@inprogress(
+    app.state.web_requests_inprogress_total,
     labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
 )
 async def get_details_product(
@@ -98,7 +130,9 @@ async def get_details_product(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for Webportal"""
-    app.state.request.inc({"route": "GET /datasets/{dataset_id}/{product_id}"})
+    app.state.web_http_requests_total.inc(
+        {"type": "GET /datasets/{dataset_id}/{product_id}"}
+    )
     try:
         context = Context(request, authorization, enable_public=True)
         details = GeokubeAPIRequester.get(
@@ -112,7 +146,15 @@ async def get_details_product(
 
 @app.post("/datasets/{dataset_id}/{product_id}/execute")
 @timer(
-    app.state.request_time,
+    app.state.web_request_duration_seconds,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
+)
+@count_exceptions(
+    app.state.web_exceptions_total,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
+)
+@inprogress(
+    app.state.web_requests_inprogress_total,
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
 )
 async def execute(
@@ -123,7 +165,7 @@ async def execute(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieving by using geokube-dds API"""
-    app.state.request.inc(
+    app.state.web_http_requests_total.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
     )
     try:
@@ -145,7 +187,15 @@ async def execute(
 
 @app.post("/datasets/{dataset_id}/{product_id}/estimate")
 @timer(
-    app.state.request_time,
+    app.state.web_request_duration_seconds,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
+)
+@count_exceptions(
+    app.state.web_exceptions_total,
+    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
+)
+@inprogress(
+    app.state.web_requests_inprogress_total,
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
 )
 async def estimate(
@@ -156,7 +206,7 @@ async def estimate(
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Estimate the resulting size of the query by using geokube-dds API"""
-    app.state.request.inc(
+    app.state.web_http_requests_total.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )
     try:
@@ -197,13 +247,15 @@ async def get_api_key(
 
 
 @app.get("/requests")
-@timer(app.state.request_time, labels={"route": "GET /requests"})
+@timer(
+    app.state.web_request_duration_seconds, labels={"route": "GET /requests"}
+)
 async def get_requests(
     request: Request,
     authorization: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get requests for a user the given Authorization token"""
-    app.state.request.inc({"route": "GET /requests"})
+    app.state.web_http_requests_total.inc({"type": "GET /requests"})
     try:
         context = Context(request, authorization, enable_public=False)
         response_json = GeokubeAPIRequester.get(
