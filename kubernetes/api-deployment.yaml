@@ -38,11 +38,17 @@ spec:
         - name: POSTGRES_HOST
           value: db
         - name: POSTGRES_PASSWORD
-          value: dds
+          valueFrom:
+            secretKeyRef:
+              name: db
+              key: user_psw
         - name: POSTGRES_PORT
           value: '5432'
         - name: POSTGRES_USER
-          value: dds
+          valueFrom:
+            secretKeyRef:
+              name: db
+              key: user_name
         - name: ENDPOINT_PREFIX
           value: /api
         - name: ECHO_DB

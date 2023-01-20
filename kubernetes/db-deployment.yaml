@@ -24,11 +24,17 @@ spec:
             - name: POSTGRES_HOST
               value: db
             - name: POSTGRES_PASSWORD
-              value: dds
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: user_psw
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_USER
-              value: dds
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: user_name
           image: postgres:14.1
           name: db
           ports:
