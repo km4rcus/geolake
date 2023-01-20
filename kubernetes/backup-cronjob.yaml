@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: geodds
+spec:
+  schedule: "0 3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: dump
+            image: postgres:14.1
+            volumeMounts:
+            - mountPath: /db-backup
+              name: db-backup
+              readOnly: false
+            args:
+              - /bin/sh
+              - -c
+              - /db-backup/backup.sh 
+            env:
+              - name: POSTGRES_DB
+                value: dds
+              - name: POSTGRES_HOST
+                value: db                
+              - name: POSTGRES_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: db
+                    key: user_psw
+              - name: POSTGRES_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: db
+                    key: user_name    
+          volumes:
+          - hostPath:
+              path: /work/services/dds/DDS-2.0/db-backup
+            name: db-backup       
+          restartPolicy: OnFailure
+
