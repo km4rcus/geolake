@@ -9,17 +9,19 @@ spec:
     spec:
       template:
         spec:
+          imagePullSecrets:
+          - name: scalereg      
           containers:
-          - name: dump
-            image: postgres:14.1
+          - name: backup
+            image: rg.nl-ams.scw.cloud/dds-production/backup:v0.1a1
             volumeMounts:
-            - mountPath: /db-backup
-              name: db-backup
+            - mountPath: /snapshots
+              name: snapshots
               readOnly: false
             args:
               - /bin/sh
               - -c
-              - /db-backup/backup.sh 
+              - /scripts/do_backup.sh 
             env:
               - name: POSTGRES_DB
                 value: dds
@@ -37,7 +39,7 @@ spec:
                     key: user_name    
           volumes:
           - hostPath:
-              path: /work/services/dds/DDS-2.0/db-backup
-            name: db-backup       
+              path: /home/dds/db-backup-dds-dev
+            name: snapshots      
           restartPolicy: OnFailure
 
