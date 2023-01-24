@@ -92,6 +92,7 @@ class Executor(metaclass=LoggableMeta):
 
     def maybe_restart_cluster(self, status: RequestStatus):
         if status is RequestStatus.TIMEOUT:
+            self._LOG.info("recreating the cluster due to timeout")
             self._dask_client.cluster.close()
             self.create_dask_cluster()
         if self._dask_client.cluster.status is Status.failed:
@@ -160,6 +161,7 @@ class Executor(metaclass=LoggableMeta):
                         extra={"track_id": request_id},
                     )
                     location_path = future.result()
+                    status = RequestStatus.DONE
                     break
                 self._LOG.debug(
                     "result is not ready yet. sleeping 30 sec",
@@ -182,27 +184,8 @@ class Executor(metaclass=LoggableMeta):
                 stack_info=True,
                 extra={"track_id": request_id},
             )
-            future.cancel()
             status = RequestStatus.FAILED
             fail_reason = f"{type(e)}: {str(e)}"
-        else:
-            if location_path:
-                self._LOG.debug(
-                    "updating status and download URI for request",
-                    extra={"track_id": request_id},
-                )
-                status = RequestStatus.DONE
-            elif status is not RequestStatus.FAILED:
-                self._LOG.warning(
-                    "location path is `None` - resulting dataset was empty!",
-                    extra={"track_id": request_id},
-                )
-                future.cancel()
-                status = RequestStatus.FAILED
-                fail_reason = (
-                    "the query resulted in an empty Dataset. Check your"
-                    " request!"
-                )
         self._db.update_request(
             request_id=request_id,
             worker_id=self._worker_id,

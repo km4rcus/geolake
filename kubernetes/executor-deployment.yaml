@@ -44,18 +44,18 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: db
               key: user_psw
+              name: db
         - name: POSTGRES_PORT
           value: '5432'
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: db
               key: user_name
+              name: db
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-executor:v0.1a94
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-executor:v0.1a96
         name: executor
         ports:
         - containerPort: 8787
