@@ -41,15 +41,15 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: db
               key: user_psw
+              name: db
         - name: POSTGRES_PORT
           value: '5432'
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: db
               key: user_name
+              name: db
         - name: API_URL
           value: http://api:8080
         - name: DOWNLOAD_PREFIX
@@ -60,7 +60,7 @@ spec:
           value: 'false'
         - name: ALLOWED_CORS_ORIGINS_REGEX
           value: https://dds(-dev|)+\.cmcc\.it.*
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a121
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a122
         name: web
         ports:
         - containerPort: 80

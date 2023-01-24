@@ -25,6 +25,7 @@ class RequestStatusDTO(Enum):
     Running = "RUNNING"
     Pending = "PENDING"
     Failed = "FAILED"
+    Timeout = "TIMEOUT"
 
 
 class Contact(BaseModel):
