@@ -26,7 +26,9 @@ spec:
         - ./app/main.py
         env:
         - name: RESULT_CHECK_RETRIES
-          value: '3'
+          value: '20'
+        - name: SLEEP_SEC
+          value: '30'
         - name: DASK_N_WORKERS
           value: '2'
         - name: LOGGING_LEVEL
