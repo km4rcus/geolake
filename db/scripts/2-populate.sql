@@ -1,5 +1,13 @@
-INSERT INTO roles VALUES (1, 'public');
+INSERT INTO roles VALUES (0, 'public');
+INSERT INTO roles VALUES (1, 'admin');
 INSERT INTO roles VALUES (2, 'internal');
-INSERT INTO roles VALUES (3, 'admin');
-INSERT INTO users VALUES (1, '1234', '1234', 'Mario Rossi', 2);
-INSERT INTO users VALUES (2, '4321', '4321', 'Jan Kowalski', 1);
+INSERT INTO roles VALUES (3, 'cmcc');
+INSERT INTO roles VALUES (4, 'silvanus');
+INSERT INTO roles VALUES (5, 'atlantic-project');
+INSERT INTO roles VALUES (6, 'spei-review');
+INSERT INTO roles VALUES (7, 'climate-projection-review');
+INSERT INTO users VALUES ('d9152e98-9de8-4064-b281-f61f8cecffe9', 'arZFgTatrOJpJ3egHEjRUyTUDt763SX6uAI4m2CVT4I', 'Mario Rossi');
+INSERT INTO users VALUES ('54a0473f-51ea-45a7-a3e9-eb150fc47302', 'hcuxnej74hbhGagdfBua4sd5VVzxchysrg', 'Test user');
+INSERT INTO users_roles VALUES (0, 'd9152e98-9de8-4064-b281-f61f8cecffe9', 2);
+INSERT INTO users_roles VALUES (1, '54a0473f-51ea-45a7-a3e9-eb150fc47302', 2);
+INSERT INTO users_roles VALUES (2, 'd9152e98-9de8-4064-b281-f61f8cecffe9', 4);

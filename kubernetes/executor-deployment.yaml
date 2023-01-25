@@ -25,6 +25,14 @@ spec:
         - python
         - ./app/main.py
         env:
+        - name: RESULT_CHECK_RETRIES
+          value: '20'
+        - name: SLEEP_SEC
+          value: '30'
+        - name: DASK_N_WORKERS
+          value: '2'
+        - name: LOGGING_LEVEL
+          value: DEBUG
         - name: CATALOG_PATH
           value: /catalog/catalog.yaml
         - name: CACHE_PATH
@@ -36,29 +44,35 @@ spec:
         - name: POSTGRES_HOST
           value: db
         - name: POSTGRES_PASSWORD
-          value: dds
+          valueFrom:
+            secretKeyRef:
+              key: user_psw
+              name: db
         - name: POSTGRES_PORT
           value: '5432'
         - name: POSTGRES_USER
-          value: dds
+          valueFrom:
+            secretKeyRef:
+              key: user_name
+              name: db
         - name: DASK_DASHBOARD_PORT
           value: '8787'
-        image: rg.fr-par.scw.cloud/ddsr/geodds-executor:v0.1a87
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-executor:v0.1a98
         name: executor
         ports:
         - containerPort: 8787
         resources:
           limits:
             cpu: '4'
-            memory: 4Gi
+            memory: 16Gi
           requests:
             cpu: '4'
-            memory: 4Gi
+            memory: 16Gi
         volumeMounts:
         - mountPath: /catalog
           name: catalog
           readOnly: false
-        - mountPath: /work/services/dds/cache
+        - mountPath: /work/services/dds/DDS-2.0/cache
           name: cache
           readOnly: false
         - mountPath: /data
@@ -71,13 +85,13 @@ spec:
       restartPolicy: Always
       volumes:
       - hostPath:
-          path: /work/services/dds/dds-catalog/Catalog
+          path: /work/services/dds/DDS-2.0/catalog/Catalog
         name: catalog
       - hostPath:
-          path: /work/services/dds/downloads
+          path: /work/services/dds/DDS-2.0/downloads
         name: downloads
       - hostPath:
-          path: /work/services/dds/cache
+          path: /work/services/dds/DDS-2.0/cache
         name: cache
       - hostPath:
           path: /data

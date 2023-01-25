@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import yaml
 import logging
+import uuid
+import secrets
 from datetime import datetime
 from enum import auto, Enum as Enum_, unique
 
@@ -17,19 +19,38 @@ from sqlalchemy import (
     Sequence,
     String,
     Table,
-    BigInteger,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 from .singleton import Singleton
 
 
+def is_true(item) -> bool:
+    """If `item` represents `True` value"""
+    if isinstance(item, str):
+        return item.lower() in ["y", "yes", "true", "t"]
+    return bool(item)
+
+
+def generate_key() -> str:
+    """Generate as new api key for a user"""
+    return secrets.token_urlsafe(nbytes=32)
+
+
 @unique
 class RequestStatus(Enum_):
+    """Status of the Request"""
+
     PENDING = auto()
     RUNNING = auto()
     DONE = auto()
     FAILED = auto()
+    TIMEOUT = auto()
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.PENDING
 
 
 class _Repr:
@@ -42,6 +63,14 @@ class _Repr:
 Base = declarative_base(cls=_Repr, name="Base")
 
 
+association_table = Table(
+    "users_roles",
+    Base.metadata,
+    Column("user_id", ForeignKey("users.user_id")),
+    Column("role_id", ForeignKey("roles.role_id")),
+)
+
+
 class Role(Base):
     __tablename__ = "roles"
     role_id = Column(Integer, Sequence("role_id_seq"), primary_key=True)
@@ -50,12 +79,14 @@ class Role(Base):
 
 class User(Base):
     __tablename__ = "users"
-    user_id = Column(Integer, primary_key=True)
-    keycloak_id = Column(Integer, nullable=False, unique=True)
-    api_key = Column(String(255), nullable=False, unique=True)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # keycloak_id = Column(UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4)
+    api_key = Column(
+        String(255), nullable=False, unique=True, default=generate_key
+    )
     contact_name = Column(String(255))
-    role_id = Column(Integer, ForeignKey("roles.role_id"))
     requests = relationship("Request")
+    roles = relationship("Role", secondary=association_table)
 
 
 class Worker(Base):
@@ -73,23 +104,28 @@ class Request(Base):
     request_id = Column(Integer, primary_key=True)
     status = Column(Enum(RequestStatus), nullable=False)
     priority = Column(Integer)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False
+    )
     worker_id = Column(Integer, ForeignKey("workers.worker_id"))
     dataset = Column(String(255))
     product = Column(String(255))
     query = Column(JSON())
     estimate_size_bytes = Column(Integer)
-    download_id = Column(Integer, unique=True)
     created_on = Column(DateTime, nullable=False)
     last_update = Column(DateTime)
     fail_reason = Column(String(1000))
+    download = relationship("Download", uselist=False, lazy="selectin")
 
 
 class Download(Base):
     __tablename__ = "downloads"
     download_id = Column(Integer, primary_key=True)
     download_uri = Column(String(255))
-    storage_id = Column(Integer)
+    request_id = Column(
+        Integer, ForeignKey("requests.request_id"), nullable=False
+    )
+    storage_id = Column(Integer, ForeignKey("storages.storage_id"))
     location_path = Column(String(255))
     size_bytes = Column(Integer)
     created_on = Column(DateTime, nullable=False)
@@ -105,8 +141,7 @@ class Storage(Base):
 
 
 class DBManager(metaclass=Singleton):
-
-    _LOG = logging.getLogger("DBManager")
+    _LOG = logging.getLogger("geokube.DBManager")
 
     def __init__(self) -> None:
         for venv_key in [
@@ -116,15 +151,15 @@ class DBManager(metaclass=Singleton):
             "POSTGRES_PORT",
         ]:
             self._LOG.info(
-                "Attempt to load data from environment variable:"
-                f" {venv_key}..."
+                "attempt to load data from environment variable: `%s`",
+                venv_key,
             )
             if venv_key not in os.environ:
                 self._LOG.error(
-                    f"Missing required environment variable: {venv_key}"
+                    "missing required environment variable: `%s`", venv_key
                 )
                 raise KeyError(
-                    f"Missing required environment variable: {venv_key}"
+                    f"missing required environment variable: {venv_key}"
                 )
 
         user = os.environ["POSTGRES_USER"]
@@ -134,18 +169,58 @@ class DBManager(metaclass=Singleton):
         database = os.environ["POSTGRES_DB"]
 
         url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
-        self.__engine = create_engine(url, echo=True)
+        self.__engine = create_engine(
+            url, echo=is_true(os.environ.get("ECHO_DB", False))
+        )
         self.__session_maker = sessionmaker(bind=self.__engine)
-        Base.metadata.create_all(self.__engine)
+
+    def _create_database(self):
+        try:
+            Base.metadata.create_all(self.__engine)
+        except Exception as exception:
+            self._LOG.error(
+                "could not create a database due to an error", exc_info=True
+            )
+            raise exception
+
+    def add_user(
+        self,
+        contact_name: str,
+        user_id: UUID | None = None,
+        api_key: str | None = None,
+        roles_names: list[str] | None = None,
+    ):
+        with self.__session_maker() as session:
+            user = User(
+                user_id=user_id, api_key=api_key, contact_name=contact_name
+            )
+            if roles_names:
+                user.roles.extend(
+                    [
+                        session.query(Role)
+                        .where(Role.role_name == role_name)
+                        .all()[0]  # NOTE: role_name is unique in the database
+                        for role_name in roles_names
+                    ]
+                )
+            session.add(user)
+            session.commit()
+            return user
 
     def get_user_details(self, user_id: int):
         with self.__session_maker() as session:
             return session.query(User).get(user_id)
 
-    def get_user_role_name(self, user_id: int):
+    def get_user_roles_names(self, user_id: int | None = None) -> list[str]:
+        if user_id is None:
+            return ["public"]
         with self.__session_maker() as session:
-            user = session.query(User).get(user_id)
-            return session.query(Role).get(user.role_id).role_name
+            return list(
+                map(
+                    lambda role: role.role_name,
+                    session.query(User).get(user_id).roles,
+                )
+            )
 
     def get_request_details(self, request_id: int):
         with self.__session_maker() as session:
@@ -158,7 +233,7 @@ class DBManager(metaclass=Singleton):
                 raise ValueError(
                     f"Request with id: {request_id} doesn't exist"
                 )
-            return session.query(Download).get(request_details.download_id)
+            return request_details.download
 
     def create_request(
         self,
@@ -169,7 +244,6 @@ class DBManager(metaclass=Singleton):
         worker_id: int | None = None,
         priority: str | None = None,
         estimate_size_bytes: int | None = None,
-        download_id: int | None = None,
         status: RequestStatus = RequestStatus.PENDING,
     ) -> int:
         # TODO: Add more request-related parameters to this method.
@@ -183,7 +257,6 @@ class DBManager(metaclass=Singleton):
                 product=product,
                 query=query,
                 estimate_size_bytes=estimate_size_bytes,
-                download_id=download_id,
                 created_on=datetime.utcnow(),
             )
             session.add(request)
@@ -200,25 +273,23 @@ class DBManager(metaclass=Singleton):
         fail_reason: str = None,
     ) -> int:
         with self.__session_maker() as session:
-            download_id = None
+            request = session.query(Request).get(request_id)
+            request.status = status
+            request.worker_id = worker_id
+            request.last_update = datetime.utcnow()
+            request.fail_reason = fail_reason
+            session.commit()
             if status is RequestStatus.DONE:
                 download = Download(
                     location_path=location_path,
                     storage_id=0,
+                    request_id=request.request_id,
                     created_on=datetime.utcnow(),
                     download_uri=f"/download/{request_id}",
                     size_bytes=size_bytes,
                 )
                 session.add(download)
                 session.commit()
-                download_id = download.download_id
-            request = session.query(Request).get(request_id)
-            request.status = status
-            request.worker_id = worker_id
-            request.last_update = datetime.utcnow()
-            request.download_id = download_id
-            request.fail_reason = fail_reason
-            session.commit()
             return request.request_id
 
     def get_request_status_and_reason(
@@ -235,15 +306,14 @@ class DBManager(metaclass=Singleton):
         with self.__session_maker() as session:
             return session.query(User).get(user_id).requests
 
-    def get_download_details_for_request_id(self, request_id) -> str:
+    def get_download_details_for_request_id(self, request_id) -> Download:
         with self.__session_maker() as session:
             request_details = session.query(Request).get(request_id)
             if request_details is None:
                 raise IndexError(
                     f"Request with id: `{request_id}` does not exist!"
                 )
-            download_id = request_details.download_id
-            return session.query(Download).get(download_id)
+            return request_details.download
 
     def create_worker(
         self,

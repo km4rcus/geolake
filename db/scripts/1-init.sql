@@ -2,20 +2,30 @@
 -- CREATE DATABASE dds;
 -- GRANT ALL PRIVILEGES ON DATABASE dds TO dds;
 
-CREATE TABLE IF NOT EXISTS roles (
-   role_id SERIAL PRIMARY KEY,
-   role_name VARCHAR (255) UNIQUE NOT NULL
-);
+-- extension for using UUID column type
+CREATE EXTENSION "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS users (
-    user_id SERIAL PRIMARY KEY,
-    keycloak_id INT UNIQUE NOT NULL,
+    user_id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     api_key VARCHAR(255) UNIQUE NOT NULL,
-    contact_name VARCHAR(255),
-    role_id INT,
+    contact_name VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS roles (
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR (255) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS users_roles (
+    ur_id SERIAL PRIMARY KEY,
+    user_id uuid NOT NULL,
+    role_id SERIAL NOT NULL,
+    CONSTRAINT fk_user
+        FOREIGN KEY(user_id) 
+            REFERENCES users(user_id),
     CONSTRAINT fk_role
         FOREIGN KEY(role_id) 
-	        REFERENCES roles(role_id)
+            REFERENCES roles(role_id)              
 );
 
 CREATE TABLE IF NOT EXISTS workers (
@@ -31,13 +41,12 @@ CREATE TABLE IF NOT EXISTS requests (
     request_id SERIAL PRIMARY KEY, 
     status VARCHAR(255) NOT NULL, 
     priority INT,
-    user_id INT NOT NULL,
+    user_id uuid NOT NULL,
     worker_id INT,
     dataset VARCHAR(255),
     product VARCHAR(255), 
     query json,
     estimate_size_bytes BIGINT,
-    download_id INT UNIQUE,
     created_on TIMESTAMP NOT NULL,
     last_update TIMESTAMP,
     fail_reason VARCHAR(1000),
@@ -52,10 +61,14 @@ CREATE TABLE IF NOT EXISTS requests (
 CREATE TABLE IF NOT EXISTS downloads (
     download_id SERIAL PRIMARY KEY,
     download_uri VARCHAR(255),
+    request_id INT UNIQUE,
     storage_id INT,
     location_path VARCHAR(255),
     size_bytes BIGINT,
-    created_on TIMESTAMP NOT NULL
+    created_on TIMESTAMP NOT NULL,
+    CONSTRAINT fk_req
+        FOREIGN KEY(request_id) 
+	        REFERENCES requests(request_id) 
 );
 
 CREATE TABLE IF NOT EXISTS storages (

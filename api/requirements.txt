@@ -5,3 +5,4 @@ pika
 intake
 sqlalchemy
 pytest
+aioprometheus
