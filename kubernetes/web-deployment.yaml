@@ -60,7 +60,7 @@ spec:
           value: 'false'
         - name: ALLOWED_CORS_ORIGINS_REGEX
           value: https://dds(-dev|)+\.cmcc\.it.*
-        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a122
+        image: rg.nl-ams.scw.cloud/dds-production/geodds-web:v0.1a124
         name: web
         ports:
         - containerPort: 80
