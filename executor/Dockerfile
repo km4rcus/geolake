@@ -1,16 +1,12 @@
-FROM continuumio/miniconda3
-WORKDIR /code
-RUN conda install -c conda-forge xesmf cartopy psycopg2 -y
-COPY ./executor/requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-COPY geokube_packages/geokube-0.1a0-py3-none-any.whl /code
-COPY geokube_packages/intake_geokube-0.1a0-py3-none-any.whl /code
-RUN pip install /code/geokube-0.1a0-py3-none-any.whl
-RUN pip install /code/intake_geokube-0.1a0-py3-none-any.whl
-COPY ./db/dbmanager /code/app/db/dbmanager
-COPY ./utils/wait-for-it.sh /code/wait-for-it.sh
-COPY ./datastore /code/app/datastore
-COPY ./geoquery /code/app/geoquery
-COPY ./resources /code/app/resources
-COPY ./executor/app /code/app
-CMD [ "python", "./app/main.py" ]
+ARG REGISTRY=rg.nl-ams.scw.cloud/geodds-production
+ARG TAG=latest
+ARG SENTINEL_USERNAME=...
+ARG SENTINEL_PASSWORD=...
+FROM $REGISTRY/geodds-datastore:$TAG
+WORKDIR /app
+ENV SENTINEL_USERNAME=$SENTINEL_USERNAME
+ENV SENTINEL_PASSWORD=$SENTINEL_PASSWORD
+COPY requirements.txt /code/requirements.txt
+RUN pip install --no-cache-dir -r /code/requirements.txt
+COPY app /app
+CMD [ "python", "main.py" ]
