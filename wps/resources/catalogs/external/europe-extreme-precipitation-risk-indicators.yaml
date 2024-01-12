@@ -1,0 +1,7 @@
+sources:
+  yearly:
+    description: Europe-extreme-precipitation-risk-indicators Yearly Dataset
+    driver: geokube_netcdf
+    role: admin
+    args:
+      path: '/home/wps-test/WPS/testfiles/europe-extreme-precipitation-risk-indicators/yearly/dds/europe-extreme-precipitation-risk-indicators-yearly.nc'

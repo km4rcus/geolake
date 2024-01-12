@@ -1,0 +1,9 @@
+# conda env create -f environment-docs.yml
+name: rook
+channels:
+- conda-forge
+- defaults
+dependencies:
+- python=3.7
+- pywps>=4.4
+- sphinx

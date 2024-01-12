@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wps
+  namespace: development
+data:
+  custom.cfg: |
+    [metadata:main]
+    identification_title = rook
+    identification_abstract = Rook is a Web Processing Service (WPS) of the roocs project to allow remote operations like subsetting on climate model data.
+    identification_keywords = PyWPS, WPS, OGC, processing, birdhouse, roocs, copernicus
+    identification_keywords_type = theme
+    provider_name = rook4.cloud.dkrz.de
+    provider_url=http://rook.readthedocs.org/en/latest/
+    identification_accessconstraints = open access 
+
+    [server]
+    url = https://ddshub-dev.cmcc.it/wps
+    outputurl =  https://ddshub-dev.cmcc.it/wps/outputs/
+    outputpath=/opt/wps/outputs
+    output_dir=/opt/wps/outputs
+    allowedinputpaths = /
+    maxprocesses = 10
+    parallelprocesses = 2
+    storage_copy_function = link
+
+    [processing]
+    mode=default
+
+    [logging]
+    level = INFO
+    file = rook.log
+    format = %(asctime)s] [%(levelname)s] line=%(lineno)s module=%(module)s %(message)s

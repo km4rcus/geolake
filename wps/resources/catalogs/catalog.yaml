@@ -1,0 +1,10 @@
+sources:
+
+  europe-extreme-precipitation-risk-indicators:
+    driver: intake.catalog.local.YAMLFileCatalog
+    args:
+      path: '/home/wps-test/WPS/catalog/external/europe-extreme-precipitation-risk-indicators.yaml'
+  e-obs:
+    driver: intake.catalog.local.YAMLFileCatalog
+    args:
+      path: '/home/wps-test/WPS/catalog/external/e-obs.yaml'

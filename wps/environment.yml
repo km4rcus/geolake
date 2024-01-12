@@ -1,0 +1,43 @@
+name: rook
+channels:
+- conda-forge
+- defaults
+dependencies:
+- pip
+- python=3.9 # >=3.6,<3.8
+- xesmf
+- cartopy
+- pywps>=4.5.2,<4.6
+- jinja2
+- click
+- psutil
+- requests
+# daops
+# - cftime>=1.2.1
+- xarray==2022.10.0
+- setuptools==65.5.0 
+# - dask>=2021.12
+- netcdf4
+# - bottleneck>=1.3.1,<1.4
+# daops>=0.8.1,<0.9
+# clisops>=0.9.1,<0.10
+- roocs-utils>=0.6.2,<0.7
+# workflow
+- networkx
+# provenance
+- prov>=2.0.0
+- pydot
+# - graphviz
+# catalog
+- intake
+# pandas>=1.3.5,<1.4
+# - pandas>=1.3.5
+- pandas==1.4.3
+- aiohttp
+# dashboard
+- bokeh>=2.4.2,<2.5
+# tests
+- pytest
+- humanize
+- pyproj==3.3.1
+- numpy==1.21.5

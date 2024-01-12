@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    geodds.component: wps
+  name: wps
+  namespace: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      geodds.component: wps
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        geodds.component: wps
+    spec:
+      containers:
+        - env:
+            - name: ROOCS_CONFIG
+              value: /opt/wps/etc/roocs.ini
+          image: rg.nl-ams.scw.cloud/geokube-production/geodds-wps:v0.1a2
+          name: wps
+          ports:
+            - containerPort: 5000
+          resources:
+            limits:
+              cpu: '2'
+              memory: 4Gi
+            requests:
+              cpu: '2'
+              memory: 4Gi
+          volumeMounts:
+            - mountPath: /opt/wps/outputs
+              name: outputs
+              readOnly: false
+            - name: config
+              mountPath: "/opt/wps/etc/custom.cfg"
+              subPath: custom.cfg
+      imagePullSecrets:
+        - name: scalereg
+      restartPolicy: Always
+      volumes:
+      - name: outputs
+        hostPath:
+          path: /work/services/dds/wps/output
+      - name: config
+        configMap:
+          name: wps
+          items:
+            - key: custom.cfg
+              path: custom.cfg
+          
