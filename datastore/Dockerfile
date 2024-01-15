@@ -1,6 +1,6 @@
 ARG REGISTRY=rg.nl-ams.scw.cloud/geokube-production
 ARG TAG=latest
-FROM $REGISTRY/intake-geokube:$TAG
+FROM $REGISTRY/geolake-drivers:$TAG
 RUN conda install -c conda-forge --yes --freeze-installed psycopg2 \
     && conda clean -afy
 COPY requirements.txt /app/requirements.txt
