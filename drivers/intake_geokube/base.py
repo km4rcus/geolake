@@ -98,7 +98,11 @@ class AbstractBaseDriver(ABC, DataSourceBase):
         )
         if not query:
             self.log.info("query is empty!")
-            return dataset.compute() if compute else dataset
+            if compute:
+                return dataset.apply(
+                    lambda dc: dc.compute() if isinstance(dc, Delayed) else dc
+                )            
+            return dataset
         if isinstance(dataset, Dataset):
             self.log.info("filtering with: %s", query.filters)
             dataset = dataset.filter(**query.filters)
