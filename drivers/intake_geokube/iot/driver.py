@@ -100,7 +100,7 @@ class IotDriver(AbstractBaseDriver):
             self.stream.start()
         return {"stream": str(self.stream)}
 
-    def read(self) -> streamz.dataframe.DataFrame:
+    def read(self):
         """Read IoT data."""
         self.log.info("reading stream...")
         self._get_schema()
@@ -113,7 +113,7 @@ class IotDriver(AbstractBaseDriver):
             "loading entire product is not supported for IoT data"
         )
 
-    def process(self, query: GeoQuery) -> streamz.dataframe.DataFrame:
+    def process(self, query: GeoQuery):
         """Process IoT data with the passed query.
 
         Parameters
