@@ -28,7 +28,7 @@ jobs:
       with:
         username: nologin
         password: ${{ secrets.DOCKER_PASSWORD }}
-        registry: ${{ vars.STAGING_DOCKER_REGISTRY }}
+        registry: ${{ vars.DOCKER_REGISTRY }}
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2     
     - name: Build and push drivers
@@ -38,10 +38,10 @@ jobs:
         file: ./drivers/Dockerfile
         push: true
         build-args: |
-          REGISTRY=${{ vars.STAGING_DOCKER_REGISTRY  }}
+          REGISTRY=${{ vars.DOCKER_REGISTRY  }}
         tags: | 
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-drivers:${{ env.TAG }}  
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-drivers:latest             
+          ${{ vars.DOCKER_REGISTRY }}/geolake-drivers:${{ env.TAG }}  
+          ${{ vars.DOCKER_REGISTRY }}/geolake-drivers:latest             
     - name: Build and push datastore component
       uses: docker/build-push-action@v4
       with:
@@ -49,10 +49,10 @@ jobs:
         file: ./datastore/Dockerfile
         push: true
         build-args: |
-          REGISTRY=${{ vars.STAGING_DOCKER_REGISTRY  }}
+          REGISTRY=${{ vars.DOCKER_REGISTRY  }}
         tags: | 
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-datastore:${{ env.TAG }}  
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-datastore:latest    
+          ${{ vars.DOCKER_REGISTRY }}/geolake-datastore:${{ env.TAG }}  
+          ${{ vars.DOCKER_REGISTRY }}/geolake-datastore:latest    
     - name: Build and push api component
       uses: docker/build-push-action@v4
       with:
@@ -60,10 +60,10 @@ jobs:
         file: ./api/Dockerfile
         push: true
         build-args: |
-          REGISTRY=${{ vars.STAGING_DOCKER_REGISTRY  }}
+          REGISTRY=${{ vars.DOCKER_REGISTRY  }}
         tags: | 
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-api:${{ env.TAG }}  
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-api:latest 
+          ${{ vars.DOCKER_REGISTRY }}/geolake-api:${{ env.TAG }}  
+          ${{ vars.DOCKER_REGISTRY }}/geolake-api:latest 
     - name: Build and push executor component
       uses: docker/build-push-action@v4
       with:
@@ -71,7 +71,7 @@ jobs:
         file: ./executor/Dockerfile
         push: true
         build-args: |
-          REGISTRY=${{ vars.STAGING_DOCKER_REGISTRY  }}
+          REGISTRY=${{ vars.DOCKER_REGISTRY  }}
         tags: | 
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-executor:${{ env.TAG }}  
-          ${{ vars.STAGING_DOCKER_REGISTRY }}/geolake-executor:latest                           
+          ${{ vars.DOCKER_REGISTRY }}/geolake-executor:${{ env.TAG }}  
+          ${{ vars.DOCKER_REGISTRY }}/geolake-executor:latest                           
