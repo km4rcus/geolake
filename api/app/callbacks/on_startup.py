@@ -1,9 +1,9 @@
 """Module with functions call during API server startup"""
-from utils.api_logging import get_dds_logger
+from utils.api_logging import get_geolake_logger
 
 from datastore.datastore import Datastore
 
-log = get_dds_logger(__name__)
+log = get_geolake_logger(__name__)
 
 
 def _load_cache() -> None:

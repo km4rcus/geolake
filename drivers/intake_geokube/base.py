@@ -16,7 +16,7 @@ _NOT_SET: str = "<NOT_SET>"
 
 
 class AbstractBaseDriver(ABC, DataSourceBase):
-    """Abstract base class for all DDS-related drivers."""
+    """Abstract base class for all GeoLake-related drivers."""
 
     name: str = _NOT_SET
     version: str = _NOT_SET
@@ -40,10 +40,10 @@ class AbstractBaseDriver(ABC, DataSourceBase):
 
     @classmethod
     def __configure_logger(cls) -> logging.Logger:
-        log = logging.getLogger(f"dds.intake.{cls.__name__}")
-        level = os.environ.get("DDS_LOG_LEVEL", "INFO")
+        log = logging.getLogger(f"geolake.intake.{cls.__name__}")
+        level = os.environ.get("GeoLake_LOG_LEVEL", "INFO")
         logformat = os.environ.get(
-            "DDS_LOG_FORMAT",
+            "GeoLake_LOG_FORMAT",
             "%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s",
         )
         log.setLevel(level)  # type: ignore[arg-type]
@@ -76,13 +76,19 @@ class AbstractBaseDriver(ABC, DataSourceBase):
 
         Parameters
         ----------
-        query: GeoQuery
+        query: `queries.GeoQuery`
             A query to use for data processing
 
         Results
         -------
         res: Any
             Result of `query` processing
+
+        Examples
+        --------
+        ```python
+        >>> data = catalog['dataset']['product'].process(query)
+        ```
         """
         data_ = self.read()
         return self._process_geokube_dataset(data_, query=query, compute=True)

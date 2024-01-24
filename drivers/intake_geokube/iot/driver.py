@@ -101,7 +101,12 @@ class IotDriver(AbstractBaseDriver):
         return {"stream": str(self.stream)}
 
     def read(self) -> streamz.dataframe.core.DataFrame:
-        """Read IoT data."""
+        """Read IoT data.
+        
+        Returns
+        -------
+        stream : `streamz.dataframe.DataFrame`
+        """
         self.log.info("reading stream...")
         self._get_schema()
         return self.stream
@@ -123,7 +128,7 @@ class IotDriver(AbstractBaseDriver):
 
         Returns
         -------
-        stream  : streamz.dataframe.core.DataFrame
+        stream  : streamz.dataframe.DataFrame
             A DataFrame object with streamed content
         """
         df = d[0]

@@ -1,4 +1,4 @@
-ARG REGISTRY=rg.nl-ams.scw.cloud/geodds-production
+ARG REGISTRY=rg.nl-ams.scw.cloud/geogeolake-production
 ARG TAG=latest
 FROM $REGISTRY/geolake-datastore:$TAG
 WORKDIR /app

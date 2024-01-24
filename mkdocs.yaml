@@ -36,8 +36,21 @@ nav:
 - GeoLake: index.md
 - installation.md
 - References:
-  - drivers.md
+  - queries.md
+  - Drivers:
+    - base.md
+    - netcdf.md
+    - sentinel.md
+    - iot.md
+    - wrf.md
+  - datastore.md
   - broker.md
   - api.md
   - executor.md
 - about.md
+
+plugins:
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [drivers, executor, api, datastore]

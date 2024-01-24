@@ -1,11 +1,11 @@
-"""Module with DDS exceptions definitions"""
+"""Module with GeoLake exceptions definitions"""
 from typing import Optional
 
 from fastapi import HTTPException
 
 
-class BaseDDSException(BaseException):
-    """Base class for DDS.api exceptions"""
+class BaseGeoLakeException(BaseException):
+    """Base class for GeoLake.api exceptions"""
 
     msg: str = "Bad request"
     code: int = 400
@@ -18,13 +18,13 @@ class BaseDDSException(BaseException):
         )
 
 
-class EmptyUserTokenError(BaseDDSException):
+class EmptyUserTokenError(BaseGeoLakeException):
     """Raised if `User-Token` is empty"""
 
     msg: str = "User-Token cannot be empty!"
 
 
-class ImproperUserTokenError(BaseDDSException):
+class ImproperUserTokenError(BaseGeoLakeException):
     """Raised if `User-Token` format is wrong"""
 
     msg: str = (
@@ -33,7 +33,7 @@ class ImproperUserTokenError(BaseDDSException):
     )
 
 
-class NoEligibleProductInDatasetError(BaseDDSException):
+class NoEligibleProductInDatasetError(BaseGeoLakeException):
     """No eligible products in the dataset Error"""
 
     msg: str = (
@@ -48,7 +48,7 @@ class NoEligibleProductInDatasetError(BaseDDSException):
         super().__init__(self.msg)
 
 
-class MissingKeyInCatalogEntryError(BaseDDSException):
+class MissingKeyInCatalogEntryError(BaseGeoLakeException):
     """Missing key in the catalog entry"""
 
     msg: str = (
@@ -60,7 +60,7 @@ class MissingKeyInCatalogEntryError(BaseDDSException):
         super().__init__(self.msg)
 
 
-class MaximumAllowedSizeExceededError(BaseDDSException):
+class MaximumAllowedSizeExceededError(BaseGeoLakeException):
     """Estimated size is too big"""
 
     msg: str = (
@@ -81,8 +81,8 @@ class MaximumAllowedSizeExceededError(BaseDDSException):
         super().__init__(self.msg)
 
 
-class RequestNotYetAccomplished(BaseDDSException):
-    """Raised if dds request was not finished yet"""
+class RequestNotYetAccomplished(BaseGeoLakeException):
+    """Raised if geolake request was not finished yet"""
 
     msg: str = (
         "Request with id: {request_id} does not exist or it is not"
@@ -94,7 +94,7 @@ class RequestNotYetAccomplished(BaseDDSException):
         super().__init__(self.msg)
 
 
-class RequestNotFound(BaseDDSException):
+class RequestNotFound(BaseGeoLakeException):
     """If the given request could not be found"""
 
     msg: str = "Request with ID '{request_id}' was not found"
@@ -104,7 +104,7 @@ class RequestNotFound(BaseDDSException):
         super().__init__(self.msg)
 
 
-class RequestStatusNotDone(BaseDDSException):
+class RequestStatusNotDone(BaseGeoLakeException):
     """Raised when the submitted request failed"""
 
     msg: str = (
@@ -119,7 +119,7 @@ class RequestStatusNotDone(BaseDDSException):
         super().__init__(self.msg)
 
 
-class AuthorizationFailed(BaseDDSException):
+class AuthorizationFailed(BaseGeoLakeException):
     """Raised when the user is not authorized for the given resource"""
 
     msg: str = "{user} is not authorized for the resource!"
@@ -133,7 +133,7 @@ class AuthorizationFailed(BaseDDSException):
         super().__init__(self.msg)
 
 
-class AuthenticationFailed(BaseDDSException):
+class AuthenticationFailed(BaseGeoLakeException):
     """Raised when the key of the provided user differs from the one s
     tored in the DB"""
 
@@ -145,7 +145,7 @@ class AuthenticationFailed(BaseDDSException):
         super().__init__(self.msg)
 
 
-class MissingDatasetError(BaseDDSException):
+class MissingDatasetError(BaseGeoLakeException):
     """Raied if the queried dataset is not present in the catalog"""
 
     msg: str = "Dataset '{dataset_id}' does not exist in the catalog!"
@@ -155,7 +155,7 @@ class MissingDatasetError(BaseDDSException):
         super().__init__(self.msg)
 
 
-class MissingProductError(BaseDDSException):
+class MissingProductError(BaseGeoLakeException):
     """Raised if the requested product is not defined for the dataset"""
 
     msg: str = (
@@ -169,7 +169,7 @@ class MissingProductError(BaseDDSException):
         super().__init__(self.msg)
 
 
-class EmptyDatasetError(BaseDDSException):
+class EmptyDatasetError(BaseGeoLakeException):
     """The size of the requested dataset is zero"""
 
     msg: str = "The resulting dataset '{dataset_id}.{product_id}' is empty"
@@ -181,7 +181,7 @@ class EmptyDatasetError(BaseDDSException):
         )
         super().__init__(self.msg)
 
-class ProductRetrievingError(BaseDDSException):
+class ProductRetrievingError(BaseGeoLakeException):
     """Retrieving of the product failed."""
 
     msg: str = "Retrieving of the product '{dataset_id}.{product_id}' failed with the status {status}"

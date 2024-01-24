@@ -41,6 +41,6 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_DB: dds
-      POSTGRES_USER: dds
-      POSTGRES_PASSWORD: dds
+      POSTGRES_DB: geolake
+      POSTGRES_USER: geolake
+      POSTGRES_PASSWORD: geolake

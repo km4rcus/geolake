@@ -13,7 +13,7 @@ from datastore.datastore import Datastore, DEFAULT_MAX_REQUEST_SIZE_GB
 from datastore import exception as datastore_exception
 
 from utils.metrics import log_execution_time
-from utils.api_logging import get_dds_logger
+from utils.api_logging import get_geolake_logger
 from auth.manager import (
     is_role_eligible_for_product,
 )
@@ -23,7 +23,7 @@ from validation import assert_product_exists
 
 from . import request
 
-log = get_dds_logger(__name__)
+log = get_geolake_logger(__name__)
 data_store = Datastore()
 
 MESSAGE_SEPARATOR = os.environ["MESSAGE_SEPARATOR"]

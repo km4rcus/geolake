@@ -1,4 +1,4 @@
-"""Main module with dekube-dds API endpoints defined"""
+"""Main module with dekube-geolake API endpoints defined"""
 __version__ = "2.0"
 import os
 from typing import Optional
@@ -21,14 +21,14 @@ from aioprometheus.asgi.starlette import metrics
 from intake_geokube.queries.workflow import Workflow
 from intake_geokube.queries.geoquery import GeoQuery
 
-from utils.api_logging import get_dds_logger
+from utils.api_logging import get_geolake_logger
 import exceptions as exc
 from endpoint_handlers import (
     dataset_handler,
     file_handler,
     request_handler,
 )
-from auth.backend import DDSAuthenticationBackend
+from auth.backend import GeoLakeAuthenticationBackend
 from callbacks import all_onstartup_callbacks
 from encoders import extend_json_encoders
 from const import venv, tags
@@ -49,14 +49,14 @@ def map_to_geoquery(
                      format_args=format_kwargs, format=format)    
     return query
 
-logger = get_dds_logger(__name__)
+logger = get_geolake_logger(__name__)
 
 # ======== JSON encoders extension ========= #
 extend_json_encoders()
 
 app = FastAPI(
-    title="geokube-dds API",
-    description="REST API for geokube-dds",
+    title="geokube-geolake API",
+    description="REST API for geokube-geolake",
     version=__version__,
     contact={
         "name": "geokube Contributors",
@@ -72,7 +72,7 @@ app = FastAPI(
 
 # ======== Authentication backend ========= #
 app.add_middleware(
-    AuthenticationMiddleware, backend=DDSAuthenticationBackend()
+    AuthenticationMiddleware, backend=GeoLakeAuthenticationBackend()
 )
 
 # ======== CORS ========= #
@@ -107,9 +107,9 @@ app.state.api_http_requests_total = Counter(
 
 # ======== Endpoints definitions ========= #
 @app.get("/", tags=[tags.BASIC])
-async def dds_info():
-    """Return current version of the DDS API"""
-    return f"DDS API {__version__}"
+async def geolake_info():
+    """Return current version of the GeoLake API"""
+    return f"GeoLake API {__version__}"
 
 
 @app.get("/datasets", tags=[tags.DATASET])
@@ -123,7 +123,7 @@ async def get_datasets(request: Request):
         return dataset_handler.get_datasets(
             user_roles_names=request.auth.scopes
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -145,7 +145,7 @@ async def get_first_product_details(
             user_roles_names=request.auth.scopes,
             dataset_id=dataset_id,
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -169,7 +169,7 @@ async def get_product_details(
             dataset_id=dataset_id,
             product_id=product_id,
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 @app.get("/datasets/{dataset_id}/{product_id}/map", tags=[tags.DATASET])
@@ -219,7 +219,7 @@ async def get_map(
             product_id=product_id,
             query=query
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 @app.get("/datasets/{dataset_id}/{product_id}/items/{feature_id}", tags=[tags.DATASET])
@@ -264,7 +264,7 @@ async def get_feature(
             product_id=product_id,
             query=query
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 @app.get("/datasets/{dataset_id}/{product_id}/metadata", tags=[tags.DATASET])
@@ -285,7 +285,7 @@ async def get_metadata(
         return dataset_handler.get_metadata(
             dataset_id=dataset_id, product_id=product_id
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -312,7 +312,7 @@ async def estimate(
             query=query,
             unit=unit,
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -339,7 +339,7 @@ async def query(
             product_id=product_id,
             query=query,
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -360,7 +360,7 @@ async def workflow(
             user_id=request.user.id,
             workflow=tasks,
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -376,7 +376,7 @@ async def get_requests(
     app.state.api_http_requests_total.inc({"route": "GET /requests"})
     try:
         return request_handler.get_requests(request.user.id)
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -398,7 +398,7 @@ async def get_request_status(
         return request_handler.get_request_status(
             user_id=request.user.id, request_id=request_id
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -420,7 +420,7 @@ async def get_request_resulting_size(
         return request_handler.get_request_resulting_size(
             request_id=request_id
         )
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -440,7 +440,7 @@ async def get_request_uri(
     )
     try:
         return request_handler.get_request_uri(request_id=request_id)
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
 
 
@@ -460,7 +460,7 @@ async def download_request_result(
     )
     try:
         return file_handler.download_request_result(request_id=request_id)
-    except exc.BaseDDSException as err:
+    except exc.BaseGeoLakeException as err:
         raise err.wrap_around_http_exception() from err
     except FileNotFoundError as err:
         raise HTTPException(

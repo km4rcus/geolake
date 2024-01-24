@@ -1,4 +1,4 @@
-"""NetCDF driver for DDS."""
+"""NetCDF driver for GeoLake."""
 
 from geokube import open_datacube, open_dataset
 from geokube.core.datacube import DataCube
@@ -48,7 +48,22 @@ class NetCdfDriver(AbstractBaseDriver):
         } | self.xarray_kwargs
 
     def read(self) -> Dataset | DataCube:
-        """Read netCDF."""
+        """Read netCDF into geokube.Dataset or geokube.Datacube.
+
+        If `pattern` is set for a product, the method would return
+        a `geokube.Dataset` with `dask.Delayed` objects instead of 
+        `geokube.DataCube`s.
+        
+        Returns
+        -------
+        cube : `geokube.Dataset` or `geokube.DataCube`
+        
+        Examples
+        --------
+        ```python
+        >>> data = catalog['era5']['reanalysis'].read()
+        ```
+        """
         if self.pattern:
             return open_dataset(
                 pattern=self.pattern, delay_read_cubes=True, **self._arguments
@@ -56,7 +71,20 @@ class NetCdfDriver(AbstractBaseDriver):
         return open_datacube(**self._arguments)
 
     def load(self) -> Dataset | DataCube:
-        """Load netCDF."""
+        """Load netCDF into geokube.Dataset or geokube.Datacube.
+
+        All cubes would be computed on loading.
+        
+        Returns
+        -------
+        cube : `geokube.Dataset` or `geokube.DataCube`
+        
+        Examples
+        --------
+        ```python
+        >>> data = catalog['era5']['reanalysis'].read()
+        ```
+        """
         if self.pattern:
             return open_dataset(
                 pattern=self.pattern, delay_read_cubes=False, **self._arguments

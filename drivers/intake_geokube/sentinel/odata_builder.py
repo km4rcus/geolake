@@ -26,7 +26,17 @@ from .auth import SentinelAuth
 
 
 def datetime_to_isoformat(date: str | datetime) -> str:
-    """Convert string of datetime object to ISO datetime string."""
+    """Convert string of datetime object to ISO datetime string.
+    
+    Parameters
+    ----------
+    data : `str` or `datetime`
+    
+    Returns
+    -------
+    date_str : str
+        A ISO-compliant datetime format
+    """
     if isinstance(date, str):
         try:
             value = pd.to_datetime([date]).item().isoformat()

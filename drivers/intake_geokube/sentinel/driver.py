@@ -323,7 +323,18 @@ class SentinelDriver(AbstractBaseDriver):
         )
 
     def process(self, query: GeoQuery) -> Dataset:
-        """Process query for sentinel data."""
+        """Process sentinel data according to the `query`.
+
+        Returns
+        -------
+        cube : `geokube.Dataset`
+        
+        Examples
+        --------
+        ```python
+        >>> data = catalog['sentinel']['prod_name'].process(query)
+        ```
+        """
         self.log.info("builder odata request based on passed geoquery...")
         req = self._build_odata_from_geoquery(query)
         self.log.info("downloading data...")

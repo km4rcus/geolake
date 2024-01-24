@@ -9,11 +9,11 @@ from starlette.authentication import (
 from dbmanager.dbmanager import DBManager
 
 import exceptions as exc
-from auth.models import DDSUser
+from auth.models import GeoLakeUser
 from auth import scopes
 
 
-class DDSAuthenticationBackend(AuthenticationBackend):
+class GeoLakeAuthenticationBackend(AuthenticationBackend):
     """Class managing authentication and authorization"""
 
     async def authenticate(self, conn):
@@ -25,7 +25,7 @@ class DDSAuthenticationBackend(AuthenticationBackend):
     def _manage_user_token_auth(self, user_token: str):
         try:
             user_id, api_key = self.get_authorization_scheme_param(user_token)
-        except exc.BaseDDSException as err:
+        except exc.BaseGeoLakeException as err:
             raise err.wrap_around_http_exception()
         user_dto = DBManager().get_user_details(user_id)
         eligible_scopes = [scopes.AUTHENTICATED] + self._get_scopes_for_user(
@@ -35,7 +35,7 @@ class DDSAuthenticationBackend(AuthenticationBackend):
             raise exc.AuthenticationFailed(
                 user_dto
             ).wrap_around_http_exception()
-        return AuthCredentials(eligible_scopes), DDSUser(username=user_id)
+        return AuthCredentials(eligible_scopes), GeoLakeUser(username=user_id)
 
     def _get_scopes_for_user(self, user_dto) -> list[str]:
         if user_dto is None:

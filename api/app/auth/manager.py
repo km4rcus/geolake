@@ -1,10 +1,10 @@
 """Module with access/authentication functions"""
 from typing import Optional
 
-from utils.api_logging import get_dds_logger
+from utils.api_logging import get_geolake_logger
 import exceptions as exc
 
-log = get_dds_logger(__name__)
+log = get_geolake_logger(__name__)
 
 
 def is_role_eligible_for_product(

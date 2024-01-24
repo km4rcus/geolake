@@ -2,7 +2,7 @@
 from starlette.authentication import SimpleUser
 
 
-class DDSUser(SimpleUser):
+class GeoLakeUser(SimpleUser):
     """Immutable class containing information about the authenticated user"""
 
     def __init__(self, username: str) -> None:
@@ -13,7 +13,7 @@ class DDSUser(SimpleUser):
         return self.username
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, DDSUser):
+        if not isinstance(other, GeoLakeUser):
             return False
         if self.username == other.username:
             return True
@@ -23,7 +23,7 @@ class DDSUser(SimpleUser):
         return self != other
 
     def __repr__(self):
-        return f"<DDSUser(username={self.username}>"
+        return f"<GeoLakeUser(username={self.username}>"
 
     def __delattr__(self, name):
         if getattr(self, name, None) is not None:

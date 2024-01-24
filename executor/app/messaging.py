@@ -1,3 +1,4 @@
+"""Module contains definitions of messages in the executor."""
 import os
 import logging
 from enum import Enum
@@ -14,6 +15,7 @@ class MessageType(Enum):
 
 
 class Message:
+    """Message class definition."""
     _LOG = logging.getLogger("geokube.Message")
 
     request_id: int
@@ -23,6 +25,13 @@ class Message:
     content: GeoQuery | Workflow
 
     def __init__(self, load: bytes) -> None:
+        """Create `Message` instances.
+        
+        Parameters
+        ----------
+        load : `bytes`
+            Bytes containing message load
+        """
         self.request_id, msg_type, *query = load.decode().split(
             MESSAGE_SEPARATOR
         )

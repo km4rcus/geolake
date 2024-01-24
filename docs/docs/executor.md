@@ -1,5 +1,0 @@
-# Executor
-
-## Description
-
-## Docstring

@@ -1,4 +1,4 @@
-"""WRF driver for DDS."""
+"""WRF driver for GeoLake."""
 
 from functools import partial
 from typing import Any
