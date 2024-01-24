@@ -34,7 +34,7 @@ repo_url: https://github.com/CMCC-Foundation/geolake
 edit_uri: ''
 nav:
 - GeoLake: index.md
-- installation.md
+# - installation.md
 - References:
   - queries.md
   - Drivers:
