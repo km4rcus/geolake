@@ -1,7 +1,4 @@
-pika
-bokeh
-dask
-distributed
-intake
-pydantic
+pika==1.2.1
+prometheus_client
 sqlalchemy
+pydantic
