@@ -1,9 +1,0 @@
-fastapi
-pydantic
-uvicorn
-intake
-pytest
-jinja2
-pyjwt==1.7.1
-sqlalchemy
-aioprometheus
