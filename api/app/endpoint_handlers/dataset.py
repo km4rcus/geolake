@@ -1,30 +1,40 @@
 """Modules realizing logic for dataset-related endpoints"""
+import os
 import pika
 from typing import Optional
 
-from db.dbmanager.dbmanager import DBManager
+from fastapi.responses import FileResponse
+
+from dbmanager.dbmanager import DBManager, RequestStatus
 from geoquery.geoquery import GeoQuery
+from geoquery.task import TaskList
+from datastore.datastore import Datastore, DEFAULT_MAX_REQUEST_SIZE_GB
+from datastore import exception as datastore_exception
 
-from ..auth import Context
-from ..auth.manager import (
+from utils.metrics import log_execution_time
+from utils.api_logging import get_dds_logger
+from auth.manager import (
     is_role_eligible_for_product,
-    assert_is_role_eligible,
 )
-from ..auth import assert_not_anonymous
-from ..api_logging import get_dds_logger
-from .. import exceptions as exc
-from ..utils import make_bytes_readable_dict
-from ..metrics import log_execution_time
-from ..validation import assert_product_exists
-from ..datastore.datastore import Datastore
+import exceptions as exc
+from api_utils import make_bytes_readable_dict
+from validation import assert_product_exists
 
+from . import request
 
 log = get_dds_logger(__name__)
-data_store = Datastore(cache_path="/cache")
+data_store = Datastore()
+
+MESSAGE_SEPARATOR = os.environ["MESSAGE_SEPARATOR"]
+
+def _is_etimate_enabled(dataset_id, product_id):
+    if dataset_id in ("sentinel-2",):
+        return False
+    return True
 
 
 @log_execution_time(log)
-def get_datasets(context: Context) -> list[dict]:
+def get_datasets(user_roles_names: list[str]) -> list[dict]:
     """Realize the logic for the endpoint:
 
     `GET /datasets`
@@ -34,8 +44,8 @@ def get_datasets(context: Context) -> list[dict]:
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
+    user_roles_names : list of str
+        List of user's roles
 
     Returns
     -------
@@ -50,15 +60,12 @@ def get_datasets(context: Context) -> list[dict]:
     """
     log.debug(
         "getting all eligible products for datasets...",
-        extra={"rid": context.rid},
     )
-    user_roles_names = DBManager().get_user_roles_names(context.user.id)
     datasets = []
     for dataset_id in data_store.dataset_list():
         log.debug(
             "getting info and eligible products for `%s`",
             dataset_id,
-            extra={"rid": context.rid},
         )
         dataset_info = data_store.dataset_info(dataset_id=dataset_id)
         try:
@@ -66,7 +73,6 @@ def get_datasets(context: Context) -> list[dict]:
                 prod_name: prod_info
                 for prod_name, prod_info in dataset_info["products"].items()
                 if is_role_eligible_for_product(
-                    context=context,
                     product_role_name=prod_info.get("role"),
                     user_roles_names=user_roles_names,
                 )
@@ -76,7 +82,6 @@ def get_datasets(context: Context) -> list[dict]:
                 "dataset `%s` does not have products defined",
                 dataset_id,
                 exc_info=True,
-                extra={"rid": context.rid},
             )
             raise exc.MissingKeyInCatalogEntryError(
                 key="products", dataset=dataset_id
@@ -84,11 +89,10 @@ def get_datasets(context: Context) -> list[dict]:
         else:
             if len(eligible_prods) == 0:
                 log.debug(
-                    "no eligible products for dataset `%s` for the user"
-                    " `%s`. dataset skipped",
+                    "no eligible products for dataset `%s` for the role `%s`."
+                    " dataset skipped",
                     dataset_id,
-                    context.user.id,
-                    extra={"rid": context.rid},
+                    user_roles_names,
                 )
             else:
                 dataset_info["products"] = eligible_prods
@@ -99,7 +103,9 @@ def get_datasets(context: Context) -> list[dict]:
 @log_execution_time(log)
 @assert_product_exists
 def get_product_details(
-    context: Context, dataset_id: str, product_id: str
+    user_roles_names: list[str],
+    dataset_id: str,
+    product_id: Optional[str] = None,
 ) -> dict:
     """Realize the logic for the endpoint:
 
@@ -110,12 +116,12 @@ def get_product_details(
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
+    user_roles_names : list of str
+        List of user's roles
     dataset_id : str
         ID of the dataset
-    product_id : str
-        ID of the dataset
+    product_id : optional, str
+        ID of the product. If `None` the 1st product will be considered
 
     Returns
     -------
@@ -130,23 +136,26 @@ def get_product_details(
     log.debug(
         "getting details for eligible products of `%s`",
         dataset_id,
-        extra={"rid": context.rid},
     )
-    user_roles_names = DBManager().get_user_roles_names(context.user.id)
-    details = data_store.product_details(
-        dataset_id=dataset_id, product_id=product_id, use_cache=True
-    )
-    assert_is_role_eligible(
-        context=context,
-        product_role_name=details["metadata"].get("role"),
-        user_roles_names=user_roles_names,
-    )
-    return details
+    try:
+        if product_id:
+            return data_store.product_details(
+                dataset_id=dataset_id,
+                product_id=product_id,
+                role=user_roles_names,
+                use_cache=True,
+            )
+        else:
+            return data_store.first_eligible_product_details(
+                dataset_id=dataset_id, role=user_roles_names, use_cache=True
+            )
+    except datastore_exception.UnauthorizedError as err:
+        raise exc.AuthorizationFailed from err
 
 
 @log_execution_time(log)
 @assert_product_exists
-def get_metadata(context: Context, dataset_id: str, product_id: str):
+def get_metadata(dataset_id: str, product_id: str):
     """Realize the logic for the endpoint:
 
     `GET /datasets/{dataset_id}/{product_id}/metadata`
@@ -155,8 +164,6 @@ def get_metadata(context: Context, dataset_id: str, product_id: str):
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
     dataset_id : str
         ID of the dataset
     product_id : str
@@ -164,7 +171,6 @@ def get_metadata(context: Context, dataset_id: str, product_id: str):
     """
     log.debug(
         "getting metadata for '{dataset_id}.{product_id}'",
-        extra={"rid": context.rid},
     )
     return data_store.product_metadata(dataset_id, product_id)
 
@@ -172,7 +178,6 @@ def get_metadata(context: Context, dataset_id: str, product_id: str):
 @log_execution_time(log)
 @assert_product_exists
 def estimate(
-    context: Context,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
@@ -215,10 +220,9 @@ def estimate(
 
 
 @log_execution_time(log)
-@assert_not_anonymous
 @assert_product_exists
-def query(
-    context: Context,
+def async_query(
+    user_id: str,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
@@ -231,8 +235,8 @@ def query(
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
+    user_id : str
+        ID of the user executing the query
     dataset_id : str
         ID of the dataset
     product_id : str
@@ -247,36 +251,171 @@ def query(
 
     Raises
     -------
-    AuthorizationFailed
+    MaximumAllowedSizeExceededError
+        if the allowed size is below the estimated one
+    EmptyDatasetError
+        if estimated size is zero
+
     """
-    log.debug("geoquery: %s", query, extra={"rid": context.rid})
-    estimated_size = estimate(
-        context, dataset_id, product_id, query, "GB"
-    ).get("value")
-    allowed_size = data_store.product_metadata(dataset_id, product_id).get(
-        "maximum_query_size_gb", 10
-    )
-    if estimated_size > allowed_size:
-        raise exc.MaximumAllowedSizeExceededError(
-            dataset_id=dataset_id,
-            product_id=product_id,
-            estimated_size_gb=estimated_size,
-            allowed_size_gb=allowed_size,
+    log.debug("geoquery: %s", query)
+    if _is_etimate_enabled(dataset_id, product_id):
+        estimated_size = estimate(dataset_id, product_id, query, "GB").get("value")
+        allowed_size = data_store.product_metadata(dataset_id, product_id).get(
+            "maximum_query_size_gb", DEFAULT_MAX_REQUEST_SIZE_GB
         )
+        if estimated_size > allowed_size:
+            raise exc.MaximumAllowedSizeExceededError(
+                dataset_id=dataset_id,
+                product_id=product_id,
+                estimated_size_gb=estimated_size,
+                allowed_size_gb=allowed_size,
+            )
+        if estimated_size == 0.0:
+            raise exc.EmptyDatasetError(
+                dataset_id=dataset_id, product_id=product_id
+            )
     broker_conn = pika.BlockingConnection(
-        pika.ConnectionParameters(host="broker")
+        pika.ConnectionParameters(
+            host=os.getenv("BROKER_SERVICE_HOST", "broker")
+        )
     )
     broker_channel = broker_conn.channel()
 
     request_id = DBManager().create_request(
-        user_id=context.user.id,
+        user_id=user_id,
         dataset=dataset_id,
         product=product_id,
         query=query.original_query_json(),
     )
 
     # TODO: find a separator; for the moment use "\"
-    message = f"{request_id}\\{dataset_id}\\{product_id}\\{query.json()}"
+    message = MESSAGE_SEPARATOR.join(
+        [str(request_id), "query", dataset_id, product_id, query.json()]
+    )
+
+    broker_channel.basic_publish(
+        exchange="",
+        routing_key="query_queue",
+        body=message,
+        properties=pika.BasicProperties(
+            delivery_mode=2,  # make message persistent
+        ),
+    )
+    broker_conn.close()
+    return request_id
+
+@log_execution_time(log)
+@assert_product_exists
+def sync_query(
+    user_id: str,
+    dataset_id: str,
+    product_id: str,
+    query: GeoQuery,
+):
+    """Realize the logic for the endpoint:
+
+    `POST /datasets/{dataset_id}/{product_id}/execute`
+
+    Query the data and return the result of the request.
+
+    Parameters
+    ----------
+    user_id : str
+        ID of the user executing the query
+    dataset_id : str
+        ID of the dataset
+    product_id : str
+        ID of the product
+    query : GeoQuery
+        Query to perform
+
+    Returns
+    -------
+    request_id : int
+        ID of the request
+
+    Raises
+    -------
+    MaximumAllowedSizeExceededError
+        if the allowed size is below the estimated one
+    EmptyDatasetError
+        if estimated size is zero
+
+    """
+    
+    import time
+    request_id = async_query(user_id, dataset_id, product_id, query)
+    status, _ = DBManager().get_request_status_and_reason(request_id)
+    log.debug("sync query: status: %s", status)
+    while status in (RequestStatus.RUNNING, RequestStatus.QUEUED, 
+                     RequestStatus.PENDING):
+        time.sleep(1)
+        status, _ = DBManager().get_request_status_and_reason(request_id)
+        log.debug("sync query: status: %s", status)
+    
+    if status is RequestStatus.DONE:
+        download_details = DBManager().get_download_details_for_request_id(
+                request_id
+        )
+        return FileResponse(
+            path=download_details.location_path,
+            filename=download_details.location_path.split(os.sep)[-1],
+        )
+    raise exc.ProductRetrievingError(
+        dataset_id=dataset_id, 
+        product_id=product_id,
+        status=status.name)
+
+
+@log_execution_time(log)
+def run_workflow(
+    user_id: str,
+    workflow: TaskList,
+):
+    """Realize the logic for the endpoint:
+
+    `POST /datasets/workflow`
+
+    Schedule the workflow and return the ID of the request.
+
+    Parameters
+    ----------
+    user_id : str
+        ID of the user executing the query
+    workflow : TaskList
+        Workflow to perform
+
+    Returns
+    -------
+    request_id : int
+        ID of the request
+
+    Raises
+    -------
+    MaximumAllowedSizeExceededError
+        if the allowed size is below the estimated one
+    EmptyDatasetError
+        if estimated size is zero
+
+    """
+    log.debug("geoquery: %s", workflow)
+    broker_conn = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host=os.getenv("BROKER_SERVICE_HOST", "broker")
+        )
+    )
+    broker_channel = broker_conn.channel()
+    request_id = DBManager().create_request(
+        user_id=user_id,
+        dataset=workflow.dataset_id,
+        product=workflow.product_id,
+        query=workflow.json(),
+    )
+
+    # TODO: find a separator; for the moment use "\"
+    message = MESSAGE_SEPARATOR.join(
+        [str(request_id), "workflow", workflow.json()]
+    )
 
     broker_channel.basic_publish(
         exchange="",

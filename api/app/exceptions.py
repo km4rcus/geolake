@@ -125,9 +125,9 @@ class AuthorizationFailed(BaseDDSException):
     msg: str = "{user} is not authorized for the resource!"
     code: int = 403
 
-    def __init__(self, user_id: Optional[str]):
+    def __init__(self, user_id: Optional[str] = None):
         if user_id is None:
-            self.msg = self.msg.format(user="Anonymous user")
+            self.msg = self.msg.format(user="User")
         else:
             self.msg = self.msg.format(user=f"User '{user_id}'")
         super().__init__(self.msg)
@@ -165,5 +165,31 @@ class MissingProductError(BaseDDSException):
     def __init__(self, dataset_id: str, product_id: str):
         self.msg = self.msg.format(
             dataset_id=dataset_id, product_id=product_id
+        )
+        super().__init__(self.msg)
+
+
+class EmptyDatasetError(BaseDDSException):
+    """The size of the requested dataset is zero"""
+
+    msg: str = "The resulting dataset '{dataset_id}.{product_id}' is empty"
+
+    def __init__(self, dataset_id, product_id):
+        self.msg = self.msg.format(
+            dataset_id=dataset_id,
+            product_id=product_id,
+        )
+        super().__init__(self.msg)
+
+class ProductRetrievingError(BaseDDSException):
+    """Retrieving of the product failed."""
+
+    msg: str = "Retrieving of the product '{dataset_id}.{product_id}' failed with the status {status}"
+
+    def __init__(self, dataset_id, product_id, status):
+        self.msg = self.msg.format(
+            dataset_id=dataset_id,
+            product_id=product_id,
+            status=status
         )
         super().__init__(self.msg)

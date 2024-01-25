@@ -1,8 +1,7 @@
 """Utils module"""
-from typing import Literal
 
 
-def convert_bytes(size_bytes: int, to: Literal["kb", "mb", "gb"]) -> float:
+def convert_bytes(size_bytes: int, to: str) -> float:
     """Converts size in bytes to the other unit - one out of:
     ["kb", "mb", "gb"]
 
@@ -16,19 +15,24 @@ def convert_bytes(size_bytes: int, to: Literal["kb", "mb", "gb"]) -> float:
     size : float
         `size_bytes` converted to the given unit
     """
+    assert to is not None, "Expected unit cannot be `None`"
     to = to.lower()
-    if to == "kb":
-        value = size_bytes / 1024
-    elif to == "mb":
-        value = size_bytes / 1024**2
-    elif to == "gb":
-        value = size_bytes / 1024**3
-    else:
-        raise ValueError(f"unsupported units: {to}")
-    return value
+    match to:
+        case "bytes":
+            return size_bytes
+        case "kb":
+            return size_bytes / 1024
+        case "mb":
+            return size_bytes / 1024**2
+        case "gb":
+            return size_bytes / 1024**3
+        case _:
+            raise ValueError(f"unsupported units: {to}")
 
 
-def make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
+def make_bytes_readable_dict(
+    size_bytes: int, units: str | None = None
+) -> dict:
     """Prepare dictionary representing size (in bytes) in more readable unit
     to keep value in the range [0,1] - if `units` is `None`.
     If `units` is not None, converts `size_bytes` to the size expressed by
@@ -38,8 +42,8 @@ def make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
     ----------
     size_bytes : int
         Size expressed in bytes
-    units : optional, str
-        Units (case insensitive), one of [kB, MB, GB]
+    units : optional str
+
     Returns
     -------
     result : dict
@@ -52,8 +56,8 @@ def make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
     if units is None:
         units = "bytes"
     if units != "bytes":
-        size_bytes = convert_bytes(size_bytes=size_bytes, to=units)
-        return {"value": size_bytes, "units": units}
+        converted_size = convert_bytes(size_bytes=size_bytes, to=units)
+        return {"value": converted_size, "units": units}
     val = size_bytes
     if val > 1024:
         units = "kB"
@@ -64,6 +68,6 @@ def make_bytes_readable_dict(size_bytes: int, units: str = None) -> dict:
     if val > 1024:
         units = "GB"
         val /= 1024
-    if val > 0.0 and (val := round(val, 2)) == 0.00:
+    if val > 0.0 and (round(val, 2) == 0.00):
         val = 0.01
     return {"value": round(val, 2), "units": units}

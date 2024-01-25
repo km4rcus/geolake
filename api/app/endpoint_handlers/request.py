@@ -1,17 +1,15 @@
 """Modules with functions realizing logic for requests-related endpoints"""
-from db.dbmanager.dbmanager import DBManager
+from dbmanager.dbmanager import DBManager
 
-from ..auth import Context, assert_not_anonymous
-from ..api_logging import get_dds_logger
-from .. import exceptions as exc
-from ..metrics import log_execution_time
+from utils.api_logging import get_dds_logger
+from utils.metrics import log_execution_time
+import exceptions as exc
 
 log = get_dds_logger(__name__)
 
 
 @log_execution_time(log)
-@assert_not_anonymous
-def get_requests(context: Context):
+def get_requests(user_id: str):
     """Realize the logic for the endpoint:
 
     `GET /requests`
@@ -20,19 +18,19 @@ def get_requests(context: Context):
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
+    user_id : str
+        ID of the user for whom requests are taken
 
     Returns
     -------
     requests : list
         List of all requests done by the user
     """
-    return DBManager().get_requests_for_user_id(user_id=context.user.id)
+    return DBManager().get_requests_for_user_id(user_id=user_id)
 
 
 @log_execution_time(log)
-def get_request_status(context: Context, request_id: int):
+def get_request_status(user_id: str, request_id: int):
     """Realize the logic for the endpoint:
 
     `GET /requests/{request_id}/status`
@@ -42,8 +40,8 @@ def get_request_status(context: Context, request_id: int):
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
+    user_id : str
+        ID of the user whose request's status is about to be checed
     request_id : int
         ID of the request
 
@@ -52,20 +50,20 @@ def get_request_status(context: Context, request_id: int):
     status : tuple
         Tuple of status and fail reason.
     """
+    # NOTE: maybe verification should be added if user checks only him\her requests
     try:
         status, reason = DBManager().get_request_status_and_reason(request_id)
     except IndexError as err:
         log.error(
             "request with id: '%s' was not found!",
             request_id,
-            extra={"rid": context.rid},
         )
         raise exc.RequestNotFound(request_id=request_id) from err
     return {"status": status.name, "fail_reason": reason}
 
 
 @log_execution_time(log)
-def get_request_resulting_size(context: Context, request_id: int):
+def get_request_resulting_size(request_id: int):
     """Realize the logic for the endpoint:
 
     `GET /requests/{request_id}/size`
@@ -74,8 +72,6 @@ def get_request_resulting_size(context: Context, request_id: int):
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
     request_id : int
         ID of the request
 
@@ -90,17 +86,20 @@ def get_request_resulting_size(context: Context, request_id: int):
         If the request was not found
     """
     if request := DBManager().get_request_details(request_id):
-        return request.download.size_bytes
+        size = request.download.size_bytes
+        if not size or size == 0:
+            raise exc.EmptyDatasetError(dataset_id=request.dataset, 
+                                        product_id=request.product)
+        return size
     log.info(
         "request with id '%s' could not be found",
         request_id,
-        extra={"rid": context.rid},
     )
     raise exc.RequestNotFound(request_id=request_id)
 
 
 @log_execution_time(log)
-def get_request_uri(context: Context, request_id: int):
+def get_request_uri(request_id: int):
     """
     Realize the logic for the endpoint:
 
@@ -126,7 +125,6 @@ def get_request_uri(context: Context, request_id: int):
         log.error(
             "request with id: '%s' was not found!",
             request_id,
-            extra={"rid": context.rid},
         )
         raise exc.RequestNotFound(request_id=request_id) from err
     if download_details is None:
@@ -139,7 +137,6 @@ def get_request_uri(context: Context, request_id: int):
             " Request status is '%s'",
             request_id,
             request_status,
-            extra={"rid": context.rid},
         )
         raise exc.RequestStatusNotDone(
             request_id=request_id, request_status=request_status

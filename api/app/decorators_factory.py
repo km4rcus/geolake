@@ -22,10 +22,7 @@ def assert_parameters_are_defined(
         If a required parameter is not defined or is of wrong type
     """
     for param_name, param_type in required_parameters:
-        if (
-            param_name not in sig.parameters
-            or sig.parameters[param_name].annotation != param_type
-        ):
+        if param_name not in sig.parameters:
             raise TypeError(
                 f"The parameter '{param_name}' annotated with the type"
                 f" '{param_type}' must be defined for the callable decorated"

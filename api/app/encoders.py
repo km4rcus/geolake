@@ -29,6 +29,7 @@ def make_ndarray_dtypes_valid(o: np.ndarray) -> np.ndarray:
         return o.astype(np.int64)
     if np.issubdtype(o.dtype, np.float32):
         return o.astype(np.float64)
+    return o
 
 
 def extend_json_encoders():

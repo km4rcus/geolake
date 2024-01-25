@@ -1,8 +1,5 @@
 fastapi
-pydantic
 uvicorn
 pika
-intake
 sqlalchemy
-pytest
 aioprometheus
