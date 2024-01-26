@@ -21,7 +21,6 @@ class NetCDFSource(GeokubeSource):
         metadata=None,
         mapping: Optional[Mapping[str, Mapping[str, str]]] = None,
         load_files_on_persistance: Optional[bool] = True,
-        **kwargs
     ):
         self._kube = None
         self.path = path
@@ -35,7 +34,7 @@ class NetCDFSource(GeokubeSource):
         self.xarray_kwargs = {} if xarray_kwargs is None else xarray_kwargs
         self.load_files_on_persistance = load_files_on_persistance
         #        self.xarray_kwargs.update({'engine' : 'netcdf'})
-        super(NetCDFSource, self).__init__(metadata=metadata, **kwargs)
+        super(NetCDFSource, self).__init__(metadata=metadata)
 
     def _open_dataset(self):
         if self.pattern is None:

@@ -124,7 +124,6 @@ class CMCCWRFSource(GeokubeSource):
         load_files_on_persistance: Optional[bool] = True,
         variables_to_keep: Optional[Union[str, list[str]]] = None,
         variables_to_skip: Optional[Union[str, list[str]]] = None,
-        **kwargs
     ):
         self._kube = None
         self.path = path
@@ -143,7 +142,7 @@ class CMCCWRFSource(GeokubeSource):
             variables_to_skip=variables_to_skip,
         )
         #     self.xarray_kwargs.update({'engine' : 'netcdf'})
-        super(CMCCWRFSource, self).__init__(metadata=metadata, **kwargs)
+        super(CMCCWRFSource, self).__init__(metadata=metadata)
 
     def _open_dataset(self):
         if self.pattern is None:
