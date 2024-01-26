@@ -86,11 +86,7 @@ def get_request_resulting_size(request_id: int):
         If the request was not found
     """
     if request := DBManager().get_request_details(request_id):
-        size = request.download.size_bytes
-        if not size or size == 0:
-            raise exc.EmptyDatasetError(dataset_id=request.dataset, 
-                                        product_id=request.product)
-        return size
+        return request.download.size_bytes
     log.info(
         "request with id '%s' could not be found",
         request_id,
