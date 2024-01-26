@@ -43,7 +43,6 @@ class RequestStatus(Enum_):
     """Status of the Request"""
 
     PENDING = auto()
-    QUEUED = auto()
     RUNNING = auto()
     DONE = auto()
     FAILED = auto()
@@ -86,7 +85,7 @@ class User(Base):
         String(255), nullable=False, unique=True, default=generate_key
     )
     contact_name = Column(String(255))
-    requests = relationship("Request", lazy="dynamic")
+    requests = relationship("Request")
     roles = relationship("Role", secondary=association_table, lazy="selectin")
 
 
@@ -97,7 +96,7 @@ class Worker(Base):
     host = Column(String(255))
     dask_scheduler_port = Column(Integer)
     dask_dashboard_address = Column(String(10))
-    created_on = Column(DateTime, default=datetime.now)
+    created_on = Column(DateTime, nullable=False)
 
 
 class Request(Base):
@@ -113,8 +112,8 @@ class Request(Base):
     product = Column(String(255))
     query = Column(JSON())
     estimate_size_bytes = Column(Integer)
-    created_on = Column(DateTime, default=datetime.now)
-    last_update = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_on = Column(DateTime, nullable=False)
+    last_update = Column(DateTime)
     fail_reason = Column(String(1000))
     download = relationship("Download", uselist=False, lazy="selectin")
 
@@ -129,7 +128,7 @@ class Download(Base):
     storage_id = Column(Integer, ForeignKey("storages.storage_id"))
     location_path = Column(String(255))
     size_bytes = Column(Integer)
-    created_on = Column(DateTime, default=datetime.now)
+    created_on = Column(DateTime, nullable=False)
 
 
 class Storage(Base):
@@ -268,18 +267,16 @@ class DBManager(metaclass=Singleton):
     def update_request(
         self,
         request_id: int,
-        worker_id: int | None = None,
-        status: RequestStatus | None = None,
+        worker_id: int,
+        status: RequestStatus,
         location_path: str = None,
         size_bytes: int = None,
         fail_reason: str = None,
     ) -> int:
         with self.__session_maker() as session:
             request = session.query(Request).get(request_id)
-            if status:
-                request.status = status
-            if worker_id:
-                request.worker_id = worker_id
+            request.status = status
+            request.worker_id = worker_id
             request.last_update = datetime.utcnow()
             request.fail_reason = fail_reason
             session.commit()
@@ -308,17 +305,7 @@ class DBManager(metaclass=Singleton):
 
     def get_requests_for_user_id(self, user_id) -> list[Request]:
         with self.__session_maker() as session:
-            return session.query(User).get(user_id).requests.all()
-
-    def get_requests_for_user_id_and_status(
-        self, user_id, status: RequestStatus | tuple[RequestStatus]
-    ) -> list[Request]:
-        if isinstance(status, RequestStatus):
-            status = (status,)
-        with self.__session_maker() as session:
-            return session.get(User, user_id).requests.filter(
-                Request.status.in_(status)
-            )
+            return session.query(User).get(user_id).requests
 
     def get_download_details_for_request_id(self, request_id) -> Download:
         with self.__session_maker() as session:
