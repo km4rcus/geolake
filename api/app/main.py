@@ -1,4 +1,4 @@
-"""Main module with dekube-dds API endpoints defined"""
+"""Main module with geolake API endpoints defined"""
 __version__ = "2.0"
 import os
 from typing import Optional
