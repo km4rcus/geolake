@@ -7,16 +7,6 @@ theme:
     scheme: default
     primary: blue grey
     accent: amber
-    toggle:
-      icon: material/lightbulb
-      name: Switch to dark mode
-  - media: '(prefers-color-scheme: dark)'
-    scheme: slate
-    primary: blue grey
-    accent: amber
-    toggle:
-      icon: material/lightbulb-outline
-      name: Switch to light mode
   features:
   - search.suggest
   - search.highlight
@@ -32,6 +22,7 @@ theme:
 repo_name: CMCC-Foundation/geolake
 repo_url: https://github.com/CMCC-Foundation/geolake
 edit_uri: ''
+use_directory_urls: false
 nav:
 - GeoLake: index.md
 # - installation.md
