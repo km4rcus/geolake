@@ -1,4 +1,4 @@
-ARG REGISTRY=rg.nl-ams.scw.cloud/geokube-production
+ARG REGISTRY=rg.fr-par.scw.cloud/geokube
 ARG TAG=latest
 FROM $REGISTRY/geokube:$TAG
 RUN conda install -c conda-forge --yes --freeze-installed intake=0.6.6
