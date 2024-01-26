@@ -1,6 +1,6 @@
-ARG REGISTRY=rg.nl-ams.scw.cloud/geodds-production
+ARG REGISTRY=rg.fr-par.scw.cloud/geolake
 ARG TAG=latest
-FROM $REGISTRY/geodds-datastore:$TAG
+FROM $REGISTRY/geolake-datastore:$TAG
 WORKDIR /app
 COPY requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
