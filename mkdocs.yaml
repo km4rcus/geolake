@@ -25,7 +25,6 @@ edit_uri: ''
 use_directory_urls: false
 nav:
 - GeoLake: index.md
-# - installation.md
 - References:
   - queries.md
   - Drivers:
@@ -35,7 +34,6 @@ nav:
     - iot.md
     - wrf.md
   - datastore.md
-  - broker.md
   - api.md
   - executor.md
 - about.md
