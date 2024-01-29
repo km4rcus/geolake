@@ -11,6 +11,5 @@ COPY ./dbmanager /app/dbmanager
 COPY ./geoquery /app/geoquery
 COPY ./utils /app/utils
 COPY ./tests /app/tests
-RUN cp /opt/conda/lib/python3.10/site-packages/intake_geokube/geoquery.py /app/geoquery/geoquery.py
 COPY ./wait-for-it.sh /
 
