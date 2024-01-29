@@ -1,10 +1,10 @@
-from .api_logging import get_dds_logger
-from .decorators_factory import assert_parameters_are_defined, bind_arguments
+from datastore.datastore import Datastore
+from utils.api_logging import get_dds_logger
+from decorators_factory import assert_parameters_are_defined, bind_arguments
 from functools import wraps
 from inspect import signature
-from . import exceptions as exc
+import exceptions as exc
 
-from .datastore.datastore import Datastore
 
 log = get_dds_logger(__name__)
 
@@ -24,7 +24,10 @@ def assert_product_exists(func):
         product_id = args_dict["product_id"]
         if dataset_id not in Datastore().dataset_list():
             raise exc.MissingDatasetError(dataset_id=dataset_id)
-        elif product_id not in Datastore().product_list(dataset_id):
+        elif (
+            product_id is not None
+            and product_id not in Datastore().product_list(dataset_id)
+        ):
             raise exc.MissingProductError(
                 dataset_id=dataset_id, product_id=product_id
             )

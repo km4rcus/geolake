@@ -1,37 +1,36 @@
 """Main module with dekube-dds API endpoints defined"""
 __version__ = "2.0"
 import os
-from uuid import uuid4
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.authentication import requires
 
 from aioprometheus import (
     Counter,
     Summary,
-    Gauge,
     timer,
-    inprogress,
-    count_exceptions,
     MetricsMiddleware,
 )
 from aioprometheus.asgi.starlette import metrics
 
 from geoquery.geoquery import GeoQuery
+from geoquery.task import TaskList
 
-from .auth.context import ContextCreator
-from .api_logging import get_dds_logger
-from . import exceptions as exc
-from .endpoint_handlers import (
+from utils.api_logging import get_dds_logger
+import exceptions as exc
+from endpoint_handlers import (
     dataset_handler,
     file_handler,
     request_handler,
-    user_handler,
 )
-from .endpoint_handlers.user import UserDTO
-from .callbacks import all_onstartup_callbacks
-from .encoders import extend_json_encoders
+from auth.backend import DDSAuthenticationBackend
+from callbacks import all_onstartup_callbacks
+from encoders import extend_json_encoders
+from const import venv, tags
+from auth import scopes
 
 logger = get_dds_logger(__name__)
 
@@ -50,14 +49,20 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    root_path=os.environ.get("ENDPOINT_PREFIX", "/api"),
+    root_path=os.environ.get(venv.ENDPOINT_PREFIX, "/api"),
     on_startup=all_onstartup_callbacks,
 )
 
+# ======== Authentication backend ========= #
+app.add_middleware(
+    AuthenticationMiddleware, backend=DDSAuthenticationBackend()
+)
+
 # ======== CORS ========= #
-if "ALLOWED_CORS_ORIGINS_REGEX" in os.environ:
+cors_kwargs: dict[str, str | list[str]]
+if venv.ALLOWED_CORS_ORIGINS_REGEX in os.environ:
     cors_kwargs = {
-        "allow_origin_regex": os.environ["ALLOWED_CORS_ORIGINS_REGEX"]
+        "allow_origin_regex": os.environ[venv.ALLOWED_CORS_ORIGINS_REGEX]
     }
 else:
     cors_kwargs = {"allow_origins": ["*"]}
@@ -70,6 +75,7 @@ app.add_middleware(
     **cors_kwargs,
 )
 
+
 # ======== Prometheus metrics ========= #
 app.add_middleware(MetricsMiddleware)
 app.add_route("/metrics", metrics)
@@ -80,76 +86,69 @@ app.state.api_request_duration_seconds = Summary(
 app.state.api_http_requests_total = Counter(
     "api_http_requests_total", "Total number of requests"
 )
-app.state.api_exceptions_total = Counter(
-    "api_exceptions_total", "Total number of exception raised"
-)
-app.state.api_requests_inprogress_total = Gauge(
-    "api_requests_inprogress_total", "Endpoints being currently in progress"
-)
+
 
 # ======== Endpoints definitions ========= #
-@app.get("/")
+@app.get("/", tags=[tags.BASIC])
 async def dds_info():
     """Return current version of the DDS API"""
     return f"DDS API {__version__}"
 
 
-@app.get("/datasets")
+@app.get("/datasets", tags=[tags.DATASET])
 @timer(
     app.state.api_request_duration_seconds, labels={"route": "GET /datasets"}
 )
-@inprogress(
-    app.state.api_requests_inprogress_total, labels={"route": "GET /datasets"}
-)
-@count_exceptions(
-    app.state.api_exceptions_total, labels={"route": "GET /datasets"}
-)
-async def get_datasets(
-    request: Request,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
-):
+async def get_datasets(request: Request):
     """List all products eligible for a user defined by user_token"""
     app.state.api_http_requests_total.inc({"route": "GET /datasets"})
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
+        return dataset_handler.get_datasets(
+            user_roles_names=request.auth.scopes
         )
-        return dataset_handler.get_datasets(context)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/datasets/{dataset_id}/{product_id}")
+@app.get("/datasets/{dataset_id}", tags=[tags.DATASET])
 @timer(
     app.state.api_request_duration_seconds,
-    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
+    labels={"route": "GET /datasets/{dataset_id}"},
 )
-@inprogress(
-    app.state.api_requests_inprogress_total,
-    labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
-)
-@count_exceptions(
-    app.state.api_exceptions_total,
+async def get_first_product_details(
+    request: Request,
+    dataset_id: str,
+):
+    """Get details for the 1st product of the dataset"""
+    app.state.api_http_requests_total.inc(
+        {"route": "GET /datasets/{dataset_id}"}
+    )
+    try:
+        return dataset_handler.get_product_details(
+            user_roles_names=request.auth.scopes,
+            dataset_id=dataset_id,
+        )
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
+
+
+@app.get("/datasets/{dataset_id}/{product_id}", tags=[tags.DATASET])
+@timer(
+    app.state.api_request_duration_seconds,
     labels={"route": "GET /datasets/{dataset_id}/{product_id}"},
 )
 async def get_product_details(
     request: Request,
     dataset_id: str,
     product_id: str,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get details for the requested product if user is authorized"""
     app.state.api_http_requests_total.inc(
         {"route": "GET /datasets/{dataset_id}/{product_id}"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
         return dataset_handler.get_product_details(
-            context,
+            user_roles_names=request.auth.scopes,
             dataset_id=dataset_id,
             product_id=product_id,
         )
@@ -157,7 +156,7 @@ async def get_product_details(
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/datasets/{dataset_id}/{product_id}/metadata")
+@app.get("/datasets/{dataset_id}/{product_id}/metadata", tags=[tags.DATASET])
 @timer(
     app.state.api_request_duration_seconds,
     labels={"route": "GET /datasets/{dataset_id}/{product_id}/metadata"},
@@ -166,35 +165,22 @@ async def get_metadata(
     request: Request,
     dataset_id: str,
     product_id: str,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get metadata of the given product"""
     app.state.api_http_requests_total.inc(
         {"route": "GET /datasets/{dataset_id}/{product_id}/metadata"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
         return dataset_handler.get_metadata(
-            context, dataset_id=dataset_id, product_id=product_id
+            dataset_id=dataset_id, product_id=product_id
         )
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
 
-@app.post("/datasets/{dataset_id}/{product_id}/estimate")
+@app.post("/datasets/{dataset_id}/{product_id}/estimate", tags=[tags.DATASET])
 @timer(
     app.state.api_request_duration_seconds,
-    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
-)
-@inprogress(
-    app.state.api_requests_inprogress_total,
-    labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
-)
-@count_exceptions(
-    app.state.api_exceptions_total,
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/estimate"},
 )
 async def estimate(
@@ -202,8 +188,6 @@ async def estimate(
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
     unit: str = None,
 ):
     """Estimate the resulting size of the query"""
@@ -211,11 +195,7 @@ async def estimate(
         {"route": "POST /datasets/{dataset_id}/{product_id}/estimate"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
         return dataset_handler.estimate(
-            context,
             dataset_id=dataset_id,
             product_id=product_id,
             query=query,
@@ -225,37 +205,25 @@ async def estimate(
         raise err.wrap_around_http_exception() from err
 
 
-@app.post("/datasets/{dataset_id}/{product_id}/execute")
+@app.post("/datasets/{dataset_id}/{product_id}/execute", tags=[tags.DATASET])
 @timer(
     app.state.api_request_duration_seconds,
     labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
 )
-@inprogress(
-    app.state.api_requests_inprogress_total,
-    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
-)
-@count_exceptions(
-    app.state.api_exceptions_total,
-    labels={"route": "POST /datasets/{dataset_id}/{product_id}/execute"},
-)
+@requires([scopes.AUTHENTICATED])
 async def query(
     request: Request,
     dataset_id: str,
     product_id: str,
     query: GeoQuery,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Schedule the job of data retrieve"""
     app.state.api_http_requests_total.inc(
         {"route": "POST /datasets/{dataset_id}/{product_id}/execute"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
         return dataset_handler.query(
-            context,
+            user_id=request.user.id,
             dataset_id=dataset_id,
             product_id=product_id,
             query=query,
@@ -264,152 +232,126 @@ async def query(
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/requests")
+@app.post("/datasets/workflow", tags=[tags.DATASET])
+@timer(
+    app.state.api_request_duration_seconds,
+    labels={"route": "POST /datasets/workflow"},
+)
+@requires([scopes.AUTHENTICATED])
+async def workflow(
+    request: Request,
+    tasks: TaskList,
+):
+    """Schedule the job of workflow processing"""
+    app.state.api_http_requests_total.inc({"route": "POST /datasets/workflow"})
+    try:
+        return dataset_handler.run_workflow(
+            user_id=request.user.id,
+            workflow=tasks,
+        )
+    except exc.BaseDDSException as err:
+        raise err.wrap_around_http_exception() from err
+
+
+@app.get("/requests", tags=[tags.REQUEST])
 @timer(
     app.state.api_request_duration_seconds, labels={"route": "GET /requests"}
 )
+@requires([scopes.AUTHENTICATED])
 async def get_requests(
     request: Request,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get all requests for the user"""
     app.state.api_http_requests_total.inc({"route": "GET /requests"})
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
-        return request_handler.get_requests(context)
+        return request_handler.get_requests(request.user.id)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/requests/{request_id}/status")
+@app.get("/requests/{request_id}/status", tags=[tags.REQUEST])
 @timer(
     app.state.api_request_duration_seconds,
     labels={"route": "GET /requests/{request_id}/status"},
 )
+@requires([scopes.AUTHENTICATED])
 async def get_request_status(
     request: Request,
     request_id: int,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get status of the request without authentication"""
-    # NOTE: no auth required for checking status
     app.state.api_http_requests_total.inc(
         {"route": "GET /requests/{request_id}/status"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
         return request_handler.get_request_status(
-            context, request_id=request_id
+            user_id=request.user.id, request_id=request_id
         )
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/requests/{request_id}/size")
+@app.get("/requests/{request_id}/size", tags=[tags.REQUEST])
 @timer(
     app.state.api_request_duration_seconds,
     labels={"route": "GET /requests/{request_id}/size"},
 )
+@requires([scopes.AUTHENTICATED])
 async def get_request_resulting_size(
     request: Request,
     request_id: int,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get size of the file being the result of the request"""
     app.state.api_http_requests_total.inc(
         {"route": "GET /requests/{request_id}/size"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
         return request_handler.get_request_resulting_size(
-            context, request_id=request_id
+            request_id=request_id
         )
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/requests/{request_id}/uri")
+@app.get("/requests/{request_id}/uri", tags=[tags.REQUEST])
 @timer(
     app.state.api_request_duration_seconds,
     labels={"route": "GET /requests/{request_id}/uri"},
 )
+@requires([scopes.AUTHENTICATED])
 async def get_request_uri(
     request: Request,
     request_id: int,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Get download URI for the request"""
     app.state.api_http_requests_total.inc(
         {"route": "GET /requests/{request_id}/uri"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
-        return request_handler.get_request_uri(context, request_id=request_id)
+        return request_handler.get_request_uri(request_id=request_id)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
 
 
-@app.get("/download/{request_id}")
+@app.get("/download/{request_id}", tags=[tags.REQUEST])
 @timer(
     app.state.api_request_duration_seconds,
     labels={"route": "GET /download/{request_id}"},
 )
+# @requires([scopes.AUTHENTICATED]) # TODO: mange download auth in the web component
 async def download_request_result(
     request: Request,
     request_id: int,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
 ):
     """Download result of the request"""
     app.state.api_http_requests_total.inc(
         {"route": "GET /download/{request_id}"}
     )
     try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
-        return file_handler.download_request_result(
-            context, request_id=request_id
-        )
+        return file_handler.download_request_result(request_id=request_id)
     except exc.BaseDDSException as err:
         raise err.wrap_around_http_exception() from err
     except FileNotFoundError as err:
         raise HTTPException(
-            status_code=404, detail="File was not found!"
+            status_code=status.HTTP_404_NOT_FOUND, detail="File was not found!"
         ) from err
-
-
-@app.post("/users/add")
-@timer(
-    app.state.api_request_duration_seconds,
-    labels={"route": "POST /users/add/"},
-)
-async def add_user(
-    request: Request,
-    user: UserDTO,
-    dds_request_id: str = Header(str(uuid4()), convert_underscores=True),
-    user_token: Optional[str] = Header(None, convert_underscores=True),
-):
-    """Add user to the database"""
-    app.state.api_http_requests_total.inc({"route": "POST /users/add/"})
-    try:
-        context = ContextCreator.new_context(
-            request, rid=dds_request_id, user_token=user_token
-        )
-        return user_handler.add_user(context, user)
-    except exc.BaseDDSException as err:
-        raise err.wrap_around_http_exception() from err
-    except Exception as err:
-        raise HTTPException(status_code=400, detail=str(err)) from err

@@ -2,18 +2,17 @@
 import os
 
 from fastapi.responses import FileResponse
-from db.dbmanager.dbmanager import DBManager, RequestStatus
+from dbmanager.dbmanager import DBManager, RequestStatus
 
-from ..auth import Context
-from ..api_logging import get_dds_logger
-from ..metrics import log_execution_time
-from .. import exceptions as exc
+from utils.api_logging import get_dds_logger
+from utils.metrics import log_execution_time
+import exceptions as exc
 
 log = get_dds_logger(__name__)
 
 
 @log_execution_time(log)
-def download_request_result(context: Context, request_id: int):
+def download_request_result(request_id: int):
     """Realize the logic for the endpoint:
 
     `GET /download/{request_id}`
@@ -23,8 +22,6 @@ def download_request_result(context: Context, request_id: int):
 
     Parameters
     ----------
-    context : Context
-        Context of the current http request
     request_id : int
         ID of the request
 
@@ -43,7 +40,6 @@ def download_request_result(context: Context, request_id: int):
     log.debug(
         "preparing downloads for request id: %s",
         request_id,
-        extra={"rid": context.rid},
     )
     (
         request_status,
@@ -53,7 +49,6 @@ def download_request_result(context: Context, request_id: int):
         log.debug(
             "request with id: '%s' does not exist or it is not finished yet!",
             request_id,
-            extra={"rid": context.rid},
         )
         raise exc.RequestNotYetAccomplished(request_id=request_id)
     download_details = DBManager().get_download_details_for_request(
@@ -63,7 +58,6 @@ def download_request_result(context: Context, request_id: int):
         log.error(
             "file '%s' does not exists!",
             download_details.location_path,
-            extra={"rid": context.rid},
         )
         raise FileNotFoundError
     return FileResponse(

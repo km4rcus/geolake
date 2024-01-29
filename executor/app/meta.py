@@ -12,8 +12,8 @@ class LoggableMeta(type):
         if hasattr(res, "_LOG"):
             format_ = os.environ.get(
                 "LOGGING_FORMAT",
-                "%(asctime)s %(name)s %(levelname)s %(lineno)d %(track_id)s"
-                " %(message)s",
+                "%(asctime)s %(name)s %(levelname)s %(lineno)d"
+                " %(track_id)s %(message)s",
             )
             formatter = logging.Formatter(format_)
             logging_level = os.environ.get("LOGGING_LEVEL", "INFO")

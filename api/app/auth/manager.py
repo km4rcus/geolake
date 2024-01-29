@@ -1,18 +1,13 @@
 """Module with access/authentication functions"""
-from inspect import signature
-from functools import wraps
 from typing import Optional
 
-from ..api_logging import get_dds_logger
-from ..auth import Context
-from ..decorators_factory import assert_parameters_are_defined, bind_arguments
-from .. import exceptions as exc
+from utils.api_logging import get_dds_logger
+import exceptions as exc
 
 log = get_dds_logger(__name__)
 
 
 def is_role_eligible_for_product(
-    context: Context,
     product_role_name: Optional[str] = None,
     user_roles_names: Optional[list[str]] = None,
 ):
@@ -38,7 +33,6 @@ def is_role_eligible_for_product(
         "verifying eligibility of the product role '%s' against roles '%s'",
         product_role_name,
         user_roles_names,
-        extra={"rid": context.rid},
     )
     if product_role_name == "public" or product_role_name is None:
         return True
@@ -53,7 +47,6 @@ def is_role_eligible_for_product(
 
 
 def assert_is_role_eligible(
-    context: Context,
     product_role_name: Optional[str] = None,
     user_roles_names: Optional[list[str]] = None,
 ):
@@ -73,26 +66,7 @@ def assert_is_role_eligible(
     AuthorizationFailed
     """
     if not is_role_eligible_for_product(
-        context=context,
         product_role_name=product_role_name,
         user_roles_names=user_roles_names,
     ):
-        raise exc.AuthorizationFailed(user_id=context.user.id)
-
-
-def assert_not_anonymous(func):
-    """Decorator for convenient authentication management"""
-    sig = signature(func)
-    assert_parameters_are_defined(
-        sig, required_parameters=[("context", Context)]
-    )
-
-    @wraps(func)
-    def wrapper_sync(*args, **kwargs):
-        args_dict = bind_arguments(sig, *args, **kwargs)
-        context = args_dict["context"]
-        if context.is_public:
-            raise exc.AuthorizationFailed(user_id=None)
-        return func(*args, **kwargs)
-
-    return wrapper_sync
+        raise exc.AuthorizationFailed
