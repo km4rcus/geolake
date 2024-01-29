@@ -1,6 +1,5 @@
 <div align="center">
-<img src="https://raw.githubusercontent.com/CMCC-Foundation/geolake/ae60e0dc89827d7772ebd4ab28a969d8eb151f96/docs/img/logo.svg" width="20%" height="20%">
-
+<img src="docs/img/logo.svg" width="40%" height="40%">
 </div>
 
 
