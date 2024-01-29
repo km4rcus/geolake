@@ -41,4 +41,4 @@ It uses [geokube](https://github.com/CMCC-Foundation/geokube) as an Analytics En
 This work was funded by ...
 
 ## 🎬 References
-See [References](http://...) page for details
+See [References](https://opengeolake.github.io/) page for details
