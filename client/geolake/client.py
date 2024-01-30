@@ -29,7 +29,7 @@ import zipfile
 import shutil
 from typing import Any, Union, Iterable
 import urllib3
-import xarray as xr
+from geokube.backend.netcdf import open_datacube
 
 from .cache import CacheManager
 
@@ -186,12 +186,12 @@ class _Result:
         if os.path.isdir(self.target_path):
             ds_list = []
             for f in os.listdir(self.target_path):
-                ds = xr.open_dataset(os.path.join(self.target_path, f), decode_coords='all')
+                ds = open_datacube(os.path.join(self.target_path, f), engine='netcdf4')
                 ds_list.append(ds)
             if len(ds_list) == 1:
                 return ds_list[0]
             return ds_list
-        return xr.open_dataset(self.target_path, decode_coords='all')
+        return open_datacube(self.target_path, engine='netcdf4')
     
 class EnvVarNames:
     RC_FILE: str = "GEOLAKE_RC"

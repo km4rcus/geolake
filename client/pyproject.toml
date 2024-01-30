@@ -26,7 +26,7 @@ dependencies = [
     "netCDF4>=1.5.3",
     "scipy>=1.5.2",
     "requests>=2.23.0",
-    "xarray>=0.16.0",
+    "geokube>=0.2.6b2",
 ]
 
 [project.urls]

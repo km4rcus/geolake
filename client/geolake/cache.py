@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 import pickle
 import shutil
 
-import xarray as xr
+from geokube.core.datacube import DataCube
 import hashlib
 
 
@@ -85,7 +85,7 @@ class CacheManager:
 
     def maybe_get_from_cache(
         self, dataset_id: str, product_id: str, request: dict
-    ) -> Union[xr.Dataset, Iterable[xr.Dataset], None]:
+    ) -> Union[DataCube, Iterable[DataCube], None]:
         target: Union[str, Iterable[str]] = self._maybe_get_file_from_cache(
             dataset_id=dataset_id, product_id=product_id, request=request
         )

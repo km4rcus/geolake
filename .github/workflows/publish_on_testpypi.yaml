@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   client-build-and-publish:
-    name: Build geokube client and publish to TestPyPI
+    name: Build geolake client and publish to TestPyPI
     strategy:
       matrix:
         python-version: ["3.11"]
