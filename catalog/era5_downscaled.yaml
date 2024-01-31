@@ -5,7 +5,7 @@ metadata:
 sources:
   hourly:
     description: ERA5 downscaled at 2km over italy hourly.
-    driver: netcdf_driver
+    driver: geokube_netcdf
     args:
       path: '{{ CATALOG_DIR }}/datasets/era5_downscaled.nc'
       metadata_caching: true
