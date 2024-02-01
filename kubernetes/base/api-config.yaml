@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api
+  labels:
+    geodds.component: api
+data:
+  LOGGING_LEVEL: DEBUG
+  CATALOG_PATH: /catalog/Catalog/catalog.yaml
+  CACHE_PATH: /catalog/cache
+  ALLOWED_CORS_ORIGINS_REGEX: https://dds(-dev|)+\.cmcc\.it.*
+  ADMIN_ENDPOINTS_ALLOWED_HOSTS: "*.ddshub.cmcc.it,"
+  WEB_COMPONENT_HOST: ddshub.cmcc.it
+  MESSAGE_SEPARATOR: '\'

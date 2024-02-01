@@ -1,0 +1,8 @@
+varReference:
+- path: spec/template/spec/containers/envFrom/secretRef/name
+- path: spec/template/spec/containers/envFrom/configMapRef/name
+- path: spec/jobTemplate/spec/template/spec/containers/envFrom/configMapRef/name
+- path: spec/jobTemplate/spec/template/spec/containers/envFrom/secretRef/name
+- path: spec/jobTemplate/spec/template/spec/containers/env/value
+- path: spec/template/spec/volumes/configMap/name
+- path: spec/upstreams/service

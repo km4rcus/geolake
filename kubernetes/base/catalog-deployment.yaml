@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    geodds.component: catalog
+  name: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      geodds.component: catalog
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        geodds.component: catalog
+    spec:
+      containers:
+      - image: geolake-datastore:TAG
+        name: catalog
+        command: ["/bin/bash"] 
+        args: ["-c", "trap : TERM INT; sleep infinity & wait"]  
+        volumeMounts:
+        - mountPath: /catalog
+          name: catalog
+        - mountPath: /data
+          name: data
+          readOnly: true
+      imagePullSecrets:
+      - name: scalereg
+      restartPolicy: Always
+      volumes:
+      - name: catalog
+        persistentVolumeClaim:
+          claimName: catalog

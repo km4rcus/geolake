@@ -1,0 +1,17 @@
+resources:
+- api-config.yaml
+- api-deployment.yaml
+- api-service.yaml
+- broker-config.yaml
+- broker-deployment.yaml
+- broker-service.yaml
+- catalog-deployment.yaml
+- catalog-pvc.yaml
+- db-config.yaml
+- db-deployment.yaml
+- db-pvc.yaml
+- db-secrets.yaml
+- db-service.yaml
+- executor-deployment.yaml
+- executor-config.yaml
+- executor-service.yaml

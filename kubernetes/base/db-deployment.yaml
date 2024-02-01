@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  labels:
+    geodds.component: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      geodds.component: db
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        geodds.component: db
+    spec:
+      containers:
+        - name: db
+          image: postgres:14.1
+          envFrom:
+            - secretRef:
+                name: $(DB_SECRETS)
+            - configMapRef:
+                name: $(DB_CONFIG)
+          ports:
+            - containerPort: 5432
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: db-data
+              subPath: postgres
+      restartPolicy: Always
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: db-data

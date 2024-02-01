@@ -1,0 +1,77 @@
+bases:
+- ../base
+namespace: development
+namePrefix: dev-
+images:
+- name: postgres
+  newTag: '14.1'
+- name: geolake-datastore
+  newName: local/geolake-datastore
+  newTag: devel
+- name: geolake-api
+  newName: local/geolake-api
+  newTag: devel
+- name: geolake-executor
+  newName: local/geolake-executor
+  newTag: devel
+resources:
+  - data-pvc.yaml
+  - downloads-pvc.yaml
+  - initdb-config.yaml
+configurations:
+- configuration.yaml
+configMapGenerator:
+- name: api
+  behavior: merge
+  literals:
+  - ENDPOINT_PREFIX=/
+  - CATALOG_PATH=/catalog/catalog/catalog.yaml
+  - CACHE_PATH=/catalog/catalog/.cache
+- name: executor
+  behavior: merge
+  literals:
+    - DASK_N_WORKERS='2'
+    - DASK_MEMORY_LIMIT='4GB'
+    - CATALOG_PATH=/catalog/catalog/catalog.yaml
+    - CACHE_PATH=/catalog/catalog/.cache
+patchesStrategicMerge:
+  - api.yaml
+  - catalog.yaml
+  - db.yaml
+  - executor.yaml
+vars:
+- name: BROKER_SERVICE_HOST
+  objref:
+    kind: Service
+    name: broker
+    apiVersion: v1
+- name: DB_SERVICE_HOST
+  objref:
+    kind: Service
+    name: db
+    apiVersion: v1
+- name: API_CONFIG
+  objref:
+    kind: ConfigMap
+    name: api
+    apiVersion: v1
+- name: DB_CONFIG
+  objref:
+    kind: ConfigMap
+    name: db
+    apiVersion: v1
+- name: DB_SECRETS
+  objref:
+    kind: Secret
+    name: db
+    apiVersion: v1
+- name: EXECUTOR_CONFIG
+  objref:
+    kind: ConfigMap
+    name: executor
+    apiVersion: v1
+- name: BROKER_CONFIG
+  objref:
+    kind: ConfigMap
+    name: broker
+    apiVersion: v1

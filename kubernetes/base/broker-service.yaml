@@ -1,10 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: geodds
-  labels:
-    geodds.service: broker
   name: broker
+  labels:
+    geodds.component: broker
 spec:
   ports:
     - name: "broker"
@@ -17,5 +16,5 @@ spec:
       port: 15692
       targetPort: 15692
   selector:
-    geodds.service: broker
+    geodds.component: broker
   type: LoadBalancer

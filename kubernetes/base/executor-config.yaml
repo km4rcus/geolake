@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: executor
+  labels:
+    geodds.component: executor
+data:
+  LOGGING_LEVEL: DEBUG
+  CATALOG_PATH: /catalog/Catalog/catalog.yaml
+  CACHE_PATH: /catalog/cache
+  RESULT_CHECK_RETRIES: '360'
+  SLEEP_SEC: '10'
+  EXECUTOR_TYPES: query
+  DASK_DASHBOARD_PORT: '8787'
+  MESSAGE_SEPARATOR: '\'

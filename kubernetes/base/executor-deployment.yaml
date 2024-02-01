@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    geodds.component: executor
+  name: executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      geodds.component: executor
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        geodds.component: executor
+    spec:
+      containers:
+      - command: ["/bin/sh", "-c"]
+        args:
+          - ./../wait-for-it.sh $(BROKER_SERVICE_HOST):5672;
+            export LD_LIBRARY_PATH=/opt/conda/x86_64-conda-linux-gnu/lib:/usr/lib/x86_64-linux-gnu;
+            python main.py;
+        env:
+          - name: BROKER_SERVICE_HOST
+            value: $(BROKER_SERVICE_HOST)
+          - name: DB_SERVICE_HOST
+            value: $(DB_SERVICE_HOST)
+        envFrom:
+        - secretRef:
+            name: $(DB_SECRETS)
+        - configMapRef:
+            name: $(DB_CONFIG)
+        - configMapRef:
+            name: $(EXECUTOR_CONFIG)
+        image: geolake-executor:TAG
+        name: executor
+        ports:
+        - name: executor-port
+          containerPort: 8787
+        volumeMounts:
+        - mountPath: /catalog
+          name: catalog
+          readOnly: true
+        - mountPath: /data
+          name: data
+          readOnly: true
+        - mountPath: /downloads
+          name: downloads
+          readOnly: false
+      imagePullSecrets:
+      - name: scalereg
+      restartPolicy: Always
+      volumes:
+      - name: catalog
+        persistentVolumeClaim:
+          claimName: catalog

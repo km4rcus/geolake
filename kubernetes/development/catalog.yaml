@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    environment: development
+  name: catalog
+spec:
+  replicas: 1
+  template:
+    spec:
+      initContainers:
+      - image: geolake-datastore:TAG
+        name: git-clone
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh"]
+        args:
+          - -c
+          - |
+            if [ -z "$(ls -A /catalog)" ]; then
+              git clone https://github.com/CMCC-Foundation/geolake.git /catalog
+              echo "catalog repo cloned"
+              mkdir /catalog/catalog/.cache
+              echo "cache folder created"
+            else
+              cd /catalog
+              git pull https://github.com/CMCC-Foundation/geolake.git 
+              echo "catalog repo pulled"
+            fi
+            cd /catalog/catalog
+            python cache.py --cachedir=./.cache
+            echo "geolake cache created"
+        volumeMounts:
+        - name: catalog
+          mountPath: /catalog
+      volumes:
+      - persistentVolumeClaim:
+          claimName: data
+        name: data

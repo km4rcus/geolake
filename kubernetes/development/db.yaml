@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    environment: development
+  name: db
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: db
+          volumeMounts:
+            - mountPath: /docker-entrypoint-initdb.d
+              name: postgresql-initdb
+      volumes:
+        - name: postgresql-initdb
+          configMap:
+            name: initdb-config

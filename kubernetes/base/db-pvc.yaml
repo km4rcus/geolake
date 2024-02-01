@@ -1,13 +1,12 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  namespace: geodds
+  name: db-data
   labels:
-    geodds.service: downloads
-  name: downloads
+    geodds.component: db
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi

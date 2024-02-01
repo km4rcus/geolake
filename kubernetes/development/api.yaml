@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    environment: development
+  name: api
+spec:
+  replicas: 2
+  template:
+    spec:
+      volumes:
+      - persistentVolumeClaim:
+          claimName: data
+        name: data
+      - persistentVolumeClaim:
+          claimName: downloads
+        name: downloads

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: executor
+  labels:
+    geodds.component: executor
+spec:
+  ports:
+    - name: "dashboard"
+      port: 8787
+      targetPort: 8787
+  selector:
+    geodds.component: executor
+  type: LoadBalancer

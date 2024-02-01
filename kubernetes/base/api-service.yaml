@@ -1,16 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: geodds
-  labels:
-    geodds.service: api
   name: api
+  labels:
+    geodds.component: api
 spec:
   ports:
     - name: http
       port: 8080
       targetPort: 80
   selector:
-    geodds.service: api
-  type: ClusterIP
-  
+    geodds.component: api
+  type: LoadBalancer

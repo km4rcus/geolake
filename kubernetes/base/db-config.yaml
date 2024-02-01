@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db
+  labels:
+    geodds.component: db
+data:
+  POSTGRES_DB: dds
+  DB_SERVICE_PORT: '5432'
